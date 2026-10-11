@@ -439,8 +439,6 @@ table.data input, table.data select { min-height: 38px; padding: 6px 8px; font-s
 .btn-oauth svg { width: 20px; height: 20px; flex: none; }
 .btn-google { border: 1px solid var(--line); background: #fff; color: #1F1F1F; }
 .btn-google:hover { background: #F7F9FA; }
-.btn-apple { border: 1px solid #000; background: #000; color: #fff; }
-.btn-apple:hover { background: #1F1F1F; }
 .divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 18px; color: var(--ink-2); font-size: 13px; letter-spacing: 0.02em; }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .divider[hidden] { display: none; }

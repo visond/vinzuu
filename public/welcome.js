@@ -97,7 +97,7 @@
     });
   });
 
-  // Errors from the Google / Apple buttons show under whichever form is on screen.
+  // Errors from the Google button show under whichever form is on screen.
   function oauthStatus(message) {
     setStatus(signinForm.hidden ? $('signup-status') : $('signin-status'), message, 'error');
   }
@@ -133,25 +133,13 @@
     } catch (err) { setStatus(status, err.message, 'error'); }
   });
 
-  // ---------------------------------------------------------------- Google / Apple
-  // Both buttons are always on screen. Until the server reports a client id for one, its button
-  // just says that option isn't available yet. Once Google is configured, Google's own button
-  // (styled to match) replaces ours, because Google only allows sign-in through its button.
+  // ---------------------------------------------------------------- Google
+  // The button is always on screen. Until the server reports a client id, it just says Google
+  // isn't available yet. Once configured, Google's own button (styled to match) replaces ours,
+  // because Google only allows sign-in through its button.
 
-  const NOT_READY = {
-    google: 'Google sign-in is not available yet. Please use your email for now.',
-    apple: 'Apple sign-in is not available yet. Please use your email for now.',
-  };
-  let appleReady = false;
-  $('google-fallback').addEventListener('click', () => oauthStatus(NOT_READY.google));
-  $('apple-btn').addEventListener('click', async () => {
-    if (!appleReady) { oauthStatus(NOT_READY.apple); return; }
-    try {
-      const result = await window.AppleID.auth.signIn();
-      const name = result.user && result.user.name ? `${result.user.name.firstName} ${result.user.name.lastName}` : null;
-      await api('/api/auth/apple', { method: 'POST', body: { id_token: result.authorization.id_token, name } });
-      afterSignIn();
-    } catch (err) { oauthStatus('Apple sign-in did not complete. Please try again or use email.'); }
+  $('google-fallback').addEventListener('click', () => {
+    oauthStatus('Google sign-in is not available yet. Please use your email for now.');
   });
 
   function loadScript(src) {
@@ -182,16 +170,7 @@
     } catch (err) { /* offline or blocked: the email form below still works */ }
   }
 
-  async function setupApple(clientId, redirectURI) {
-    try {
-      await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js');
-      window.AppleID.auth.init({ clientId, scope: 'name email', redirectURI: redirectURI || location.origin, usePopup: true });
-      appleReady = true;
-    } catch (err) { /* offline or blocked: the button keeps saying it isn't available */ }
-  }
-
   api('/api/auth/config').then((cfg) => {
     if (cfg.google) setupGoogle(cfg.google_client_id);
-    if (cfg.apple) setupApple(cfg.apple_client_id, cfg.apple_redirect_uri);
   }).catch(() => {});
 })();

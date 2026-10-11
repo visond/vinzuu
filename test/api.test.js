@@ -514,11 +514,9 @@ test('signing in and re-entering a plate that nobody claimed yet adopts it into 
   assert.ok(mine.json.vehicles.some((v) => v.plate_number === 'RXG002B'));
 });
 
-test('Google and Apple sign-in are refused cleanly when the server has no client id configured', async () => {
+test('Google sign-in is refused cleanly when the server has no client id configured', async () => {
   const g = await post('/api/auth/google', { id_token: 'whatever' });
   assert.equal(g.status, 503);
-  const a = await post('/api/auth/apple', { id_token: 'whatever' });
-  assert.equal(a.status, 503);
 });
 
 // ---------- admin: add or remove a car ----------
