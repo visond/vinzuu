@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0F4C81">
+  <title>Shop console | Vinzuu</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%2310283B%27/%3E%3Cg transform=%27translate(3.5,11.5) scale(0.4)%27%3E%3Cpath d=%27M3 18 Q3 10 13 9 L19 9 Q23 3 33 3 L41 9 L53 9 Q59 9 59 15 L59 18 Z%27 fill=%27%23fff%27/%3E%3Ccircle cx=%2715%27 cy=%2719%27 r=%274%27 fill=%27%230A1420%27/%3E%3Ccircle cx=%2747%27 cy=%2719%27 r=%274%27 fill=%27%230A1420%27/%3E%3Crect x=%2757%27 y=%2712%27 width=%273%27 height=%273%27 rx=%271%27 fill=%27%23F5B700%27/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="demo-banner" class="demo-banner" hidden>
+    Demo data: the shops, prices and part numbers on this site are invented for testing. Demo shop codes are 111111 to 555555.
+  </div>
+
+  <header class="site-header wrap-wide">
+    <a class="brand" href="/"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#10283B" stroke="#F5B700" stroke-width="2"/><g transform="translate(3.5,11.5) scale(0.4)"><path d="M3 18 Q3 10 13 9 L19 9 Q23 3 33 3 L41 9 L53 9 Q59 9 59 15 L59 18 Z" fill="#fff"/><circle cx="15" cy="19" r="4" fill="#0A1420"/><circle cx="47" cy="19" r="4" fill="#0A1420"/><rect x="57" y="12" width="3" height="3" rx="1" fill="#F5B700"/></g></svg>Vinzuu</a>
+    <a class="nav-link" href="/">Customer site</a>
+  </header>
+
+  <main class="wrap-wide">
+    <section id="login" class="wrap" aria-labelledby="login-title">
+      <h1 id="login-title">Shop console</h1>
+      <p class="muted">List the parts you have in stock, keep prices and stock up to date, and see booking requests.</p>
+      <form id="login-form" class="panel" novalidate>
+        <div class="field">
+          <label for="code">Your shop access code</label>
+          <input id="code" type="text" inputmode="numeric" autocomplete="off" maxlength="20">
+          <p class="hint">The platform team gave you this code when you joined.</p>
+        </div>
+        <button class="btn btn-primary" type="submit">Open my shop</button>
+        <p id="login-status" class="status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section id="console" hidden>
+      <div class="console-head">
+        <div>
+          <h1 id="shop-name"></h1>
+          <p id="shop-vetted" class="muted"></p>
+        </div>
+        <button id="sign-out" class="btn btn-secondary btn-small" type="button">Sign out</button>
+      </div>
+
+      <div class="tabs" role="tablist" id="tabs"></div>
+
+      <div id="tab-lookup" role="tabpanel">
+        <h2>Look up a car</h2>
+        <p class="muted">Search by VIN first &mdash; it's the only identifier that always points to the same car. Plate is a fallback for cars that don't have a VIN on file yet.</p>
+        <div id="lookup-mount"></div>
+      </div>
+
+      <div id="tab-add" role="tabpanel" hidden>
+        <form id="add-form" class="panel" novalidate>
+          <h2>Add a part</h2>
+          <div class="field">
+            <label for="a-cat">Part</label>
+            <select id="a-cat"></select>
+          </div>
+          <div class="field" id="a-oe-wrap" hidden>
+            <label for="a-oe">Part number and the cars it fits</label>
+            <select id="a-oe"></select>
+            <p class="hint">Choose the number printed on the box or the old part. If it is not in the list, ask the platform team to add it.</p>
+          </div>
+          <div class="field" id="a-spec-wrap" hidden>
+            <label for="a-spec">Size or specification</label>
+            <input id="a-spec" type="text" maxlength="80" placeholder="For example 12V 60Ah, or 24 inch">
+          </div>
+          <div class="row stack-sm">
+            <div class="field">
+              <label for="a-condition">Type of part</label>
+              <select id="a-condition">
+                <option value="genuine">Genuine part</option>
+                <option value="aftermarket">Aftermarket part</option>
+              </select>
+              <p class="hint">Genuine means the manufacturer's own part.</p>
+            </div>
+            <div class="field">
+              <label for="a-price">Price in RWF</label>
+              <input id="a-price" type="number" inputmode="numeric" min="1" step="1">
+            </div>
+          </div>
+          <div class="field">
+            <label for="a-stock">How many in stock</label>
+            <input id="a-stock" type="number" inputmode="numeric" min="0" step="1" value="1">
+          </div>
+          <div class="field">
+            <label for="a-photo">Photo of the actual part</label>
+            <input id="a-photo" type="file" accept="image/*">
+            <p class="hint">Customers only see parts that have a photo. Take it on the shelf, in good light.</p>
+            <img id="a-preview" class="photo-preview" alt="Photo preview" hidden>
+          </div>
+          <button class="btn btn-primary" type="submit">Add part</button>
+          <p id="add-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div id="tab-parts" role="tabpanel" hidden>
+        <h2>My parts</h2>
+        <p class="muted">Change a price or stock number and press Save. Set stock to 0 when you run out: the part disappears from search until you restock.</p>
+        <div id="parts-mount"></div>
+      </div>
+
+      <div id="tab-bookings" role="tabpanel" hidden>
+        <h2>Booking requests</h2>
+        <p class="muted">Customers who asked about your parts. Contact them on WhatsApp.</p>
+        <div id="bookings-mount"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/common.js"></script>
+  <script src="/shop.js"></script>
+</body>
+</html>

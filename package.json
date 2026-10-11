@@ -1,0 +1,20 @@
+{
+  "name": "vinzuu",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plate/VIN-based spare parts and garage finder for Kigali (MVP)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
+    "reset-db": "node --disable-warning=ExperimentalWarning scripts/reset-db.js",
+    "start:real": "node --disable-warning=ExperimentalWarning server.js --no-demo"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
