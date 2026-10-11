@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT,
   auth_provider TEXT NOT NULL DEFAULT 'local' CHECK (auth_provider IN ('local','google','apple')),
   provider_id TEXT,
+  phone TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider ON users (auth_provider, provider_id)
@@ -169,6 +170,7 @@ function openDb(dbPath = process.env.DB_PATH || DEFAULT_DB_PATH) {
   const db = new DatabaseSync(dbPath);
   db.exec(SCHEMA);
   ensureColumn(db, 'vehicles', 'user_id', 'INTEGER REFERENCES users(id)');
+  ensureColumn(db, 'users', 'phone', 'TEXT');
   migratePlateNotUnique(db);
   ensureCategories(db);
   return db;

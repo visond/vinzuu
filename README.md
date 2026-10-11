@@ -43,6 +43,10 @@ in:
 - A plain "Continue without an account" link on the welcome page skips straight to the plate-only flow
   from the first version of this project, unchanged, for anyone who does not want to sign up.
 
+Creating an account asks for a full name, email, an optional phone number, and a password typed twice.
+New passwords need at least 8 characters, an uppercase letter, a number and a special character (checked
+in the browser and again on the server). Accounts made before this rule can still sign in.
+
 Passwords are hashed with `scrypt` (built into Node, no extra dependency). Sessions are a signed cookie,
 not a database table, so restarting the server does not sign anyone out early.
 

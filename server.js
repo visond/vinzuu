@@ -231,7 +231,18 @@ function createApp(db, config = {}) {
   };
 
   const getUserById = (id) => (id == null ? null : db.prepare('SELECT * FROM users WHERE id = ?').get(id));
-  const publicUser = (u) => (u && { id: u.id, name: u.name, email: u.email, provider: u.auth_provider });
+  const publicUser = (u) => (u && { id: u.id, name: u.name, email: u.email, phone: u.phone || null, provider: u.auth_provider });
+
+  /** New passwords: at least 8 characters with an uppercase letter, a number and a symbol.
+   *  (Only checked when an account is created, so older accounts can still sign in.) */
+  function checkNewPassword(password) {
+    const missing = [];
+    if (password.length < 8) missing.push('at least 8 characters');
+    if (!/[A-Z]/.test(password)) missing.push('an uppercase letter');
+    if (!/[0-9]/.test(password)) missing.push('a number');
+    if (!/[^A-Za-z0-9]/.test(password)) missing.push('a special character');
+    if (missing.length) throw new HttpError(400, `Your password needs ${missing.join(', ')}.`);
+  }
 
   /** Find or create the local account for a Google sign-in. Matches by provider id first,
    *  then by email (so someone who signed up with a password can later add Google with the same
@@ -271,12 +282,13 @@ function createApp(db, config = {}) {
     const name = text(b.name, { field: 'name', max: 60, required: true });
     const email = normalizeEmail(b.email);
     const password = String(b.password || '');
-    if (password.length < 8) throw new HttpError(400, 'Choose a password with at least 8 characters.');
+    checkNewPassword(password);
+    const userPhone = phone(b.phone, 'Phone', false);
     if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) {
       throw new HttpError(409, 'An account with that email already exists. Try signing in instead.');
     }
-    const info = db.prepare("INSERT INTO users (name, email, password_hash, auth_provider) VALUES (?,?,?,'local')")
-      .run(name, email, auth.hashPassword(password));
+    const info = db.prepare("INSERT INTO users (name, email, phone, password_hash, auth_provider) VALUES (?,?,?,?,'local')")
+      .run(name, email, userPhone, auth.hashPassword(password));
     auth.setSessionCookie(req, res, Number(info.lastInsertRowid));
     res.status(201).json({ user: publicUser(getUserById(Number(info.lastInsertRowid))) });
   });

@@ -458,14 +458,35 @@ test('sign up rejects a bad email and a short password before creating anything'
   assert.equal(shortPw.status, 400);
 });
 
+test('sign up needs an uppercase letter, a number and a special character, and says what is missing', async () => {
+  const weak = await post('/api/auth/signup', { name: 'Test', email: 'weak@example.com', password: 'alllowercase' });
+  assert.equal(weak.status, 400);
+  assert.match(weak.json.error, /uppercase letter, a number, a special character/);
+  const noSymbol = await post('/api/auth/signup', { name: 'Test', email: 'weak@example.com', password: 'Password1' });
+  assert.equal(noSymbol.status, 400);
+  assert.match(noSymbol.json.error, /special character/);
+  assert.doesNotMatch(noSymbol.json.error, /uppercase|a number/);
+});
+
+test('sign up saves an optional phone number, and rejects one that is not a phone number', async () => {
+  const withPhone = await makeClient().post('/api/auth/signup', { name: 'Eric', email: 'eric@example.com', phone: '+250 788 000 000', password: 'Strong-pass-6' });
+  assert.equal(withPhone.status, 201);
+  assert.equal(withPhone.json.user.phone, '+250788000000');
+  const noPhone = await makeClient().post('/api/auth/signup', { name: 'Fiona', email: 'fiona@example.com', password: 'Strong-pass-7' });
+  assert.equal(noPhone.status, 201);
+  assert.equal(noPhone.json.user.phone, null);
+  const badPhone = await post('/api/auth/signup', { name: 'Gad', email: 'gad@example.com', phone: '12', password: 'Strong-pass-8' });
+  assert.equal(badPhone.status, 400);
+});
+
 test('sign up, sign in, see the session, and sign out, with no password ever echoed back', async () => {
   const client = makeClient();
-  const up = await client.post('/api/auth/signup', { name: 'Alice Uwase', email: 'alice@example.com', password: 'correct horse battery' });
+  const up = await client.post('/api/auth/signup', { name: 'Alice Uwase', email: 'alice@example.com', password: 'Correct-horse-1' });
   assert.equal(up.status, 201);
   assert.equal(up.json.user.email, 'alice@example.com');
   assert.ok(!JSON.stringify(up.json).toLowerCase().includes('password'));
 
-  const dup = await client.post('/api/auth/signup', { name: 'Alice again', email: 'alice@example.com', password: 'another password' });
+  const dup = await client.post('/api/auth/signup', { name: 'Alice again', email: 'alice@example.com', password: 'Another-pass-2' });
   assert.equal(dup.status, 409);
 
   const me = await client.get('/api/auth/me');
@@ -476,7 +497,7 @@ test('sign up, sign in, see the session, and sign out, with no password ever ech
 
   const wrongPw = await client.post('/api/auth/login', { email: 'alice@example.com', password: 'nope nope nope' });
   assert.equal(wrongPw.status, 401);
-  const right = await client.post('/api/auth/login', { email: 'alice@example.com', password: 'correct horse battery' });
+  const right = await client.post('/api/auth/login', { email: 'alice@example.com', password: 'Correct-horse-1' });
   assert.equal(right.status, 200);
   assert.equal(right.json.user.email, 'alice@example.com');
 });
@@ -490,7 +511,7 @@ test('signed out, /api/auth/me and /api/me/vehicles both say so instead of error
 
 test('registering a car while signed in attaches it to the account, and it appears in "my cars"', async () => {
   const client = makeClient();
-  await client.post('/api/auth/signup', { name: 'Bosco', email: 'bosco@example.com', password: 'another-strong-pw' });
+  await client.post('/api/auth/signup', { name: 'Bosco', email: 'bosco@example.com', password: 'Another-strong-3' });
   const reg = await client.post('/api/vehicles/register', { plate_number: 'RXG001A', make: 'Toyota', model: 'Corolla', year: 2016 });
   assert.equal(reg.status, 201);
   const mine = await client.get('/api/me/vehicles');
@@ -499,14 +520,14 @@ test('registering a car while signed in attaches it to the account, and it appea
 
   // a second account never sees the first account's cars
   const other = makeClient();
-  await other.post('/api/auth/signup', { name: 'Claudine', email: 'claudine@example.com', password: 'yet-another-pw' });
+  await other.post('/api/auth/signup', { name: 'Claudine', email: 'claudine@example.com', password: 'Yet-another-4' });
   assert.equal((await other.get('/api/me/vehicles')).json.vehicles.length, 0);
 });
 
 test('signing in and re-entering a plate that nobody claimed yet adopts it into the account', async () => {
   await post('/api/vehicles/register', { plate_number: 'RXG002B', make: 'Toyota', model: 'Corolla', year: 2017 }); // guest registration
   const client = makeClient();
-  await client.post('/api/auth/signup', { name: 'Didier', email: 'didier@example.com', password: 'yet-another-pw-2' });
+  await client.post('/api/auth/signup', { name: 'Didier', email: 'didier@example.com', password: 'Yet-another-5' });
   const again = await client.post('/api/vehicles/register', { plate_number: 'RXG002B', make: 'Toyota', model: 'Corolla', year: 2017 });
   assert.equal(again.status, 200);
   assert.equal(again.json.existing, true);

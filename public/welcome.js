@@ -67,7 +67,7 @@
   const signupForm = $('signup-form');
   const HEADINGS = {
     signin: ['Welcome back', 'Sign in to save your cars and track your bookings.'],
-    signup: ['Create your account', 'Save your cars once and book garages faster next time.'],
+    signup: ['Create your account', 'Register to save your cars and book garages on Vinzuu.'],
   };
 
   function showForm(which) {
@@ -75,6 +75,10 @@
     signinForm.hidden = !isIn;
     signupForm.hidden = isIn;
     [$('auth-head').textContent, $('auth-sub').textContent] = HEADINGS[which];
+    // Our own Google button until Google's replaces it (then the label is gone and Google's is redrawn).
+    const googleLabel = $('google-label');
+    if (googleLabel) googleLabel.textContent = isIn ? 'Continue with Google' : 'Sign up with Google';
+    renderGoogleButton();
     setStatus($('signin-status'), '');
     setStatus($('signup-status'), '');
     (isIn ? $('si-email') : $('su-name')).focus({ preventScroll: true });
@@ -120,14 +124,28 @@
     } catch (err) { setStatus(status, err.message, 'error'); }
   });
 
+  // Same rule the server enforces; checked here too so people see the problem before sending.
+  function passwordProblem(password) {
+    const missing = [];
+    if (password.length < 8) missing.push('at least 8 characters');
+    if (!/[A-Z]/.test(password)) missing.push('an uppercase letter');
+    if (!/[0-9]/.test(password)) missing.push('a number');
+    if (!/[^A-Za-z0-9]/.test(password)) missing.push('a special character');
+    return missing.length ? `Your password needs ${missing.join(', ')}.` : null;
+  }
+
   signupForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const status = $('signup-status');
+    const password = $('su-password').value;
+    const problem = passwordProblem(password)
+      || (password !== $('su-password2').value ? 'The two passwords do not match.' : null);
+    if (problem) { setStatus(status, problem, 'error'); return; }
     setStatus(status, 'Creating your account…');
     try {
       await api('/api/auth/signup', {
         method: 'POST',
-        body: { name: $('su-name').value, email: $('su-email').value, password: $('su-password').value },
+        body: { name: $('su-name').value, email: $('su-email').value, phone: $('su-phone').value, password },
       });
       afterSignIn();
     } catch (err) { setStatus(status, err.message, 'error'); }
@@ -138,6 +156,7 @@
   // isn't available yet. Once configured, Google's own button (styled to match) replaces ours,
   // because Google only allows sign-in through its button.
 
+  let googleReady = false;
   $('google-fallback').addEventListener('click', () => {
     oauthStatus('Google sign-in is not available yet. Please use your email for now.');
   });
@@ -163,11 +182,21 @@
           } catch (err) { oauthStatus(err.message); }
         },
       });
-      const slot = $('google-btn');
-      const width = Math.min(400, Math.round(slot.getBoundingClientRect().width) || 400);
-      slot.replaceChildren();
-      window.google.accounts.id.renderButton(slot, { theme: 'outline', size: 'large', shape: 'rectangular', width, text: 'continue_with', logo_alignment: 'center' });
+      googleReady = true;
+      renderGoogleButton();
     } catch (err) { /* offline or blocked: the email form below still works */ }
+  }
+
+  // Draw (or redraw) Google's own button, saying "Sign up with Google" on the create-account form.
+  function renderGoogleButton() {
+    if (!googleReady) return;
+    const slot = $('google-btn');
+    const width = Math.min(400, Math.round(slot.getBoundingClientRect().width) || 400);
+    slot.replaceChildren();
+    window.google.accounts.id.renderButton(slot, {
+      theme: 'outline', size: 'large', shape: 'rectangular', width, logo_alignment: 'center',
+      text: signupForm.hidden ? 'continue_with' : 'signup_with',
+    });
   }
 
   api('/api/auth/config').then((cfg) => {
