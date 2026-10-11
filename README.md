@@ -48,8 +48,9 @@ not a database table, so restarting the server does not sign anyone out early.
 
 ### Google and Apple sign-in
 
-Both are **optional**. Leave `GOOGLE_CLIENT_ID` / `APPLE_CLIENT_ID` unset in `.env` and the welcome page
-just shows email sign in / create account — no broken buttons. Add one and its button appears automatically.
+Both are **optional**. The sign-in box always shows "Continue with Google" and "Continue with Apple", but
+until `GOOGLE_CLIENT_ID` / `APPLE_CLIENT_ID` is set in `.env`, tapping one just says that option isn't
+available yet and points people to email. Add one and its button starts working automatically.
 
 **Google** (works on `localhost` for testing):
 1. Go to https://console.cloud.google.com/apis/credentials, create an **OAuth 2.0 Client ID** of type
@@ -64,7 +65,7 @@ just shows email sign in / create account — no broken buttons. Add one and its
    https://developer.apple.com/account/resources/identifiers/list/serviceId, enable "Sign in with Apple",
    and configure it with your deployed domain and a return URL.
 2. Copy the Services ID into `.env` as `APPLE_CLIENT_ID`, and the return URL as `APPLE_REDIRECT_URI`.
-3. Deploy the site and test there. Until then, the Apple button simply stays hidden.
+3. Deploy the site and test there. Until then, the Apple button says it isn't available yet.
 
 The server verifies both providers' sign-in tokens itself (checking the signature against Google's/Apple's
 published public keys) rather than trusting whatever the browser sends — see `lib/auth.js`.

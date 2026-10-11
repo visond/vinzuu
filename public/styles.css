@@ -420,19 +420,51 @@ table.data input, table.data select { min-height: 38px; padding: 6px 8px; font-s
 @keyframes drive-right { from { transform: translateX(-50%); } to { transform: translateX(0%); } }
 @keyframes drive-left  { from { transform: translateX(0%); }  to { transform: translateX(-50%); } }
 
+.auth-body { position: relative; padding: 28px 28px 20px; }
 .auth-card { width: 100%; }
-.auth-tabs { display: flex; border: 2px solid var(--ink); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
-.auth-tabs button { flex: 1; min-height: 44px; border: 0; background: #fff; font: 600 15px/1 var(--font-body); cursor: pointer; color: var(--ink); }
-.auth-tabs button + button { border-left: 2px solid var(--ink); }
-.auth-tabs button[aria-selected='true'] { background: var(--ink); color: #fff; }
-.auth-tabs button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.auth-title { font: 800 28px/1.15 var(--font-body); letter-spacing: -0.01em; margin: 0 0 6px; }
+.auth-title:focus { outline: none; }
+.auth-sub { color: var(--ink-2); margin: 0 0 22px; }
+.auth-x {
+  position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center;
+}
+.auth-x:hover { background: #EEF3F5; color: var(--ink); }
+.auth-x:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
+.auth-x svg { width: 20px; height: 20px; }
 
-#oauth-buttons { display: grid; gap: 10px; margin-bottom: 4px; }
-#oauth-buttons[hidden] { display: none; }
-.divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--ink-2); font-size: 13px; }
+#oauth-buttons { display: grid; gap: 12px; }
+.google-slot { display: flex; justify-content: center; min-height: 48px; }
+.btn-oauth { min-height: 50px; border-radius: 10px; font-weight: 600; gap: 10px; }
+.btn-oauth svg { width: 20px; height: 20px; flex: none; }
+.btn-google { border: 1px solid var(--line); background: #fff; color: #1F1F1F; }
+.btn-google:hover { background: #F7F9FA; }
+.btn-apple { border: 1px solid #000; background: #000; color: #fff; }
+.btn-apple:hover { background: #1F1F1F; }
+.divider { display: flex; align-items: center; gap: 12px; margin: 22px 0 18px; color: var(--ink-2); font-size: 13px; letter-spacing: 0.02em; }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .divider[hidden] { display: none; }
-.auth-links { text-align: center; margin-top: 16px; }
+
+.input-icon { position: relative; }
+.input-icon > svg { position: absolute; left: 14px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); color: #6B7B87; pointer-events: none; }
+.input-icon input { padding-left: 44px; border: 1px solid var(--line); border-radius: 10px; min-height: 50px; }
+.input-icon input::placeholder { color: #8695A0; }
+.input-icon.has-eye input { padding-right: 48px; }
+.eye {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 42px; height: 42px;
+  border: 0; border-radius: 8px; background: transparent; color: #6B7B87; cursor: pointer; display: grid; place-items: center;
+}
+.eye:hover { color: var(--ink); }
+.eye:focus-visible { outline: 3px solid var(--blue); outline-offset: 0; }
+.eye svg { width: 20px; height: 20px; }
+#auth-dialog .btn-primary { min-height: 50px; border-radius: 10px; margin-top: 6px; }
+
+.auth-switch { text-align: center; color: var(--ink-2); margin: 6px 0 0; }
+.link-btn { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--blue); cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }
+.link-btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 2px; }
+.auth-skip { text-align: center; font-size: 14px; margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
+@media (max-width: 480px) { .auth-body { padding: 24px 18px 16px; } .auth-title { font-size: 24px; } }
 
 .my-cars { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 /* Author styles always beat the browser's own button chrome, so this only needs to clear the
@@ -576,10 +608,6 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
   .verify-grid { grid-template-columns: 1fr; }
   .verify-art { order: -1; padding: 22px; }
 }
-
-/* ---------- sign-in dialog heading ---------- */
-
-.auth-section-head { margin-bottom: 16px; }
 
 /* ---------- marketing footer ---------- */
 
