@@ -91,14 +91,16 @@
 
   async function renderOverview() {
     const s = await call('/api/admin/stats');
-    const stat = (n, label) => h('div', { class: 'stat' }, h('b', { text: String(n) }), h('span', { text: label }));
+    // label is [singular, plural], so "1 booking request" and "2 booking requests" both read right.
+    const stat = (n, [one, many]) => h('div', { class: 'stat' }, h('b', { text: String(n) }), h('span', { text: n === 1 ? one : many }));
     const tally = (title, rows) => h('div', {},
       h('h3', { text: title }),
       dataTable([{ label: 'Value', key: 'label' }, { label: 'Cars', key: 'n', num: true }], rows));
     return h('div', {},
       h('div', { class: 'stat-grid' },
-        stat(s.vehicles, 'registered cars'), stat(s.fitment_rows, 'part number rows'), stat(s.live_listings, 'parts in stock'),
-        stat(s.shops, 'shops'), stat(s.garages, 'garages'), stat(s.bookings, 'booking requests'), stat(s.open_gaps, 'missing-part searches')),
+        stat(s.vehicles, ['registered car', 'registered cars']), stat(s.fitment_rows, ['part number row', 'part number rows']),
+        stat(s.live_listings, ['part in stock', 'parts in stock']), stat(s.shops, ['shop', 'shops']), stat(s.garages, ['garage', 'garages']),
+        stat(s.bookings, ['booking request', 'booking requests']), stat(s.open_gaps, ['missing-part search', 'missing-part searches'])),
       meta && meta.demo ? h('p', { class: 'note-box', text: 'These numbers include demo cars and shops. Do not quote them in your thesis until you have cleared the demo data.' }) : null,
       h('p', { class: 'muted', text: 'The tables below are real data about the cars your users register. When you have enough real registrations, they can support your thesis (always state how many cars they are based on).' }),
       h('div', { class: 'row' }, tally('Cars by make', s.vehicles_by_make), tally('Cars by where they were built', s.vehicles_by_origin_market)),

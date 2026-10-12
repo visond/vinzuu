@@ -116,7 +116,9 @@ test('a public vehicle response never contains the full VIN or the owner phone',
 });
 
 test('registering an existing plate returns the stored car and ignores new details', async () => {
-  const r = await post('/api/vehicles/register', { plate_number: 'RXA002B', make: 'Toyota', model: 'Corolla', year: 2010 });
+  // A plate-only car (no VIN on file). The demo cars all have VINs now, so they can't stand in here.
+  await post('/api/vehicles/register', { plate_number: 'RXB000K', make: 'Kia', model: 'Sportage', year: 2018 });
+  const r = await post('/api/vehicles/register', { plate_number: 'RXB000K', make: 'Toyota', model: 'Corolla', year: 2010 });
   assert.equal(r.status, 200);
   assert.equal(r.json.existing, true);
   assert.equal(r.json.vehicle.make, 'Kia');
@@ -165,14 +167,14 @@ test('a plate reassigned to a genuinely different car (different VIN) is not mer
 test('adding a VIN to a car that was only ever registered by plate enriches that same record', async () => {
   await post('/api/vehicles/register', { plate_number: 'RXC011B', make: 'Toyota', model: 'RAV4', year: 2016 });
   const enriched = await post('/api/vehicles/register', {
-    plate_number: 'RXC011B', vin: 'JTMBK31V996054321', make: 'Toyota', model: 'RAV4', year: 2016,
+    plate_number: 'RXC011B', vin: 'JTMBK31V996054399', make: 'Toyota', model: 'RAV4', year: 2016,
   });
   assert.equal(enriched.status, 200);
   assert.equal(enriched.json.existing, true);
   assert.ok(enriched.json.vehicle.has_vin);
   // That VIN now also resolves this same car directly, under a different plate.
   const viaVin = await post('/api/vehicles/register', {
-    plate_number: 'RXC099Z', vin: 'JTMBK31V996054321', make: 'Toyota', model: 'RAV4', year: 2016,
+    plate_number: 'RXC099Z', vin: 'JTMBK31V996054399', make: 'Toyota', model: 'RAV4', year: 2016,
   });
   assert.equal(viaVin.json.vehicle.plate_number, 'RXC099Z');
 });
@@ -549,4 +551,28 @@ test('admin cannot delete a car that has booking history', async () => {
   const vehicle = (await get('/api/admin/vehicles', ADMIN)).json.vehicles.find((v) => v.plate_number === 'RXA001A');
   const del = await call('DELETE', `/api/admin/vehicles/${vehicle.id}`, null, ADMIN);
   assert.equal(del.status, 409);
+});
+
+// ---------- demo cars are reachable by VIN ----------
+
+test('every demo car has a VIN, and the example VIN shown on the site finds the demo RAV4', async () => {
+  const meta = await get('/api/meta');
+  assert.equal(meta.json.demo, true);
+  assert.equal(meta.json.demo_vin, 'JTMBK31V996054321');
+  const found = await get(`/api/vehicles/by-vin/${meta.json.demo_vin}`);
+  assert.equal(found.status, 200);
+  assert.equal(found.json.vehicle.plate_number, 'RXA001A');
+  assert.equal(found.json.vehicle.model, 'RAV4');
+  for (const vin of ['KNDPM3AC8J7100002', '5XYPG4A38JG100003', 'KMHJ3813DHU100004']) {
+    assert.equal((await get(`/api/vehicles/by-vin/${vin}`)).status, 200, vin);
+  }
+});
+
+test('a demo database seeded before demo cars had VINs gets them on the next start', () => {
+  const db = openDb(':memory:');
+  seedDemo(db);
+  db.exec("UPDATE vehicles SET vin = NULL WHERE registered_by = 'demo seed'");
+  assert.equal(seedDemo(db), false); // already seeded: only the VINs are filled in
+  const rows = db.prepare("SELECT plate_number, vin FROM vehicles WHERE registered_by = 'demo seed' ORDER BY plate_number").all();
+  assert.deepEqual(rows.map((r) => r.vin), ['JTMBK31V996054321', 'KNDPM3AC8J7100002', '5XYPG4A38JG100003', 'KMHJ3813DHU100004']);
 });

@@ -188,6 +188,12 @@ p { margin: 0 0 12px; }
 .btn-primary { background: var(--yellow); }
 .btn-primary:hover:not([disabled]) { background: var(--yellow-press); }
 .btn-secondary:hover:not([disabled]) { background: #EEF3F5; }
+/* A button that reads as an inline text link, for small optional actions inside a sentence. */
+.btn-link {
+  border: 0; background: none; padding: 0; font: inherit; color: var(--blue);
+  text-decoration: underline; cursor: pointer;
+}
+.btn-link:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .btn-quiet {
   border-color: transparent; background: transparent; color: var(--blue);
   text-decoration: underline; padding: 0 8px; min-height: 44px;
@@ -486,8 +492,13 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
 
 /* ---------- hero VIN quick-search ---------- */
 
-.hero-search { position: relative; z-index: 2; padding: 0 16px 22px; max-width: 420px; }
+.hero-search { position: relative; z-index: 2; padding-bottom: 22px; width: 100%; } /* auto margins in the flex hero would otherwise shrink-wrap it */
+.hero-search-row { display: flex; gap: 8px; max-width: 480px; }
+.hero-search-row .vinbox { flex: 1; }
 .hero-search .vinbox { background: #fff; }
+.hero-search-go { flex: none; padding: 0 22px; border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+.hero-search .hero-search-status { color: #FFD9A0; font-weight: 600; }
+.hero-demo-link { color: var(--yellow); font-weight: 600; }
 .hero-search .hint-dark { color: #C9D6DE; font-size: 13px; margin: 8px 0 0; }
 
 /* ---------- quick-access cards ---------- */

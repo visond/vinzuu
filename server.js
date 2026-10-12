@@ -10,7 +10,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
-const { openDb, tx, seedDemo, isDemo } = require('./db');
+const { openDb, tx, seedDemo, isDemo, DEMO_VIN } = require('./db');
 const alg = require('./lib/algorithms');
 const auth = require('./lib/auth');
 const { findCompatible, logGap, resolveListings, buildCatalog } = require('./lib/matching');
@@ -334,8 +334,9 @@ function createApp(db, config = {}) {
   // =====================  PUBLIC API  =====================
 
   app.get('/api/meta', (req, res) => {
+    const demo = isDemo(db);
     res.json({
-      app_name: APP_NAME, demo: isDemo(db), kigali_center: alg.KIGALI_CENTER,
+      app_name: APP_NAME, demo, demo_vin: demo ? DEMO_VIN : null, kigali_center: alg.KIGALI_CENTER,
       origins: ORIGINS, import_sources: IMPORT_SOURCES, default_radius_km: 15,
     });
   });

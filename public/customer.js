@@ -34,6 +34,11 @@
       return;
     }
     $('demo-banner').hidden = !state.meta.demo;
+    if (state.meta.demo_vin) {
+      // Demo data only: fills in a demo car's VIN and looks it up, so there is something to try.
+      $('demo-try').hidden = false;
+      $('demo-try-btn').addEventListener('click', () => { $('vin').value = state.meta.demo_vin; lookupVin(state.meta.demo_vin); });
+    }
     state.radius = String(state.meta.default_radius_km);
 
     $('vin').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/\s/g, ''); });

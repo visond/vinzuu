@@ -312,13 +312,16 @@ const GARAGES = [
 ];
 
 // Plates use the "RXA" series, which Rwanda has not issued, so they cannot match a real car.
-// [plate, make, model, generation, year, engine, transmission, wmi, origin, importSource]
+// Each demo car also has an invented VIN, because the customer page finds cars by VIN only.
+// The first one is the "e.g." VIN shown in every VIN box, so typing the example just works.
+// [plate, make, model, generation, year, engine, transmission, wmi, origin, importSource, vin]
 const VEHICLES = [
-  ['RXA001A', 'Toyota', 'RAV4', 'XA40', 2016, '2.0L Petrol', 'Automatic', 'JTM', 'Japan', 'UAE / Dubai'],
-  ['RXA002B', 'Kia', 'Sportage', 'QL', 2018, '2.0L Diesel', 'Automatic', 'KND', 'Korea', 'Korea'],
-  ['RXA003C', 'Kia', 'Sportage', 'QL', 2018, '2.0L Diesel', 'Automatic', '5XY', 'USA', 'USA'],
-  ['RXA004D', 'Hyundai', 'Tucson', 'TL', 2017, '1.7L Diesel', 'Automatic', 'KMH', 'Korea', 'Korea'],
+  ['RXA001A', 'Toyota', 'RAV4', 'XA40', 2016, '2.0L Petrol', 'Automatic', 'JTM', 'Japan', 'UAE / Dubai', 'JTMBK31V996054321'],
+  ['RXA002B', 'Kia', 'Sportage', 'QL', 2018, '2.0L Diesel', 'Automatic', 'KND', 'Korea', 'Korea', 'KNDPM3AC8J7100002'],
+  ['RXA003C', 'Kia', 'Sportage', 'QL', 2018, '2.0L Diesel', 'Automatic', '5XY', 'USA', 'USA', '5XYPG4A38JG100003'],
+  ['RXA004D', 'Hyundai', 'Tucson', 'TL', 2017, '1.7L Diesel', 'Automatic', 'KMH', 'Korea', 'Korea', 'KMHJ3813DHU100004'],
 ];
+const DEMO_VIN = VEHICLES[0][10];
 
 const BASE_PRICE = {
   'Front Brake Pad': 38000, 'Rear Brake Pad': 34000, 'Oil Filter': 7500, 'Air Filter': 11000,
@@ -343,7 +346,7 @@ function placeholderPhoto(text) {
 
 function seedDemo(db) {
   const already = db.prepare('SELECT COUNT(*) AS n FROM fitment_reference').get().n;
-  if (already > 0) return false;
+  if (already > 0) { backfillDemoVins(db); return false; }
 
   tx(db, () => {
     const insFit = db.prepare(`INSERT INTO fitment_reference
@@ -361,10 +364,10 @@ function seedDemo(db) {
     for (const g of GARAGES) insGarage.run(...g);
 
     const insVeh = db.prepare(`INSERT INTO vehicles
-      (plate_number, wmi_code, make, model, generation, year, engine, transmission, origin_market,
-       drive_side, import_source, registered_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
+      (plate_number, vin, wmi_code, make, model, generation, year, engine, transmission, origin_market,
+       drive_side, import_source, registered_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     for (const v of VEHICLES) {
-      insVeh.run(v[0], v[7], v[1], v[2], v[3], v[4], v[5], v[6], v[8], 'LHD', v[9], 'demo seed');
+      insVeh.run(v[0], v[10], v[7], v[1], v[2], v[3], v[4], v[5], v[6], v[8], 'LHD', v[9], 'demo seed');
     }
 
     // Listings: each OE number is stocked by 3 of the 5 demo shops, with prices that differ.
@@ -398,9 +401,21 @@ function seedDemo(db) {
   return true;
 }
 
+/** Demo databases created before the demo cars had VINs: give each seeded car its VIN, so the
+ *  VIN-only customer page can reach them. Skips a car that already has a VIN, and a VIN that some
+ *  other car has since claimed, so it never overwrites anything a person entered. */
+function backfillDemoVins(db) {
+  if (!isDemo(db)) return;
+  const setVin = db.prepare(`UPDATE vehicles SET vin = ? WHERE id = (
+      SELECT id FROM vehicles WHERE plate_number = ? AND registered_by = 'demo seed' AND vin IS NULL
+      ORDER BY id LIMIT 1)
+    AND NOT EXISTS (SELECT 1 FROM vehicles WHERE vin = ?)`);
+  for (const v of VEHICLES) setVin.run(v[10], v[0], v[10]);
+}
+
 function isDemo(db) {
   const row = db.prepare("SELECT value FROM meta WHERE key = 'demo'").get();
   return !!row && row.value === '1';
 }
 
-module.exports = { openDb, tx, seedDemo, isDemo, DEFAULT_DB_PATH };
+module.exports = { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH };

@@ -33,9 +33,19 @@
     heroSearch.addEventListener('submit', (event) => {
       event.preventDefault();
       const vin = heroVinInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      if (!vin) { heroVinInput.focus(); return; }
+      const status = $('hs-status');
+      if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+        status.textContent = vin
+          ? 'A VIN has exactly 17 letters and numbers (never I, O or Q). Check it and try again.'
+          : 'Type your 17-character VIN first.';
+        status.hidden = false;
+        heroVinInput.focus();
+        return;
+      }
+      status.hidden = true;
       location.href = `/index.html?vin=${encodeURIComponent(vin)}`;
     });
+    heroVinInput.addEventListener('input', () => { $('hs-status').hidden = true; });
   }
 
   // ---------------------------------------------------------------- sign-in popup
@@ -79,7 +89,14 @@
   function afterSignIn() { location.href = '/index.html'; }
 
   // If already signed in, skip straight to the app rather than showing the form again.
-  api('/api/meta').then((meta) => { $('demo-banner').hidden = !meta.demo; }).catch(() => {});
+  api('/api/meta').then((meta) => {
+    $('demo-banner').hidden = !meta.demo;
+    // Demo data only: a one-tap way in, since nobody visiting has a demo car's VIN to hand.
+    if (meta.demo_vin && $('hs-demo')) {
+      $('hs-demo-link').href = `/index.html?vin=${encodeURIComponent(meta.demo_vin)}`;
+      $('hs-demo').hidden = false;
+    }
+  }).catch(() => {});
   api('/api/auth/me').then((r) => { if (r.user) afterSignIn(); }).catch(() => {});
 
   // ---------------------------------------------------------------- email sign in / sign up

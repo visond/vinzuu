@@ -1,6 +1,6 @@
 # Vinzuu (MVP v0.4)
 
-A customer types a plate number. The system identifies the car, finds the exact spare part number for it,
+A customer types their car's VIN (the 17-character vehicle identification number). The system identifies the car, finds the exact spare part number for it,
 shows which Kigali shops have it in stock (price, distance, trust label), and lets the customer book a
 garage to fit it.
 
@@ -39,9 +39,11 @@ The welcome page (`/`) lets a customer create an account or sign in with email a
 in:
 - A car they register gets saved to their account, and shows up as a row of plate chips ("my cars") the
   next time they visit, so they don't have to retype it.
-- If they sign in and re-enter a plate nobody else had claimed yet, it is adopted into their account.
-- A plain "Continue without an account" link on the welcome page skips straight to the plate-only flow
-  from the first version of this project, unchanged, for anyone who does not want to sign up.
+- If they sign in and re-enter a VIN nobody else had claimed yet, that car is adopted into their account.
+- The VIN box on the welcome page, and a plain "Continue without an account" link in the sign-in box, go
+  straight to the customer app for anyone who does not want to sign up.
+- The plate is still asked for when a car is registered, but only as a label: typing a plate never looks a
+  car up, because a plate in Rwanda can move to a different car. The VIN is what finds the car.
 
 Passwords are hashed with `scrypt` (built into Node, no extra dependency). Sessions are a signed cookie,
 not a database table, so restarting the server does not sign anyone out early.
@@ -76,16 +78,20 @@ The first start loads **invented** demo data: fake shops, fake prices, and part 
 
 | Try this | What it shows |
 |---|---|
-| Plate `RXA002B`, part **Front Bumper** | A Korea-built Kia Sportage gets part `DEMO-KIA-QL-FB-KR` |
-| Plate `RXA003C`, part **Front Bumper** | The same model built in the USA gets a different part, `DEMO-KIA-QL-FB-US` |
-| Plate `RXA001A`, part **Front Brake Pad** | Three shops, three different trust labels |
-| Any plate not listed, for example `RXC777Z` | The "we do not know this car yet" registration form |
+| **Try a demo car** link under the VIN box (homepage or customer app) | Opens the demo Toyota RAV4 in one tap |
+| VIN `JTMBK31V996054321` (the example VIN shown in the box), part **Front Brake Pad** | Toyota RAV4 (plate `RXA001A`): three shops, three different trust labels |
+| VIN `KNDPM3AC8J7100002`, part **Front Bumper** | A Korea-built Kia Sportage (plate `RXA002B`) gets part `DEMO-KIA-QL-FB-KR` |
+| VIN `5XYPG4A38JG100003`, part **Front Bumper** | The same model built in the USA (plate `RXA003C`) gets a different part, `DEMO-KIA-QL-FB-US` |
+| VIN `KMHJ3813DHU100004` | Hyundai Tucson (plate `RXA004D`) |
+| Any other valid VIN, for example `JTMBK31V996000999` | The "we do not know this VIN yet" registration form |
 | Search "brake noise" | Symptom search finds the brake pads |
 | Sign up on the welcome page, then register a car | The car is saved to your account; "Change car" now shows it as a tap-to-select chip |
 | Shop console, code `111111` to `555555` | Sign in as a demo shop |
 | Admin console, your admin token, **Cars** tab | Add, correct, or delete a car directly |
 
-The demo plates use the `RXA` series, which Rwanda has not issued, so they cannot belong to a real car.
+The demo plates use the `RXA` series, which Rwanda has not issued, so they cannot belong to a real car. The
+demo VINs are invented too. A demo database created before the demo cars had VINs gets them filled in on the
+next start.
 
 **To start clean (real use):** stop the server, run `npm run reset-db`, then `npm run start:real`.
 

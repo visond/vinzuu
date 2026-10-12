@@ -49,13 +49,17 @@
       <h1>Rwanda's cars, mapped to their parts.</h1>
       <p>Type your VIN. We find the exact part for your car's build, compare shops by price and distance, and let you book installation.</p>
     </div>
-    <form class="hero-search" id="hero-search" novalidate>
+    <form class="hero-search wrap" id="hero-search" novalidate>
       <label for="hs-vin" class="sr-only">VIN (17 characters)</label>
-      <div class="vinbox">
-        <span class="vinbox-tag" aria-hidden="true">VIN</span>
-        <input id="hs-vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="17" placeholder="e.g. JTMBK31V996054321">
+      <div class="hero-search-row">
+        <div class="vinbox">
+          <span class="vinbox-tag" aria-hidden="true">VIN</span>
+          <input id="hs-vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="17" placeholder="e.g. JTMBK31V996054321">
+        </div>
+        <button class="btn btn-primary hero-search-go" type="submit">Find</button>
       </div>
-      <p class="hint-dark">No account needed to search. Sign in later to save your cars.</p>
+      <p id="hs-status" class="hint-dark hero-search-status" role="status" aria-live="polite" hidden></p>
+      <p class="hint-dark">No account needed to search. Sign in later to save your cars.<span id="hs-demo" hidden> Or <a class="hero-demo-link" id="hs-demo-link" href="/index.html">try a demo car</a>.</span></p>
     </form>
     <div class="hero-road" aria-hidden="true">
       <div class="lane lane-1"><div class="car-track"></div></div>
