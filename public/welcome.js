@@ -53,6 +53,20 @@
   }
   $('open-auth')?.addEventListener('click', showAuthDialog);
   $('auth-dialog-close')?.addEventListener('click', closeAuthDialog);
+  // Tapping or clicking the dimmed area around the card dismisses it. Taps on the backdrop land on
+  // the <dialog> itself, so check the point is outside its box. Only close when the press also
+  // started outside, so dragging to select text in a field and releasing past the edge won't close it.
+  function outsideDialog(event) {
+    if (event.target !== authDialog) return false;
+    const r = authDialog.getBoundingClientRect();
+    return event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom;
+  }
+  let pressedOutside = false;
+  authDialog.addEventListener('pointerdown', (event) => { pressedOutside = outsideDialog(event); });
+  authDialog.addEventListener('click', (event) => {
+    if (pressedOutside && outsideDialog(event)) closeAuthDialog();
+    pressedOutside = false;
+  });
   if (location.hash === '#auth-card') {
     history.replaceState(null, '', location.pathname);
     showAuthDialog();
