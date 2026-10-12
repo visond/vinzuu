@@ -52,16 +52,16 @@
   // Names match the part categories in db.js exactly, so "Shop now" can open that part
   // straight away on the finder once the car is known.
 
-  // [category, image, note]. Photos fill the frame; .svg drawings (no photo yet) sit centred.
+  // [category, image]. The card shows only the part's name.
   const PARTS = [
-    ['Front Bumper', 'front-bumper.jpg', 'Body panels, primed and ready to paint'],
-    ['Headlight Assembly', 'headlight.jpg', 'Left or right, matched to your build'],
-    ['Front Brake Pad', 'brake-disc.jpg', 'Stop the squeal, keep the grip'],
-    ['Oil Filter', 'oil-filter.svg', 'For every service'],
-    ['Air Filter', 'air-filter.svg', 'Keeps Kigali dust out of the engine'],
-    ['Battery', 'battery.jpg', 'Sized to your car, ready to fit'],
-    ['Wiper Blade', 'wiper-blade.jpg', 'Clear view in the rainy season'],
-    ['Engine Oil', 'engine-oil.jpg', 'The right grade for your engine'],
+    ['Front Bumper', 'front-bumper.jpg'],
+    ['Headlight Assembly', 'headlight.jpg'],
+    ['Front Brake Pad', 'brake-disc.jpg'],
+    ['Oil Filter', 'oil-filter.jpg'],
+    ['Air Filter', 'air-filter.jpg'],
+    ['Battery', 'battery.jpg'],
+    ['Wiper Blade', 'wiper-blade.jpg'],
+    ['Engine Oil', 'engine-oil.jpg'],
   ];
 
   function shopNowHref(part) {
@@ -71,15 +71,14 @@
     return `/index.html?${q}`;
   }
 
-  function partCard([name, img, note], copy) {
+  function partCard([name, img], copy) {
     const link = h('a', { class: 'btn btn-primary', href: `/index.html?part=${encodeURIComponent(name)}`, text: 'Shop now' });
     link.addEventListener('click', () => { link.href = shopNowHref(name); });
     return h('li', { class: 'part-card', 'aria-hidden': copy ? 'true' : null, inert: copy || null },
-      h('div', { class: `pc-photo${img.endsWith('.svg') ? ' is-drawing' : ''}` },
+      h('div', { class: 'pc-photo' },
         h('img', { src: `/img/parts/${img}`, alt: '', width: 220, height: 154, loading: 'lazy' })),
       h('div', { class: 'pc-body' },
         h('h3', { text: name }),
-        h('p', { class: 'pc-note', text: note }),
         link));
   }
   // The second copy only exists so the loop is seamless; screen readers and Tab skip it.
