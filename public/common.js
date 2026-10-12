@@ -32,7 +32,7 @@ async function api(path, { method = 'GET', body, headers } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (networkError) {
-    const err = new Error('No connection. Check your internet and try again.');
+    const err = new Error('Could not reach Vinzuu. Check your connection and try again in a moment.');
     err.status = 0;
     throw err;
   }
