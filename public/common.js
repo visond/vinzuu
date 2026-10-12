@@ -32,7 +32,7 @@ async function api(path, { method = 'GET', body, headers } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (networkError) {
-    const err = new Error('No connection. Check your internet and try again.');
+    const err = new Error('Could not reach Vinzuu. Check your connection and try again in a moment.');
     err.status = 0;
     throw err;
   }
@@ -143,4 +143,17 @@ function resizeImage(file, maxSide = 640) {
     linksWrap.classList.remove('open');
     toggle.setAttribute('aria-expanded', 'false');
   }));
+})();
+
+/* Tapping the dimmed area outside an open dialog closes it, like most apps. Dialogs have no
+   padding, so a click whose target is the <dialog> itself landed on the backdrop. The press
+   must also start there, so a text selection dragged out of a field doesn't close it. */
+(function closeDialogsOnBackdropTap() {
+  let pressedOn = null;
+  document.addEventListener('pointerdown', (e) => { pressedOn = e.target; });
+  document.addEventListener('click', (e) => {
+    const dlg = e.target;
+    if (!(dlg instanceof HTMLDialogElement) || !dlg.open || pressedOn !== dlg) return;
+    if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
+  });
 })();

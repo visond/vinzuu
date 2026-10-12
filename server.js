@@ -140,17 +140,21 @@ function createApp(db, config = {}) {
   app.use(express.json({ limit: '1mb' }));
 
   app.use((req, res, next) => {
-    // The welcome page optionally loads Google's and Apple's own sign-in scripts, so it alone
-    // gets a looser policy that names exactly those two hosts. Every other page keeps the
+    // The welcome page optionally loads Google's own sign-in script, so it alone gets a
+    // looser policy that names exactly Google's sign-in host. Every other page keeps the
     // strict 'self'-only policy.
     const onWelcomePage = req.path === '/' || req.path === '/welcome.html';
     res.set({
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'same-origin',
       'Content-Security-Policy': onWelcomePage
-        ? "default-src 'self'; img-src 'self' data:; connect-src 'self'; " +
-          "script-src 'self' https://accounts.google.com https://appleid.cdn-apple.com; " +
-          "frame-src https://accounts.google.com https://appleid.apple.com; " +
+        ? "default-src 'self'; img-src 'self' data:; " +
+          // The Google Sign-In entries Google documents for its button. Its button also sets a
+          // few inline styles, so this page alone allows those; styles cannot run script.
+          "connect-src 'self' https://accounts.google.com/gsi/; " +
+          "script-src 'self' https://accounts.google.com/gsi/client; " +
+          "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; " +
+          "frame-src https://accounts.google.com/gsi/; " +
           "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         : "default-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
     });
@@ -227,9 +231,20 @@ function createApp(db, config = {}) {
   };
 
   const getUserById = (id) => (id == null ? null : db.prepare('SELECT * FROM users WHERE id = ?').get(id));
-  const publicUser = (u) => (u && { id: u.id, name: u.name, email: u.email, provider: u.auth_provider });
+  const publicUser = (u) => (u && { id: u.id, name: u.name, email: u.email, phone: u.phone || null, provider: u.auth_provider });
 
-  /** Find or create the local account for a Google/Apple sign-in. Matches by provider id first,
+  /** New passwords: at least 8 characters with an uppercase letter, a number and a symbol.
+   *  (Only checked when an account is created, so older accounts can still sign in.) */
+  function checkNewPassword(password) {
+    const missing = [];
+    if (password.length < 8) missing.push('at least 8 characters');
+    if (!/[A-Z]/.test(password)) missing.push('an uppercase letter');
+    if (!/[0-9]/.test(password)) missing.push('a number');
+    if (!/[^A-Za-z0-9]/.test(password)) missing.push('a special character');
+    if (missing.length) throw new HttpError(400, `Your password needs ${missing.join(', ')}.`);
+  }
+
+  /** Find or create the local account for a Google sign-in. Matches by provider id first,
    *  then by email (so someone who signed up with a password can later add Google with the same
    *  address), and only creates a new row if neither matched. */
   function upsertOAuthUser(provider, providerId, email, name) {
@@ -250,13 +265,11 @@ function createApp(db, config = {}) {
 
   // =====================  ACCOUNTS  =====================
 
-  // Tells the welcome page which sign-in buttons to show. Google and Apple only light up once
-  // their environment variables are set, so the page stays simple until you configure them.
+  // Tells the welcome page whether Google sign-in is set up. The button only works once
+  // GOOGLE_CLIENT_ID is set; until then it says Google isn't available yet.
   app.get('/api/auth/config', (req, res) => {
     res.json({
       google: !!process.env.GOOGLE_CLIENT_ID, google_client_id: process.env.GOOGLE_CLIENT_ID || null,
-      apple: !!process.env.APPLE_CLIENT_ID, apple_client_id: process.env.APPLE_CLIENT_ID || null,
-      apple_redirect_uri: process.env.APPLE_REDIRECT_URI || null,
     });
   });
 
@@ -269,12 +282,13 @@ function createApp(db, config = {}) {
     const name = text(b.name, { field: 'name', max: 60, required: true });
     const email = normalizeEmail(b.email);
     const password = String(b.password || '');
-    if (password.length < 8) throw new HttpError(400, 'Choose a password with at least 8 characters.');
+    checkNewPassword(password);
+    const userPhone = phone(b.phone, 'Phone', false);
     if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) {
       throw new HttpError(409, 'An account with that email already exists. Try signing in instead.');
     }
-    const info = db.prepare("INSERT INTO users (name, email, password_hash, auth_provider) VALUES (?,?,?,'local')")
-      .run(name, email, auth.hashPassword(password));
+    const info = db.prepare("INSERT INTO users (name, email, phone, password_hash, auth_provider) VALUES (?,?,?,?,'local')")
+      .run(name, email, userPhone, auth.hashPassword(password));
     auth.setSessionCookie(req, res, Number(info.lastInsertRowid));
     res.status(201).json({ user: publicUser(getUserById(Number(info.lastInsertRowid))) });
   });
@@ -285,7 +299,7 @@ function createApp(db, config = {}) {
     const password = String(b.password || '');
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
     if (!user || user.auth_provider !== 'local' || !auth.verifyPassword(password, user.password_hash)) {
-      throw new HttpError(401, 'That email and password do not match. If you signed up with Google or Apple, use that button instead.');
+      throw new HttpError(401, 'That email and password do not match. If you signed up with Google, use the Google button instead.');
     }
     auth.setSessionCookie(req, res, user.id);
     res.json({ user: publicUser(user) });
@@ -305,22 +319,6 @@ function createApp(db, config = {}) {
       throw new HttpError(401, err.message);
     }
     const user = upsertOAuthUser('google', payload.sub, payload.email, payload.name);
-    auth.setSessionCookie(req, res, user.id);
-    res.json({ user: publicUser(user) });
-  }));
-
-  app.post('/api/auth/apple', limitWrites, asyncRoute(async (req, res) => {
-    if (!process.env.APPLE_CLIENT_ID) throw new HttpError(503, 'Apple sign-in is not set up on this server yet.');
-    let payload;
-    try {
-      payload = await auth.verifyAppleIdToken((req.body || {}).id_token, process.env.APPLE_CLIENT_ID);
-    } catch (err) {
-      throw new HttpError(401, err.message);
-    }
-    // Apple sends the person's name only once, on their very first sign-in, as plain fields in
-    // the page's response rather than inside the token, so the client passes it along here.
-    const name = text((req.body || {}).name, { field: 'name', max: 60 });
-    const user = upsertOAuthUser('apple', payload.sub, payload.email, name);
     auth.setSessionCookie(req, res, user.id);
     res.json({ user: publicUser(user) });
   }));

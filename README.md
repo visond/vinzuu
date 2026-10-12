@@ -45,31 +45,35 @@ in:
 - The plate is still asked for when a car is registered, but only as a label: typing a plate never looks a
   car up, because a plate in Rwanda can move to a different car. The VIN is what finds the car.
 
+Creating an account asks for a full name, email, an optional phone number, and a password typed twice.
+New passwords need at least 8 characters, an uppercase letter, a number and a special character (checked
+in the browser and again on the server). Accounts made before this rule can still sign in.
+
 Passwords are hashed with `scrypt` (built into Node, no extra dependency). Sessions are a signed cookie,
 not a database table, so restarting the server does not sign anyone out early.
 
-### Google and Apple sign-in
+### Google sign-in
 
-Both are **optional**. Leave `GOOGLE_CLIENT_ID` / `APPLE_CLIENT_ID` unset in `.env` and the welcome page
-just shows email sign in / create account — no broken buttons. Add one and its button appears automatically.
+**Optional.** The sign-in box always shows "Continue with Google", but until `GOOGLE_CLIENT_ID` is set in
+`.env`, tapping it just says Google isn't available yet and points people to email. Set it and the
+button starts working automatically. It works on `localhost`, so you can test it before deploying.
 
-**Google** (works on `localhost` for testing):
-1. Go to https://console.cloud.google.com/apis/credentials, create an **OAuth 2.0 Client ID** of type
-   "Web application".
-2. Under "Authorized JavaScript origins" add `http://localhost:3000` (for testing) and your real domain
-   once you deploy.
-3. Copy the client ID into `.env` as `GOOGLE_CLIENT_ID`.
+1. Go to https://console.cloud.google.com/ and create a project (for example "Vinzuu").
+2. Open **APIs & Services → OAuth consent screen** (newer consoles call it **Google Auth Platform**).
+   Choose **External**, fill in the app name, support email and developer email, and save.
+   While the app is in "Testing", only the Google accounts you add under **Test users** can sign in.
+   Click **Publish app** when you want anyone to be able to.
+3. Open **APIs & Services → Credentials → Create credentials → OAuth client ID**. Choose
+   **Web application**.
+4. Under **Authorized JavaScript origins** add `http://localhost:3000` and `http://localhost` (Google
+   needs both for local testing), plus your real domain (for example `https://your-domain.example`) once you deploy.
+   No redirect URIs are needed.
+5. Copy the client ID (it ends in `.apps.googleusercontent.com`) into `.env` as `GOOGLE_CLIENT_ID`,
+   then restart the server.
 
-**Apple** (needs a real deployed domain — it cannot be tested on `localhost`; Apple does not accept
-`localhost` as a redirect target):
-1. You need a paid Apple Developer account. Create a **Services ID** in
-   https://developer.apple.com/account/resources/identifiers/list/serviceId, enable "Sign in with Apple",
-   and configure it with your deployed domain and a return URL.
-2. Copy the Services ID into `.env` as `APPLE_CLIENT_ID`, and the return URL as `APPLE_REDIRECT_URI`.
-3. Deploy the site and test there. Until then, the Apple button simply stays hidden.
-
-The server verifies both providers' sign-in tokens itself (checking the signature against Google's/Apple's
-published public keys) rather than trusting whatever the browser sends — see `lib/auth.js`.
+The client ID is not a secret (it is visible in the page), so there is no client secret to store.
+The server verifies every Google sign-in token itself, checking the signature against Google's
+published public keys, rather than trusting whatever the browser sends; see `lib/auth.js`.
 
 ## Try it with the demo data
 
@@ -116,7 +120,7 @@ confirming the test failed.
 | Algorithm E: confidence to customer badge | `lib/algorithms.js` (`badgeFor`) |
 | Database schema | `db.js` |
 | REST API | `server.js` |
-| Customer accounts, sessions, Google/Apple sign-in | `lib/auth.js` |
+| Customer accounts, sessions, Google sign-in | `lib/auth.js` |
 
 Safety rules worth knowing:
 
@@ -157,7 +161,6 @@ These are deliberate, and each one fixes a gap in the spec:
   for a pilot with a handful of shops and one operator, not for the public internet.
 - **No "forgot password" flow yet.** If a customer forgets their password, the only fix right now is an admin
   resetting it directly in the database, or the customer signing up again with a different email.
-- **Apple sign-in cannot be tested on localhost.** See "Google and Apple sign-in" above.
 - **Photos are stored inside the database.** Move them to file storage (Cloudinary, S3) before you have many shops.
 - **WhatsApp works through pre-filled links.** The customer taps to send, so nothing is sent automatically. The
   WhatsApp Business API is the upgrade path.
@@ -178,7 +181,7 @@ server.js            the API and web server
 db.js                schema, part categories, demo data
 lib/algorithms.js    pure functions: plate, VIN, WMI, distance, badges
 lib/matching.js      database algorithms: part lookup, shop listings, catalog
-lib/auth.js          passwords, session cookies, Google/Apple sign-in verification
+lib/auth.js          passwords, session cookies, Google sign-in verification
 public/              the web pages (welcome, customer, shop, admin), scripts, styles, fonts
 test/api.test.js     the test suite
 scripts/reset-db.js  deletes the local database

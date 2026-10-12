@@ -163,48 +163,65 @@
   function showAuthDialog() {
     if (typeof authDialog.showModal === 'function') { if (!authDialog.open) authDialog.showModal(); }
     else authDialog.setAttribute('open', '');
+    // Start on the heading rather than the first button, so the close X doesn't open highlighted.
+    $('auth-head').focus({ preventScroll: true });
   }
   function closeAuthDialog() {
     if (typeof authDialog.close === 'function') authDialog.close(); else authDialog.removeAttribute('open');
   }
   $('open-auth')?.addEventListener('click', showAuthDialog);
   $('auth-dialog-close')?.addEventListener('click', closeAuthDialog);
-  // Tapping or clicking the dimmed area around the card dismisses it. Taps on the backdrop land on
-  // the <dialog> itself, so check the point is outside its box. Only close when the press also
-  // started outside, so dragging to select text in a field and releasing past the edge won't close it.
-  function outsideDialog(event) {
-    if (event.target !== authDialog) return false;
-    const r = authDialog.getBoundingClientRect();
-    return event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom;
-  }
-  let pressedOutside = false;
-  authDialog.addEventListener('pointerdown', (event) => { pressedOutside = outsideDialog(event); });
-  authDialog.addEventListener('click', (event) => {
-    if (pressedOutside && outsideDialog(event)) closeAuthDialog();
-    pressedOutside = false;
-  });
+  // Tapping the dimmed area outside the popup closes it: handled for every dialog in common.js.
   if (location.hash === '#auth-card') {
     history.replaceState(null, '', location.pathname);
     showAuthDialog();
   }
 
-  // ---------------------------------------------------------------- tabs
+  // ---------------------------------------------------------------- sign in <-> create account
+  // One form at a time; the link under each form swaps to the other, and the heading follows.
 
   const signinForm = $('signin-form');
   const signupForm = $('signup-form');
-  const tabSignin = $('tab-signin');
-  const tabSignup = $('tab-signup');
+  const HEADINGS = {
+    signin: ['Welcome back', 'Sign in to save your cars and track your bookings.'],
+    signup: ['Create your account', 'Register to save your cars and book garages on Vinzuu.'],
+  };
 
-  function showTab(which) {
+  function showForm(which) {
     const isIn = which === 'signin';
     signinForm.hidden = !isIn;
     signupForm.hidden = isIn;
-    tabSignin.setAttribute('aria-selected', String(isIn));
-    tabSignup.setAttribute('aria-selected', String(!isIn));
+    [$('auth-head').textContent, $('auth-sub').textContent] = HEADINGS[which];
+    // Our own Google button until Google's replaces it (then the label is gone and Google's is redrawn).
+    const googleLabel = $('google-label');
+    if (googleLabel) googleLabel.textContent = isIn ? 'Continue with Google' : 'Sign up with Google';
+    renderGoogleButton();
+    setStatus($('signin-status'), '');
+    setStatus($('signup-status'), '');
     (isIn ? $('si-email') : $('su-name')).focus({ preventScroll: true });
   }
-  tabSignin.addEventListener('click', () => showTab('signin'));
-  tabSignup.addEventListener('click', () => showTab('signup'));
+  $('to-signup').addEventListener('click', () => showForm('signup'));
+  $('to-signin').addEventListener('click', () => showForm('signin'));
+
+  // Show / hide password. The icon is static markup, so innerHTML is safe here.
+  const EYE_OPEN = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/></svg>';
+  const EYE_SHUT = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.3-.5 4.6-1.2M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  document.querySelectorAll('#auth-dialog .eye').forEach((eye) => {
+    const input = $(eye.dataset.for);
+    eye.innerHTML = EYE_OPEN;
+    eye.addEventListener('click', () => {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      eye.innerHTML = show ? EYE_SHUT : EYE_OPEN;
+      eye.setAttribute('aria-pressed', String(show));
+      eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+  });
+
+  // Errors from the Google button show under whichever form is on screen.
+  function oauthStatus(message) {
+    setStatus(signinForm.hidden ? $('signup-status') : $('signin-status'), message, 'error');
+  }
 
   function afterSignIn() { location.href = '/index.html'; }
 
@@ -231,22 +248,42 @@
     } catch (err) { setStatus(status, err.message, 'error'); }
   });
 
+  // Same rule the server enforces; checked here too so people see the problem before sending.
+  function passwordProblem(password) {
+    const missing = [];
+    if (password.length < 8) missing.push('at least 8 characters');
+    if (!/[A-Z]/.test(password)) missing.push('an uppercase letter');
+    if (!/[0-9]/.test(password)) missing.push('a number');
+    if (!/[^A-Za-z0-9]/.test(password)) missing.push('a special character');
+    return missing.length ? `Your password needs ${missing.join(', ')}.` : null;
+  }
+
   signupForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const status = $('signup-status');
+    const password = $('su-password').value;
+    const problem = passwordProblem(password)
+      || (password !== $('su-password2').value ? 'The two passwords do not match.' : null);
+    if (problem) { setStatus(status, problem, 'error'); return; }
     setStatus(status, 'Creating your account…');
     try {
       await api('/api/auth/signup', {
         method: 'POST',
-        body: { name: $('su-name').value, email: $('su-email').value, password: $('su-password').value },
+        body: { name: $('su-name').value, email: $('su-email').value, phone: $('su-phone').value, password },
       });
       afterSignIn();
     } catch (err) { setStatus(status, err.message, 'error'); }
   });
 
-  // ---------------------------------------------------------------- optional Google / Apple
-  // These stay hidden until the server reports a client id is configured, so the page looks
-  // deliberate (email-only) rather than broken when nobody has set them up yet.
+  // ---------------------------------------------------------------- Google
+  // The button is always on screen. Until the server reports a client id, it just says Google
+  // isn't available yet. Once configured, Google's own button (styled to match) replaces ours,
+  // because Google only allows sign-in through its button.
+
+  let googleReady = false;
+  $('google-fallback').addEventListener('click', () => {
+    oauthStatus('Google sign-in is not available yet. Please use your email for now.');
+  });
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -266,35 +303,27 @@
           try {
             await api('/api/auth/google', { method: 'POST', body: { id_token: response.credential } });
             afterSignIn();
-          } catch (err) { setStatus($('signin-status'), err.message, 'error'); }
+          } catch (err) { oauthStatus(err.message); }
         },
       });
-      window.google.accounts.id.renderButton($('google-btn'), { theme: 'outline', size: 'large', width: 320, text: 'continue_with' });
+      googleReady = true;
+      renderGoogleButton();
     } catch (err) { /* offline or blocked: the email form below still works */ }
   }
 
-  async function setupApple(clientId, redirectURI) {
-    try {
-      await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js');
-      window.AppleID.auth.init({ clientId, scope: 'name email', redirectURI: redirectURI || location.origin, usePopup: true });
-      const btn = $('apple-btn');
-      btn.hidden = false;
-      btn.addEventListener('click', async () => {
-        try {
-          const result = await window.AppleID.auth.signIn();
-          const name = result.user && result.user.name ? `${result.user.name.firstName} ${result.user.name.lastName}` : null;
-          await api('/api/auth/apple', { method: 'POST', body: { id_token: result.authorization.id_token, name } });
-          afterSignIn();
-        } catch (err) { setStatus($('signin-status'), 'Apple sign-in did not complete. Please try again or use email.', 'error'); }
-      });
-    } catch (err) { /* offline or blocked */ }
+  // Draw (or redraw) Google's own button, saying "Sign up with Google" on the create-account form.
+  function renderGoogleButton() {
+    if (!googleReady) return;
+    const slot = $('google-btn');
+    const width = Math.min(400, Math.round(slot.getBoundingClientRect().width) || 400);
+    slot.replaceChildren();
+    window.google.accounts.id.renderButton(slot, {
+      theme: 'outline', size: 'large', shape: 'rectangular', width, logo_alignment: 'center',
+      text: signupForm.hidden ? 'continue_with' : 'signup_with',
+    });
   }
 
   api('/api/auth/config').then((cfg) => {
-    if (!cfg.google && !cfg.apple) return; // keep the page to email only until one is configured
-    $('oauth-buttons').hidden = false;
-    document.querySelector('.divider').hidden = false;
     if (cfg.google) setupGoogle(cfg.google_client_id);
-    if (cfg.apple) setupApple(cfg.apple_client_id, cfg.apple_redirect_uri);
   }).catch(() => {});
 })();
