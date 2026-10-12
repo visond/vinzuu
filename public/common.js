@@ -81,6 +81,46 @@ function setStatus(el, message, kind) {
   el.className = 'status' + (kind ? ` ${kind}` : '');
 }
 
+// ---------- car registration forms (customer app and shop console) ----------
+
+/** The one generation of this model on sale in `year`, or null when the year does not settle it. */
+function generationForYear(generations, year) {
+  const y = Number(year);
+  if (!y) return null;
+  const hits = generations.filter((g) => y >= g.year_start && y <= g.year_end);
+  return hits.length === 1 ? hits[0].generation : null;
+}
+
+/** When a select offers exactly one real choice and none is made yet, make it. */
+function pickOnlyChoice(select) {
+  const real = [...select.options].filter((o) => o.value);
+  if (real.length === 1 && !select.value) select.value = real[0].value;
+}
+
+/**
+ * Keeps the generation in step with the year: picks the generation that year settles, and clears
+ * it again if a later change of year no longer settles it. A generation the person chose by hand
+ * is left alone.
+ */
+function syncGenerationToYear(genSelect, generations, year) {
+  if (genSelect.value && genSelect.dataset.auto !== '1') return;
+  const g = generationForYear(generations, year);
+  genSelect.value = g || '';
+  genSelect.dataset.auto = g ? '1' : '';
+}
+
+/** Fill the make and the build country from the VIN prefix, without overriding a choice already made. */
+async function prefillFromVin(vin, f, onMakeChange) {
+  if (!vin) return;
+  const has = (select, value) => [...select.options].some((o) => o.value === value);
+  try {
+    const d = await api(`/api/vin/decode?vin=${enc(vin)}`);
+    if (!d.valid) return;
+    if (d.maker && !f.make.value && has(f.make, d.maker)) { f.make.value = d.maker; onMakeChange(); }
+    if (d.origin && !f.origin.value && has(f.origin, d.origin)) f.origin.value = d.origin;
+  } catch (err) { /* a convenience only: the person can still fill these in */ }
+}
+
 /** Static, trusted SVG strings only (no user data), so innerHTML is safe here. */
 const ICONS = {
   shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z" fill="currentColor"/><path d="m8.4 12.2 2.5 2.5 4.7-5.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',

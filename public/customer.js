@@ -246,6 +246,8 @@
       f.engineSelect.hidden = engines.length === 0;
       f.engineText.hidden = engines.length !== 0;
       fillSelect(f.engineSelect, engines.map((e) => ({ value: e, text: e })), 'Not sure');
+      syncGenerationToYear(f.generation, gens, f.year.value);
+      pickOnlyChoice(f.engineSelect);
     }
     function syncMake() {
       const make = currentMake();
@@ -257,7 +259,13 @@
     }
     f.make.addEventListener('change', syncMake);
     f.model.addEventListener('change', syncModel);
+    f.year.addEventListener('input', () => {
+      const model = currentModel();
+      syncGenerationToYear(f.generation, model ? model.generations : [], f.year.value);
+    });
+    f.generation.addEventListener('change', () => { f.generation.dataset.auto = ''; });
     syncMake();
+    prefillFromVin(vin, f, syncMake);
 
     f.plate.addEventListener('input', () => { f.plate.value = f.plate.value.toUpperCase(); });
     f.plate.addEventListener('blur', () => { f.plate.value = formatPlate(f.plate.value); });
@@ -389,6 +397,28 @@
           try {
             const res = await api(`/api/vehicles/id/${enc(state.vehicle.id)}`, { method: 'PATCH', body: { origin_market: sel.value } });
             state.vehicle = res.vehicle;
+            setVehicle(res.vehicle);
+            state.category = s.part_category;
+            renderPartList();
+            await runSearch();
+          } catch (err) { setStatus(status, err.message, 'error'); }
+        },
+      }), status);
+    }
+    if (s.reason === 'generation_unknown') {
+      const v = state.vehicle;
+      const make = state.catalog.makes.find((m) => m.make.toLowerCase() === v.make.toLowerCase());
+      const model = make && make.models.find((m) => m.model.toLowerCase() === v.model.toLowerCase());
+      const gens = (model ? model.generations : []).filter((g) => v.year >= g.year_start && v.year <= g.year_end);
+      const sel = h('select', { id: 'fix-generation', 'aria-label': 'Which generation is your car?' });
+      fillSelect(sel, gens.map((g) => ({ value: g.generation, text: `${g.generation} (${g.year_start} to ${g.year_end})` })), 'Which generation is it?');
+      const status = h('p', { class: 'status', role: 'status' });
+      box.push(h('div', { class: 'field' }, sel), h('button', {
+        class: 'btn btn-primary', type: 'button', text: 'Save and search again',
+        onclick: async () => {
+          if (!sel.value) return setStatus(status, 'Choose a generation first.', 'error');
+          try {
+            const res = await api(`/api/vehicles/id/${enc(v.id)}`, { method: 'PATCH', body: { generation: sel.value } });
             setVehicle(res.vehicle);
             state.category = s.part_category;
             renderPartList();
