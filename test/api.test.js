@@ -576,3 +576,17 @@ test('a demo database seeded before demo cars had VINs gets them on the next sta
   const rows = db.prepare("SELECT plate_number, vin FROM vehicles WHERE registered_by = 'demo seed' ORDER BY plate_number").all();
   assert.deepEqual(rows.map((r) => r.vin), ['JTMBK31V996054321', 'KNDPM3AC8J7100002', '5XYPG4A38JG100003', 'KMHJ3813DHU100004']);
 });
+
+test('nearby garages come back nearest first, with coordinates for the map link', async () => {
+  const r = await get('/api/garages/nearby?radius_km=any');
+  assert.equal(r.status, 200);
+  assert.ok(r.json.count >= 3);
+  const d = r.json.garages.map((g) => g.distance_km);
+  assert.deepEqual(d, [...d].sort((a, b) => a - b));
+  for (const g of r.json.garages) {
+    assert.equal(typeof g.latitude, 'number');
+    assert.equal(typeof g.longitude, 'number');
+  }
+  const fromKanombe = await get('/api/garages/nearby?radius_km=any&lat=-1.974&lon=30.137');
+  assert.equal(fromKanombe.json.garages[0].name, 'Demo Garage Kanombe');
+});

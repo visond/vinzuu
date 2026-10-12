@@ -15,6 +15,7 @@
     category: null,
     query: null,        // { oe: [..] } or { category: 'Wiper Blade' }
     searchInfo: null,   // response from /api/parts/search
+    wantedPart: null,   // a category picked on the homepage before the car was known
     coords: null,       // { lat, lon } once the customer shares their location
     sort: 'price',
     radius: '15',
@@ -46,10 +47,16 @@
     $('part-q').addEventListener('input', renderPartList);
 
     // A VIN in the URL (from the homepage's quick-search box) wins over a remembered car,
-    // since typing a different VIN there is a deliberate new search.
-    const fromUrl = new URLSearchParams(location.search).get('vin');
+    // since typing a different VIN there is a deliberate new search. A part in the URL (a
+    // homepage "Shop now" button) is opened as soon as a car is known.
+    const params = new URLSearchParams(location.search);
+    const fromUrl = params.get('vin');
+    state.wantedPart = state.catalog.categories.find((c) => c.name === params.get('part')) || null;
+    if (fromUrl || params.has('part')) history.replaceState(null, '', location.pathname); // tidy the URL, keep the lookup
+    if (state.wantedPart && !fromUrl && !store.get(VEHICLE_ID_KEY)) {
+      setStatus($('vin-status'), `Enter your VIN and we'll show the ${state.wantedPart.name.toLowerCase()} that fits your car.`);
+    }
     if (fromUrl) {
-      history.replaceState(null, '', location.pathname); // tidy the URL, keep the lookup
       const vin = normalizeVin(fromUrl);
       $('vin').value = vin;
       await lookupVin(vin);
@@ -183,6 +190,11 @@
           h('span', { text: vehicleDetails(vehicle) })),
         h('button', { class: 'btn btn-quiet', type: 'button', onclick: changeCar, text: 'Change car' })));
     renderPartList();
+    if (state.wantedPart) {
+      const wanted = state.wantedPart;
+      state.wantedPart = null; // only once: picking another car later starts from the list
+      pickCategory(wanted);
+    }
   }
 
   function changeCar() {

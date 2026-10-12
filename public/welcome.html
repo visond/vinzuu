@@ -21,8 +21,9 @@
       <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links-wrap">&#9776;</button>
       <div class="nav-links-wrap" id="nav-links-wrap">
         <ul class="nav-links">
-          <li><a href="#how-it-works">How it works</a></li>
-          <li><a href="#brands">Brands</a></li>
+          <li><a href="#find">Find parts</a></li>
+          <li><a href="#parts">Popular parts</a></li>
+          <li><a href="#garages">Garages</a></li>
           <li><a href="/about.html">About us</a></li>
           <li><a href="/contact.html">Contact us</a></li>
         </ul>
@@ -34,70 +35,69 @@
     </div>
   </nav>
 
-  <div class="hero">
-    <div class="hero-hills" aria-hidden="true"></div>
-    <div class="hero-tools" aria-hidden="true">
-      <span class="tool t-wrench"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.3 2.3-2-.7-.7-2 2.3-2.3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
-      <span class="tool t-bolt"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v12l8 4 8-4V6l-8-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg></span>
-      <span class="tool t-gear"><svg viewBox="0 0 24 24" fill="none"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" stroke="currentColor" stroke-width="1.5"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1M18.5 18.5l-2.1-2.1M7.6 7.6 5.5 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-      <span class="tool t-filter"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="4" width="10" height="16" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M7 9h10M7 14h10" stroke="currentColor" stroke-width="1.4"/></svg></span>
-      <span class="tool t-disc"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="5.6" r="1" fill="currentColor"/><circle cx="12" cy="18.4" r="1" fill="currentColor"/><circle cx="5.6" cy="12" r="1" fill="currentColor"/><circle cx="18.4" cy="12" r="1" fill="currentColor"/></svg></span>
-      <span class="tool t-spanner"><svg viewBox="0 0 24 24" fill="none"><path d="M5 19 15 9m0 0a3 3 0 1 1 4-4 3 3 0 0 1-4 4zM5 19a2 2 0 1 0 2.8 2.8L9 20.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    </div>
-    <div class="hero-copy wrap">
-      <span class="hero-tag"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v12l8 4 8-4V6l-8-4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>VIN-based parts matching</span>
-      <h1>Rwanda's cars, mapped to their parts.</h1>
-      <p>Type your VIN. We find the exact part for your car's build, compare shops by price and distance, and let you book installation.</p>
-    </div>
-    <form class="hero-search wrap" id="hero-search" novalidate>
-      <label for="hs-vin" class="sr-only">VIN (17 characters)</label>
-      <div class="hero-search-row">
-        <div class="vinbox">
-          <span class="vinbox-tag" aria-hidden="true">VIN</span>
-          <input id="hs-vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" maxlength="17" placeholder="e.g. JTMBK31V996054321">
-        </div>
-        <button class="btn btn-primary hero-search-go" type="submit">Find</button>
+  <header class="home-hero">
+    <div class="home-hero-inner">
+      <span class="home-kicker">Spare parts &amp; garages in Kigali</span>
+      <h1>The right part for your car, the first time.</h1>
+      <p class="home-lead">Vinzuu reads your car's VIN, matches parts to its exact build, shows which Kigali shops have them and what each one charges, then helps you book a garage to fit them.</p>
+      <div class="home-hero-ctas">
+        <a class="btn btn-primary" href="#find">Find my part</a>
+        <a class="btn btn-onphoto" href="#garages">Garages near me</a>
       </div>
-      <p id="hs-status" class="hint-dark hero-search-status" role="status" aria-live="polite" hidden></p>
-      <p class="hint-dark">No account needed to search. Sign in later to save your cars.<span id="hs-demo" hidden> Or <a class="hero-demo-link" id="hs-demo-link" href="/index.html">try a demo car</a>.</span></p>
-    </form>
-    <div class="hero-road" aria-hidden="true">
-      <div class="lane lane-1"><div class="car-track"></div></div>
-      <div class="lane lane-2"><div class="car-track"></div></div>
-      <div class="lane lane-3"><div class="car-track"></div></div>
+      <ul class="home-facts" id="brands">
+        <li><strong>VIN-matched</strong> generation, engine and build market</li>
+        <li><strong>Prices compared</strong> across shops near you</li>
+        <li><strong>Toyota, Hyundai, Kia</strong> today, more coming</li>
+      </ul>
     </div>
-  </div>
+  </header>
 
-  <section class="section" aria-labelledby="quick-head">
-    <div class="section-head">
-      <h2 id="quick-head">Go straight to what you need</h2>
-      <p>Three sides of the same marketplace: car owners, parts shops, and the garages that fit the part.</p>
+  <section class="finder" id="find" aria-labelledby="find-head">
+    <div class="finder-card">
+      <div class="finder-main">
+        <h2 id="find-head">Can we look for your car's parts?</h2>
+        <p class="finder-sub">Type your 17-character VIN and we'll show only the parts that fit. No account needed.</p>
+        <form class="hero-search" id="hero-search" novalidate>
+          <label for="hs-vin" class="sr-only">VIN (17 characters)</label>
+          <div class="hero-search-row">
+            <div class="vinbox">
+              <span class="vinbox-tag" aria-hidden="true">VIN</span>
+              <input id="hs-vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="17" placeholder="e.g. JTMBK31V996054321" aria-describedby="vin-example-head">
+            </div>
+            <button class="btn btn-primary hero-search-go" type="submit">Find parts</button>
+          </div>
+          <p id="hs-status" class="finder-status" role="status" aria-live="polite" hidden></p>
+          <p class="finder-hint"><span id="hs-count" aria-hidden="true">0 / 17</span><span id="hs-demo" hidden> · Just looking? <a id="hs-demo-link" href="/index.html">Try a demo car</a></span></p>
+        </form>
+      </div>
+
+      <aside class="vin-guide" aria-labelledby="vin-example-head">
+        <h3 id="vin-example-head">How to write your VIN</h3>
+        <div class="vin-anatomy" aria-label="Example VIN JTMBK31V996054321, split into its three parts">
+          <span class="vin-seg seg-maker"><b>JTM</b><small>Maker</small></span>
+          <span class="vin-seg seg-model"><b>BK31V9</b><small>Model &amp; engine</small></span>
+          <span class="vin-seg seg-serial"><b>96054321</b><small>Your car</small></span>
+        </div>
+        <ul class="vin-tips">
+          <li>Letters and numbers only, 17 in total. No spaces needed.</li>
+          <li>There is never an <b>I</b>, <b>O</b> or <b>Q</b>. If you see a round letter, it is a zero.</li>
+          <li>Find it at the bottom of the windscreen, on the driver's door frame, or on your registration card.</li>
+        </ul>
+        <button class="btn-link vin-try" type="button" id="vin-use-example">Fill in this example</button>
+      </aside>
     </div>
-    <div class="quick-cards">
-      <a class="quick-card" href="/index.html">
-        <span class="qc-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M3 15.5 4.3 11a2 2 0 0 1 1.9-1.4h11.6A2 2 0 0 1 19.7 11l1.3 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15.5h18v2.5a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1V17h-11v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="15.3" r="1.1" fill="currentColor"/><circle cx="17" cy="15.3" r="1.1" fill="currentColor"/></svg>
-        </span>
-        <h3>Car owners</h3>
-        <p>Find the exact part for your VIN and compare shops near you.</p>
-        <span class="qc-go">Find my part →</span>
-      </a>
-      <a class="quick-card" href="/shop.html">
-        <span class="qc-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M4 9.5 5 4h14l1 5.5M4 9.5a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0M5.5 9.8V20h13V9.8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-        </span>
-        <h3>Parts shops</h3>
-        <p>List what you stock against verified part numbers and reach customers searching by VIN.</p>
-        <span class="qc-go">Shop sign in →</span>
-      </a>
-      <a class="quick-card" href="/contact.html">
-        <span class="qc-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 4 6v3c0 5.4 3.4 9.6 8 11 4.6-1.4 8-5.6 8-11V6l-8-3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <h3>Garages</h3>
-        <p>Bookings come straight to WhatsApp already. Want to be listed as a partner garage?</p>
-        <span class="qc-go">Get in touch →</span>
-      </a>
+  </section>
+
+  <section class="parts-strip" id="parts" aria-labelledby="parts-head">
+    <div class="strip-head">
+      <div>
+        <h2 id="parts-head">Popular spare parts</h2>
+        <p>What Kigali drivers search for most. Tap Shop now and we'll match it to your VIN.</p>
+      </div>
+      <a class="strip-all" href="/index.html">See all parts →</a>
+    </div>
+    <div class="marquee" id="parts-marquee">
+      <ul class="marquee-track" id="parts-track"></ul>
     </div>
   </section>
 
@@ -122,82 +122,29 @@
     </div>
   </section>
 
-  <section class="section brands-wrap" id="brands" aria-labelledby="brands-head">
-    <div class="section-head">
-      <h2 id="brands-head">Built for these brands, to start</h2>
-      <p>Toyota, Hyundai and Kia cover most of Kigali's fleet. More are added as fitment data is verified.</p>
-    </div>
-    <div class="brand-row">
-      <span class="brand-badge">Toyota</span>
-      <span class="brand-badge">Hyundai</span>
-      <span class="brand-badge">Kia</span>
-      <span class="brand-badge more">More brands coming</span>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="trust-head">
-    <div class="section-head">
-      <h2 id="trust-head">Why it's different</h2>
-      <p>Every other platform we looked at does one of these. Vinzuu does all three.</p>
-    </div>
-    <div class="trust-row">
-      <div class="trust-item">
-        <span class="ti-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 3.5 7v5c0 5 3.6 9.4 8.5 11 4.9-1.6 8.5-6 8.5-11V7L12 3.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m8.3 12.4 2.6 2.6 4.8-5.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <h3>Exact-fit matching</h3>
-        <p>Matched to your car's generation, engine and build market, not just the model name.</p>
-        <ul class="tier-checks">
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Decoded from your VIN</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>No more "almost fits" parts</li>
-        </ul>
+  <section class="garages" id="garages" aria-labelledby="garages-head">
+    <div class="strip-head">
+      <div>
+        <h2 id="garages-head">Garages near you</h2>
+        <p id="garages-origin">Distances from Kigali city centre.</p>
       </div>
-      <div class="trust-item featured">
-        <span class="ti-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V10M10 19V5M16 19v-7M20 19H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <h3>Real price comparison</h3>
-        <p>See what every shop near you charges for the same part before you buy.</p>
-        <ul class="tier-checks">
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Sorted by price and distance</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>No price hidden until checkout</li>
-        </ul>
-      </div>
-      <div class="trust-item">
-        <span class="ti-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="m7.8 12.3 2.9 2.9 5.5-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
-        <h3>Verified, not just listed</h3>
-        <p>A shop only earns the top trust label once we've checked it. A listing alone never does.</p>
-        <ul class="tier-checks">
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Genuine vs. compatible, labeled</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Unverified listings flagged, not hidden</li>
-        </ul>
-      </div>
+      <button class="btn btn-ghost-dark btn-small" type="button" id="garages-locate">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="2"/></svg>
+        Use my location
+      </button>
+    </div>
+    <div class="garage-grid" id="garage-grid" aria-live="polite">
+      <p class="muted">Loading garages…</p>
     </div>
   </section>
 
-  <section class="verify-section" aria-labelledby="verify-head">
-    <div class="verify-grid">
-      <div class="verify-art">
-        <svg viewBox="0 0 220 180" fill="none">
-          <circle cx="76" cy="90" r="46" stroke="#0F4C81" stroke-width="3"/>
-          <circle cx="76" cy="90" r="14" stroke="#0F4C81" stroke-width="3"/>
-          <path d="M76 44v12M76 114v12M122 90h-12M30 90h12M105.5 58.5l-8.5 8.5M54 112.5l-8.5 8.5M105.5 121.5 97 113M54 67.5 45.5 59" stroke="#0F4C81" stroke-width="3" stroke-linecap="round"/>
-          <path d="M150 54 134 70v14l16 16 16-16V70l-16-16z" stroke="#F5B700" stroke-width="3" stroke-linejoin="round"/>
-          <circle cx="150" cy="77" r="5" stroke="#F5B700" stroke-width="3"/>
-          <path d="M136 132a10 10 0 0 1 20 0v8a10 10 0 0 1-20 0v-8z" stroke="#14804A" stroke-width="3"/>
-          <path d="M136 140h20" stroke="#14804A" stroke-width="3"/>
-        </svg>
-      </div>
-      <div class="verify-copy">
-        <h2 id="verify-head">How we keep listings honest</h2>
-        <p>Anyone can list a part as "compatible." Vinzuu only shows the top trust label once it's actually been checked against your car's build.</p>
-        <ul class="verify-list">
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Every part number is checked against generation, engine and build market before it's shown as a match.</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>If we're not sure a part fits, we say so — we don't just hide it or guess.</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Shops earn verification; they don't buy it.</li>
-        </ul>
+  <section class="partner-band" aria-labelledby="partner-head">
+    <div class="partner-inner">
+      <h2 id="partner-head">Run a parts shop or a garage?</h2>
+      <p>List what you stock against verified part numbers, or get repair bookings straight to WhatsApp.</p>
+      <div class="partner-ctas">
+        <a class="btn btn-primary" href="/shop.html">Shop sign in</a>
+        <a class="btn btn-onphoto" href="/contact.html">List my garage</a>
       </div>
     </div>
   </section>

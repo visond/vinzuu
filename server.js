@@ -541,7 +541,8 @@ function createApp(db, config = {}) {
       .sort((a, b) => a.distance_km - b.distance_km)
       .map((g) => ({
         id: g.id, name: g.name, phone: g.phone, whatsapp: g.whatsapp_number, address: g.address_text,
-        specialties: g.specialties, distance_km: Math.round(g.distance_km * 10) / 10,
+        specialties: g.specialties, latitude: g.latitude, longitude: g.longitude,
+        distance_km: Math.round(g.distance_km * 10) / 10,
       }));
     res.json({ count: garages.length, garages });
   });
