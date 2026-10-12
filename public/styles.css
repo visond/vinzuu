@@ -415,27 +415,29 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
 /* ---------- homepage: photo hero, VIN finder card, parts marquee, garages ---------- */
 
 .home-hero {
-  position: relative; color: #fff;
+  position: relative; color: #fff; text-align: center;
   background:
-    linear-gradient(90deg, rgba(10,24,36,0.94) 0%, rgba(10,24,36,0.82) 45%, rgba(10,24,36,0.45) 100%),
-    url('/img/home/hero-mechanic.jpg') center 35% / cover no-repeat,
+    linear-gradient(180deg, rgba(8,18,28,0.72) 0%, rgba(8,18,28,0.62) 55%, rgba(8,18,28,0.88) 100%),
+    url('/img/home/hero-engine.jpg') center 55% / cover no-repeat,
     var(--ink);
-  padding: 64px 16px 128px;
+  padding: 96px 16px 150px;
 }
-.home-hero-inner { max-width: 1040px; margin: 0 auto; }
+.home-hero-inner { max-width: 960px; margin: 0 auto; }
 .home-kicker {
-  display: inline-block; font-family: var(--font-display); font-weight: 700; font-size: 15px;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--yellow);
-  border-left: 3px solid var(--yellow); padding-left: 10px;
+  display: inline-block; font-family: var(--font-display); font-weight: 700; font-size: clamp(15px, 2vw, 19px);
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--yellow);
 }
-.home-hero h1 { color: #fff; font-size: clamp(38px, 8vw, 64px); max-width: 15ch; margin: 16px 0 16px; letter-spacing: -0.01em; }
-.home-lead { color: #DCE6EC; font-size: clamp(16px, 2.2vw, 18px); line-height: 1.6; max-width: 52ch; margin: 0 0 26px; }
-.home-hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; }
-.home-hero-ctas .btn, .partner-ctas .btn { min-height: 50px; padding: 0 24px; border-radius: 999px; font-weight: 700; }
+.home-hero h1 {
+  color: #fff; font-size: clamp(42px, 8.4vw, 88px); line-height: 0.98; margin: 18px auto 22px;
+  letter-spacing: -0.01em; text-shadow: 0 4px 24px rgba(0,0,0,0.45); text-wrap: balance;
+}
+.home-lead { color: #E3EBF0; font-size: clamp(16px, 2.2vw, 19px); line-height: 1.6; max-width: 56ch; margin: 0 auto 30px; }
+.home-hero-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.home-hero-ctas .btn, .partner-ctas .btn { min-height: 52px; padding: 0 28px; border-radius: 999px; font-weight: 700; }
 .home-hero-ctas .btn-primary, .partner-ctas .btn-primary { border-color: var(--yellow); }
 .btn-onphoto { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.55); }
 .btn-onphoto:hover { background: rgba(255,255,255,0.16); }
-.home-facts { list-style: none; margin: 36px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 28px; }
+.home-facts { list-style: none; margin: 44px auto 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 40px; }
 .home-facts li { font-size: 14px; color: #B9C9D3; max-width: 22ch; line-height: 1.4; }
 .home-facts strong { display: block; color: #fff; font-family: var(--font-display); font-size: 19px; letter-spacing: 0.01em; }
 
@@ -483,7 +485,7 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
   .vin-guide { border-left: 0; border-top: 1px solid var(--line); }
 }
 @media (max-width: 520px) {
-  .home-hero { padding: 40px 16px 112px; }
+  .home-hero { padding: 56px 16px 120px; }
   .finder-main { padding: 24px 18px 20px; }
   .vin-guide { padding: 22px 18px; }
   .hero-search-row { flex-direction: column; }
@@ -524,8 +526,10 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
   overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s, transform .15s, box-shadow .15s;
 }
 .part-card:hover { border-color: var(--ink); transform: translateY(-3px); box-shadow: 0 10px 22px rgba(16,40,59,0.12); }
-.part-card .pc-photo { aspect-ratio: 10 / 7; background: radial-gradient(circle at 50% 40%, #FFFFFF 0%, #E8EEF2 100%); display: flex; align-items: center; justify-content: center; }
-.part-card .pc-photo img { width: 82%; height: auto; display: block; }
+.part-card .pc-photo { aspect-ratio: 10 / 7; background: #fff; overflow: hidden; }
+.part-card .pc-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.part-card .pc-photo.is-drawing { background: radial-gradient(circle at 50% 40%, #FFFFFF 0%, #E8EEF2 100%); display: flex; align-items: center; justify-content: center; }
+.part-card .pc-photo.is-drawing img { width: 82%; height: auto; }
 .part-card .pc-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .part-card h3 { font-size: 20px; margin: 0; }
 .part-card .pc-note { font-size: 13.5px; color: var(--ink-2); margin: 0 0 10px; }
