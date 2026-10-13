@@ -77,6 +77,43 @@
       if (mine.length) setVehicle(mine[0]);
     }
     if (state.user) loadMyCars();
+    goToSection(location.hash.slice(1), { settle: true });
+    // Signed in, the nav's "Find parts", "Popular parts" and "Garages" point at sections of this
+    // page (common.js). Already here, they jump to that section instead of reloading the page.
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href^="/index.html#"]');
+      if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      history.replaceState(null, '', location.pathname);
+      goToSection(a.getAttribute('href').split('#')[1]);
+    });
+  }
+
+  /** Shows the garage section asked for ("picker" = parts that fit, "shops-near" = repair shops).
+   *  With no car open yet there is nothing to show there, so the VIN box is shown instead. */
+  function goToSection(id, { settle = false } = {}) {
+    if (!['picker', 'shops-near'].includes(id)) return;
+    if (location.hash) history.replaceState(null, '', location.pathname);
+    if (!state.vehicle) {
+      if ($('start').hidden) { showStep('start'); }
+      $('start').scrollIntoView({ behavior: motion(), block: 'start' });
+      $('vin').focus({ preventScroll: true });
+      return;
+    }
+    if ($('vehicle').hidden) showStep('vehicle');
+    $(id).scrollIntoView({ behavior: motion(), block: 'start' });
+    // Arriving from another page, the parts and shops above are still loading and push the
+    // section down, so line it up again once they are in (unless the person scrolled meanwhile).
+    if (settle) {
+      let last = null;
+      for (const ms of [400, 1000, 1800]) {
+        setTimeout(() => {
+          if (last !== null && Math.abs(window.scrollY - last) > 2) return;
+          $(id).scrollIntoView({ behavior: 'auto', block: 'start' });
+          last = window.scrollY;
+        }, ms);
+      }
+    }
   }
 
   // ---------------------------------------------------------------- account state

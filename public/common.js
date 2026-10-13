@@ -242,13 +242,18 @@ function resizeImage(file, maxSide = 640) {
       },
     });
     signIn.replaceWith(signOut);
-    // Signed in, the logo goes to your garage, and links into the public homepage's sections
-    // ("Popular parts", "Garages") use /welcome.html, since "/" itself now opens the garage.
+    // Signed in, the nav stays in your own garage (/index.html) instead of the public homepage:
+    // the logo opens it, "Find parts" and "Popular parts" jump to the parts that fit your car,
+    // "Garages" to the repair shops near you. Other links into the homepage use /welcome.html,
+    // since "/" itself now opens the garage.
     document.querySelectorAll('a.nav-logo').forEach((a) => { a.href = '/index.html'; });
-    document.querySelectorAll('a[href^="/#"]').forEach((a) => {
-      const hash = a.getAttribute('href').slice(1);
-      a.href = hash === '#find' ? '/index.html' : `/welcome.html${hash}`;
+    const inGarage = { find: 'picker', parts: 'picker', garages: 'shops-near' };
+    document.querySelectorAll('.site-nav .nav-links a').forEach((a) => {
+      const href = a.getAttribute('href');
+      const hash = href === '/index.html' ? 'find' : (href.match(/^\/?#(.+)$/) || [])[1];
+      if (inGarage[hash]) a.href = `/index.html#${inGarage[hash]}`;
     });
+    document.querySelectorAll('a[href^="/#"]').forEach((a) => { a.href = `/welcome.html${a.getAttribute('href').slice(1)}`; });
   }).catch(() => { /* offline: leave Sign in as it is */ });
 })();
 
