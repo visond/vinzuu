@@ -111,11 +111,45 @@ test('the catalog lists the full Hyundai, Kia and Toyota lineups with their logo
     assert.match(m.logo, /^\/img\/makes\/[a-z]+\.svg$/);
     const found = m.models.find((x) => x.model === model);
     assert.ok(found, `${make} ${model} is in the list`);
-    assert.deepEqual(found.generations, [], 'no part numbers yet, so no generations to choose');
+    assert.ok(found.generations.length > 0, `${make} ${model} has its generations even with no part numbers yet`);
   }
   const toyota = cat.json.makes.find((x) => x.make === 'Toyota');
   assert.equal(toyota.models.filter((x) => x.model === 'RAV4').length, 1, 'a model with part numbers is not listed twice');
-  assert.ok(toyota.models.find((x) => x.model === 'RAV4').generations.length > 0);
+  const rav4 = toyota.models.find((x) => x.model === 'RAV4');
+  assert.deepEqual(rav4.generations.map((g) => g.generation), ['XA20', 'XA30', 'XA40', 'XA50', 'XA60']);
+  assert.ok(rav4.engines.some((e) => e.label === '2.0L Petrol'), 'the demo part numbers still find their engine');
+});
+
+test('every model file parses, covers 2000 to 2026, and each generation lists its engines', () => {
+  const { loadLineup } = require('../lib/lineup');
+  const lineup = loadLineup();
+  for (const [make, models] of Object.entries(lineup)) {
+    assert.ok(models.length >= 35, `${make} has its full lineup`);
+    const names = models.map((m) => m.model.toLowerCase());
+    assert.equal(new Set(names).size, names.length, `${make} lists each model once`);
+    for (const m of models) {
+      for (const g of m.generations) {
+        assert.ok(g.year_start <= g.year_end, `${make} ${m.model} ${g.generation} years`);
+        assert.ok(g.year_end >= 2000 && g.year_start <= 2026, `${make} ${m.model} ${g.generation} is on sale between 2000 and 2026`);
+        assert.ok(g.engines.length > 0, `${make} ${m.model} ${g.generation} lists engines`);
+        for (const e of g.engines) assert.match(e.label, /^(\d\.\d{1,2}L [A-Za-z -]+|Electric|Hydrogen fuel cell)$/, `${make} ${m.model} engine "${e.label}"`);
+      }
+    }
+  }
+  const tl = lineup.Hyundai.find((m) => m.model === 'Tucson').generations.find((g) => g.generation === 'TL');
+  assert.deepEqual([tl.year_start, tl.year_end], [2015, 2020]);
+  assert.deepEqual(tl.engines.find((e) => e.label === '1.7L Diesel').codes, ['D4FD']);
+});
+
+test('a malformed model file line is reported with its line number', () => {
+  const { parseMakeFile } = require('../lib/lineup');
+  assert.throws(() => parseMakeFile('Tucson | | SUV\n  TL | 2015 to 2020 | 2.0L Petrol (G4NA)'), /line 2: years must look like/);
+  assert.throws(() => parseMakeFile('Tucson | | SUV'), /Tucson has no generations/);
+  const [m] = parseMakeFile('Tucson | ix35 | SUV\n  NX4 | 2020-now | 1.6L Turbo Petrol (G4FP); 1.6L Turbo Petrol (G4FT)', 2027);
+  assert.equal(m.generations[0].year_end, 2027);
+  assert.equal(m.generations[0].ongoing, true);
+  assert.deepEqual(m.generations[0].engines, [{ label: '1.6L Turbo Petrol', codes: ['G4FP', 'G4FT'] }]);
+  assert.deepEqual(m.aka, ['ix35']);
 });
 
 test('VIN decode returns the maker, build country and model year together', async () => {

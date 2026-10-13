@@ -255,7 +255,8 @@
 
     const wrapGeneration = field('Generation (optional)', f.generation, 'If you do not know it, leave it as "Not sure".');
     const wrapEngine = h('div', { class: 'field', hidden: true }, h('label', { for: 'r-engine', text: 'Engine' }), f.engineSelect, f.engineText);
-    const wrapModel = h('div', { class: 'field', hidden: true }, h('label', { for: 'r-model', text: 'Model' }), f.model, f.modelOther);
+    f.modelHint = h('p', { class: 'hint', hidden: true });
+    const wrapModel = h('div', { class: 'field', hidden: true }, h('label', { for: 'r-model', text: 'Model' }), f.model, f.modelOther, f.modelHint);
 
     const currentMake = () => makes.find((m) => m.make === f.make.value);
     const currentModel = () => { const m = currentMake(); return m && m.models.find((x) => x.model === f.model.value); };
@@ -267,13 +268,37 @@
       wrapEngine.hidden = !(f.make.value === '__other' || f.model.value);
       const gens = model ? model.generations : [];
       wrapGeneration.hidden = gens.length === 0;
-      fillSelect(f.generation, gens.map((g) => ({ value: g.generation, text: `${g.generation} (${g.year_start} to ${g.year_end})` })), 'Not sure');
-      const engines = model ? model.engines : [];
+      fillSelect(f.generation, gens.map((g) => ({ value: g.generation, text: generationText(g) })), 'Not sure');
+      f.modelHint.hidden = !model || !model.body;
+      if (model) f.modelHint.textContent = modelSummary(model);
+      syncGenerationToYear(f.generation, gens, f.year.value);
+      syncEngines();
+    }
+    // Only the engines the chosen generation was sold with, so a 2018 Tucson never offers a 2005 engine.
+    function syncEngines() {
+      const engines = enginesFor(currentModel(), f.generation.value);
+      const keep = f.engineSelect.value;
       f.engineSelect.hidden = engines.length === 0;
       f.engineText.hidden = engines.length !== 0;
-      fillSelect(f.engineSelect, engines.map((e) => ({ value: e, text: e })), 'Not sure');
-      syncGenerationToYear(f.generation, gens, f.year.value);
+      fillSelect(f.engineSelect, engineOptions(engines), 'Not sure');
+      if ([...f.engineSelect.options].some((o) => o.value === keep)) f.engineSelect.value = keep;
       pickOnlyChoice(f.engineSelect);
+    }
+    // Models made in the car's year come first, so the list is short when the VIN gave the year.
+    function fillModels() {
+      const make = currentMake();
+      if (!make) return;
+      const keep = f.model.value;
+      const year = Number(f.year.value);
+      const opt = (m) => h('option', { value: m.model, text: m.aka && m.aka.length ? `${m.model} (${m.aka.slice(0, 2).join(', ')})` : m.model });
+      const madeThen = year ? make.models.filter((m) => m.generations.some((g) => year >= g.year_start && year <= g.year_end)) : [];
+      const others = make.models.filter((m) => !madeThen.includes(m));
+      f.model.replaceChildren(h('option', { value: '', text: 'Choose the model' }),
+        ...(madeThen.length
+          ? [h('optgroup', { label: `Made in ${year}` }, ...madeThen.map(opt)), h('optgroup', { label: 'Other models' }, ...others.map(opt))]
+          : others.map(opt)),
+        h('option', { value: '__other', text: 'Other model' }));
+      if ([...f.model.options].some((o) => o.value === keep)) f.model.value = keep;
     }
     function syncMake() {
       const make = currentMake();
@@ -281,16 +306,18 @@
       f.makeOther.hidden = f.make.value !== '__other';
       wrapModel.hidden = !f.make.value;
       f.model.hidden = !make;
-      if (make) fillSelect(f.model, [...make.models.map((m) => ({ value: m.model, text: m.model })), { value: '__other', text: 'Other model' }], 'Choose the model');
+      fillModels();
       syncModel();
     }
     f.make.addEventListener('change', syncMake);
     f.model.addEventListener('change', syncModel);
     f.year.addEventListener('input', () => {
       const model = currentModel();
+      fillModels();
       syncGenerationToYear(f.generation, model ? model.generations : [], f.year.value);
+      syncEngines();
     });
-    f.generation.addEventListener('change', () => { f.generation.dataset.auto = ''; });
+    f.generation.addEventListener('change', () => { f.generation.dataset.auto = ''; syncEngines(); });
     syncMake();
     const decoded = h('div', { class: 'vin-decoded', 'aria-live': 'polite' });
     decodeVin(vin).then((d) => {
@@ -363,6 +390,14 @@
     mount.replaceChildren(form);
     mount.hidden = false;
     mount.scrollIntoView({ behavior: motion(), block: 'start' });
+  }
+
+  /** "SUV. 4 generations since 2000, the latest from 2020." */
+  function modelSummary(m) {
+    const n = m.generations.length;
+    const latest = m.generations[n - 1];
+    const gens = n ? ` ${n} ${n === 1 ? 'generation' : 'generations'} since ${m.generations[0].year_start}${n > 1 ? `, the latest from ${latest.year_start}` : ''}.` : '';
+    return `${m.body}.${gens}`;
   }
 
   /** What the VIN alone tells us: maker, build country and model year. null when it says nothing. */
@@ -503,7 +538,7 @@
       const model = make && make.models.find((m) => m.model.toLowerCase() === v.model.toLowerCase());
       const gens = (model ? model.generations : []).filter((g) => v.year >= g.year_start && v.year <= g.year_end);
       const sel = h('select', { id: 'fix-generation', 'aria-label': 'Which generation is your car?' });
-      fillSelect(sel, gens.map((g) => ({ value: g.generation, text: `${g.generation} (${g.year_start} to ${g.year_end})` })), 'Which generation is it?');
+      fillSelect(sel, gens.map((g) => ({ value: g.generation, text: generationText(g) })), 'Which generation is it?');
       const status = h('p', { class: 'status', role: 'status' });
       box.push(h('div', { class: 'field' }, sel), h('button', {
         class: 'btn btn-primary', type: 'button', text: 'Save and search again',

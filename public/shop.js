@@ -196,11 +196,11 @@
       wrapEngine.hidden = !(f.make.value === '__other' || f.model.value);
       const gens = model ? model.generations : [];
       wrapGen.hidden = gens.length === 0;
-      fillSelect(f.generation, gens.map((g) => ({ value: g.generation, text: `${g.generation} (${g.year_start} to ${g.year_end})` })), 'Not sure');
+      fillSelect(f.generation, gens.map((g) => ({ value: g.generation, text: generationText(g) })), 'Not sure');
       const engines = model ? model.engines : [];
       f.engineSelect.hidden = engines.length === 0;
       f.engineText.hidden = engines.length !== 0;
-      fillSelect(f.engineSelect, engines.map((e) => ({ value: e, text: e })), 'Not sure');
+      fillSelect(f.engineSelect, engineOptions(engines), 'Not sure');
       syncGenerationToYear(f.generation, gens, f.year.value);
       pickOnlyChoice(f.engineSelect);
     }

@@ -91,6 +91,24 @@ function generationForYear(generations, year) {
   return hits.length === 1 ? hits[0].generation : null;
 }
 
+/** "TL (2015 to 2020)", or "NX4 (2020 to now)" for a generation still being made. */
+function generationText(g) {
+  return `${g.generation} (${g.year_start} to ${g.ongoing ? 'now' : g.year_end})`;
+}
+
+/** Engine choices: the label is what is saved and matched on; engine codes help the owner pick. */
+function engineOptions(engines) {
+  return engines.map((e) => (typeof e === 'string' ? { value: e, text: e }
+    : { value: e.label, text: e.codes && e.codes.length ? `${e.label} (${e.codes.join(', ')})` : e.label }));
+}
+
+/** The engines of the chosen generation when it lists them, otherwise every engine of the model. */
+function enginesFor(model, generationCode) {
+  if (!model) return [];
+  const gen = generationCode && model.generations.find((g) => g.generation === generationCode);
+  return gen && gen.engines && gen.engines.length ? gen.engines : model.engines;
+}
+
 /** When a select offers exactly one real choice and none is made yet, make it. */
 function pickOnlyChoice(select) {
   const real = [...select.options].filter((o) => o.value);
