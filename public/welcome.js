@@ -284,9 +284,17 @@
   // because Google only allows sign-in through its button.
 
   let googleReady = false;
-  $('google-fallback').addEventListener('click', () => {
-    oauthStatus('Google sign-in is not available yet. Please use your email for now.');
-  });
+  // 'checking' until the server answers, then 'off' (no client id), 'loading' or 'failed'
+  // (Google's script could not be reached). Each says something different when tapped, so a
+  // slow or blocked Google script is never mistaken for "not set up".
+  let googleState = 'checking';
+  const GOOGLE_MESSAGES = {
+    checking: 'Google sign-in is still loading. Try again in a moment.',
+    loading: 'Google sign-in is still loading. Try again in a moment.',
+    off: 'Google sign-in is not available yet. Please use your email for now.',
+    failed: 'We could not reach Google. Check your connection (or any ad blocker), reload the page, or use your email.',
+  };
+  $('google-fallback').addEventListener('click', () => oauthStatus(GOOGLE_MESSAGES[googleState]));
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -298,6 +306,7 @@
   }
 
   async function setupGoogle(clientId) {
+    googleState = 'loading';
     try {
       await loadScript('https://accounts.google.com/gsi/client');
       window.google.accounts.id.initialize({
@@ -311,7 +320,7 @@
       });
       googleReady = true;
       renderGoogleButton();
-    } catch (err) { /* offline or blocked: the email form below still works */ }
+    } catch (err) { googleState = 'failed'; /* the email form below still works */ }
   }
 
   // Draw (or redraw) Google's own button, saying "Sign up with Google" on the create-account form.
@@ -330,5 +339,6 @@
 
   api('/api/auth/config').then((cfg) => {
     if (cfg.google) setupGoogle(cfg.google_client_id);
-  }).catch(() => {});
+    else googleState = 'off';
+  }).catch(() => { googleState = 'failed'; });
 })();
