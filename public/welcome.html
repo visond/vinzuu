@@ -69,21 +69,25 @@
           <p id="hs-status" class="finder-status" role="status" aria-live="polite" hidden></p>
           <p class="finder-hint"><span id="hs-count" aria-hidden="true">0 / 17</span><span id="hs-demo" hidden> · Just looking? <a id="hs-demo-link" href="/index.html">Try a demo car</a></span></p>
         </form>
+        <div class="vin-howto">
+          <h3 id="vin-example-head">How to write your VIN</h3>
+          <div class="vin-anatomy" aria-label="Example VIN JTMBK31V996054321, split into its three parts">
+            <span class="vin-seg seg-maker"><b>JTM</b><small>Maker</small></span>
+            <span class="vin-seg seg-model"><b>BK31V9</b><small>Model &amp; engine</small></span>
+            <span class="vin-seg seg-serial"><b>96054321</b><small>Your car</small></span>
+          </div>
+          <ul class="vin-tips">
+            <li>Letters and numbers only, 17 in total. No spaces needed.</li>
+            <li>There is never an <b>I</b>, <b>O</b> or <b>Q</b>. If you see a round letter, it is a zero.</li>
+            <li>Find it at the bottom of the windscreen, on the driver's door frame, or on your registration card.</li>
+          </ul>
+          <button class="btn-link vin-try" type="button" id="vin-use-example">Fill in this example</button>
+        </div>
       </div>
 
-      <aside class="vin-guide" aria-labelledby="vin-example-head">
-        <h3 id="vin-example-head">How to write your VIN</h3>
-        <div class="vin-anatomy" aria-label="Example VIN JTMBK31V996054321, split into its three parts">
-          <span class="vin-seg seg-maker"><b>JTM</b><small>Maker</small></span>
-          <span class="vin-seg seg-model"><b>BK31V9</b><small>Model &amp; engine</small></span>
-          <span class="vin-seg seg-serial"><b>96054321</b><small>Your car</small></span>
-        </div>
-        <ul class="vin-tips">
-          <li>Letters and numbers only, 17 in total. No spaces needed.</li>
-          <li>There is never an <b>I</b>, <b>O</b> or <b>Q</b>. If you see a round letter, it is a zero.</li>
-          <li>Find it at the bottom of the windscreen, on the driver's door frame, or on your registration card.</li>
-        </ul>
-<figure class="vin-where-pic">
+      <aside class="vin-guide" aria-labelledby="vin-where-head">
+        <h3 id="vin-where-head">Where to find your VIN</h3>
+        <figure class="vin-where-pic">
           <img src="/img/home/vin-door.jpg" alt="The driver's door open. A sticker on the door frame, below the latch, is enlarged; its bottom line, marked VIN, is highlighted in yellow." width="1024" height="576" loading="lazy">
           <figcaption>
             <ol class="vin-steps">
@@ -95,7 +99,6 @@
             <span class="credit">Image: Tesla owner's manual</span>
           </figcaption>
         </figure>
-        <button class="btn-link vin-try" type="button" id="vin-use-example">Fill in this example</button>
       </aside>
     </div>
   </section>
