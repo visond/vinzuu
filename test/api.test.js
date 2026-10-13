@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { openDb, seedDemo } = require('../db');
 const { createApp } = require('../server');
 const vindecode = require('../lib/vindecode');
+const carphotos = require('../lib/carphotos');
 const alg = require('../lib/algorithms');
 
 let server;
@@ -17,6 +18,51 @@ const VPIC_SORENTO = {
   BodyClass: 'Sport Utility Vehicle (SUV)/Multi-Purpose Vehicle (MPV)', PlantCountry: 'UNITED STATES (USA)', Trim: 'LX',
 };
 const vinLookups = [];
+
+// Stands in for Wikipedia and Commons: a Tucson article with an overview infobox and one per
+// generation (wikitext shaped like the real article's), and Commons answers for its photos, one
+// of them non-free. Counts calls to prove the cache works.
+const TUCSON_WIKITEXT = `{{Short description|Compact crossover SUV}}
+{{Infobox automobile
+| name = Hyundai Tucson
+| image = 2021 Hyundai Tucson (NX4) front.jpg
+| production = 2004–present
+| model_years = 2005–present
+}}
+== First generation (JM; 2004) ==
+{{Infobox automobile
+| name = First generation
+| image = [[File:2005 Hyundai Tucson JM.jpg|250px]]
+| model_code = JM
+| production = 2004–2010<ref>{{cite web|title=x}}</ref>
+}}
+== Third generation (TL; 2015) ==
+{{Infobox automobile
+| name = Third generation
+| image = 2016 Hyundai Tucson TL front.jpg <!-- best photo -->
+| model_code = {{ubl|TL|TLe}}
+| production = 2015–2020
+}}`;
+const COMMONS = {
+  '2016 Hyundai Tucson TL front.jpg': { Artist: '<a href="//commons.wikimedia.org/wiki/User:Jane">Jane Doe</a>', LicenseShortName: 'CC BY-SA 4.0' },
+  '2021 Hyundai Tucson (NX4) front.jpg': { Artist: 'Kim', LicenseShortName: 'CC BY 2.0' },
+  '2005 Hyundai Tucson JM.jpg': { Artist: 'Studio', LicenseShortName: 'Fair use', NonFree: 'true' },
+};
+const wikiCalls = [];
+async function fakeWiki(url) {
+  wikiCalls.push(url);
+  const u = new URL(url);
+  if (u.hostname === 'en.wikipedia.org') {
+    return u.searchParams.get('page') === 'Hyundai Tucson'
+      ? { parse: { title: 'Hyundai Tucson', wikitext: TUCSON_WIKITEXT } }
+      : { error: { code: 'missingtitle' } };
+  }
+  const name = u.searchParams.get('titles').replace(/^File:/, '');
+  const meta = COMMONS[name];
+  if (!meta) return { query: { pages: [{ title: name, missing: true }] } };
+  const extmetadata = Object.fromEntries(Object.entries(meta).map(([k, value]) => [k, { value }]));
+  return { query: { pages: [{ title: `File:${name}`, imageinfo: [{ thumburl: `https://upload.wikimedia.org/thumb/${encodeURIComponent(name)}/800px.jpg`, descriptionurl: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(name)}`, extmetadata }] }] } };
+}
 async function fakeVinLookup(vin) {
   vinLookups.push(vin);
   return vin === '5XYPGDA30JG100001' ? VPIC_SORENTO : null;
@@ -26,7 +72,7 @@ const ADMIN = { 'x-admin-token': 'test-admin' };
 before(async () => {
   const db = openDb(':memory:');
   seedDemo(db);
-  const app = createApp(db, { adminToken: 'test-admin', writeLimit: { windowMs: 60_000, max: 10_000 }, vinLookup: fakeVinLookup });
+  const app = createApp(db, { adminToken: 'test-admin', writeLimit: { windowMs: 60_000, max: 10_000 }, vinLookup: fakeVinLookup, wikiJson: fakeWiki });
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -342,6 +388,39 @@ test('the owner can update the mileage at any time, and nobody else can', async 
   const stranger = await call('PATCH', `/api/vehicles/id/${id}`, { mileage_km: 1 });
   assert.deepEqual(stranger.json.ignored, ['mileage_km']);
   assert.equal(stranger.json.vehicle.mileage_km, 86000);
+});
+
+test('the photo for a generation comes from its own infobox, with the photographer and licence', async () => {
+  const before = wikiCalls.length;
+  const r = await get('/api/car-photo?make=Hyundai&model=Tucson&generation=TL');
+  assert.equal(r.json.photo.exact, true);
+  assert.match(r.json.photo.src, /2016%20Hyundai%20Tucson%20TL/);
+  assert.equal(r.json.photo.credit, 'Jane Doe');
+  assert.equal(r.json.photo.license, 'CC BY-SA 4.0');
+  await get('/api/car-photo?make=Hyundai&model=Tucson&generation=TL');
+  assert.equal(wikiCalls.length - before, 2, 'one article read and one Commons lookup, then cached');
+});
+
+test('a generation whose own photo is not free falls back to the model\'s lead photo, marked as not exact', async () => {
+  const r = await get('/api/car-photo?make=Hyundai&model=Tucson&generation=JM');
+  assert.equal(r.json.photo.exact, false);
+  assert.equal(r.json.photo.credit, 'Kim');
+});
+
+test('a generation with no infobox of its own matches by years, or falls back to the lead photo', () => {
+  const boxes = carphotos.infoboxes(TUCSON_WIKITEXT);
+  assert.equal(boxes.length, 3);
+  assert.equal(carphotos.imageName(boxes[1].fields.image), '2005 Hyundai Tucson JM.jpg');
+  assert.equal(carphotos.imageName(boxes[2].fields.image), '2016 Hyundai Tucson TL front.jpg');
+  assert.equal(carphotos.pickInfobox(boxes, { generation: 'XX', year_start: 2015, year_end: 2021 }), boxes[2]);
+  assert.equal(carphotos.pickInfobox(boxes, { generation: 'NX4', year_start: 2021, year_end: 2027 }), null);
+});
+
+test('photos are only looked up for models in our lineup', async () => {
+  const before = wikiCalls.length;
+  const r = await get('/api/car-photo?make=Hyundai&model=Not%20A%20Car');
+  assert.equal(r.json.photo, null);
+  assert.equal(wikiCalls.length, before);
 });
 
 test('a customer registers by VIN alone, with no plate', async () => {

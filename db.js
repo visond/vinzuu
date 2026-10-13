@@ -62,6 +62,14 @@ CREATE TABLE IF NOT EXISTS vehicles (
 CREATE INDEX IF NOT EXISTS idx_vehicles_plate ON vehicles (plate_number);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_vin ON vehicles (vin) WHERE vin IS NOT NULL;
 
+-- Photos of each model and generation found on Wikipedia/Commons (lib/carphotos.js). data is
+-- JSON: the photo's URL and credit, or null when the article has no free photo.
+CREATE TABLE IF NOT EXISTS car_photos (
+  key TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Answers from the online VIN decoder (lib/vindecode.js), kept so each VIN is looked up once.
 CREATE TABLE IF NOT EXISTS vin_lookups (
   vin TEXT PRIMARY KEY,

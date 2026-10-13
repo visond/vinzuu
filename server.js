@@ -16,6 +16,7 @@ const auth = require('./lib/auth');
 const { findCompatible, logGap, resolveListings, buildCatalog } = require('./lib/matching');
 const { withLineup } = require('./lib/lineup');
 const vindecode = require('./lib/vindecode');
+const carphotos = require('./lib/carphotos');
 
 const APP_NAME = 'Vinzuu';
 
@@ -143,6 +144,9 @@ function createApp(db, config = {}) {
     // turns it off on a server with no internet.
     vinLookup: config.vinLookup !== undefined ? config.vinLookup
       : process.env.VIN_LOOKUP === 'off' ? null : vindecode.vpicLookup,
+    // Reads Wikipedia/Commons for car photos (null = offline: the drawn outline is shown).
+    wikiJson: config.wikiJson !== undefined ? config.wikiJson
+      : process.env.CAR_PHOTOS === 'off' ? null : carphotos.wikiJson,
   };
   const googleClientId = () => cfg.googleClientId || process.env.GOOGLE_CLIENT_ID || null;
   const app = express();
@@ -365,6 +369,24 @@ function createApp(db, config = {}) {
       makes: withLineup(buildCatalog(db)),
     });
   });
+
+  // A real photo of the model (and generation, when we can tell) with the credit its licence
+  // asks for. { photo: null } when there is none or Wikipedia can't be reached.
+  app.get('/api/car-photo', asyncRoute(async (req, res) => {
+    const make = text(req.query.make, { field: 'make', max: 40, required: true });
+    const modelName = text(req.query.model, { field: 'model', max: 60, required: true });
+    if (!cfg.wikiJson) return res.json({ photo: null });
+    const lineupMake = withLineup(buildCatalog(db)).find((m) => m.make.toLowerCase() === make.toLowerCase());
+    const model = lineupMake && lineupMake.models.find((m) => m.model.toLowerCase() === modelName.toLowerCase());
+    // Only cars in our lineup, so this can't be used to fetch arbitrary Wikipedia pages.
+    if (!model) return res.json({ photo: null });
+    const generation = req.query.generation
+      ? model.generations.find((g) => g.generation.toLowerCase() === String(req.query.generation).toLowerCase()) || null
+      : null;
+    const photo = await carphotos.photoFor(db, { make: lineupMake.make, model: model.model, aka: model.aka, generation }, cfg.wikiJson);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.json({ photo });
+  }));
 
   // The maker, build country and model year come from the VIN itself. `car` is the exact build
   // (model, generation, engine) when a saved car or the online decoder knows it, for the customer

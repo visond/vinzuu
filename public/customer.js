@@ -233,7 +233,40 @@
     if (/^hatch/.test(body)) return 'hatch';
     return 'sedan';
   }
-  const carArt = (v) => h('img', { class: 'car-art', src: `/img/cars/${bodyShape(v)}.svg`, alt: '', width: 242, height: 104 });
+  /**
+   * The car's picture: a drawn outline of its body type straight away, replaced by a real photo of
+   * the model (from Wikipedia, credited as its licence asks) once one has loaded. A photo of a
+   * different generation says the car may look different.
+   */
+  function carArt(v) {
+    const fig = h('figure', { class: 'car-figure' },
+      h('img', { class: 'car-art', src: `/img/cars/${bodyShape(v)}.svg`, alt: '', width: 242, height: 104 }));
+    carPhoto(v).then((p) => {
+      if (!p) return;
+      const img = new Image();
+      img.onload = () => {
+        img.className = 'car-photo';
+        img.alt = `${v.make} ${v.model}`;
+        fig.classList.add('has-photo');
+        fig.replaceChildren(img, h('figcaption', {},
+          p.exact ? null : 'Yours may look different. ',
+          'Photo: ', h('a', { href: p.file_page, target: '_blank', rel: 'noopener', text: p.credit }), `, ${p.license}`));
+      };
+      img.referrerPolicy = 'no-referrer';
+      img.src = p.src; // if it fails to load, the outline simply stays
+    });
+    return fig;
+  }
+  const photoCache = new Map();
+  function carPhoto(v) {
+    const key = [v.make, v.model, v.generation || ''].join('|');
+    if (!photoCache.has(key)) {
+      const q = new URLSearchParams({ make: v.make, model: v.model });
+      if (v.generation) q.set('generation', v.generation);
+      photoCache.set(key, api(`/api/car-photo?${q}`).then((r) => r.photo).catch(() => null));
+    }
+    return photoCache.get(key);
+  }
 
   /** "2.4L Petrol (G4KJ)": the engine with its codes for that generation, when we know them. */
   function engineText(v) {
