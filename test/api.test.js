@@ -3,16 +3,30 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { openDb, seedDemo } = require('../db');
 const { createApp } = require('../server');
+const vindecode = require('../lib/vindecode');
 const alg = require('../lib/algorithms');
 
 let server;
 let base;
+
+// Stands in for the online VIN decoder (NHTSA vPIC): it knows one US-built Kia Sorento, the way
+// vPIC answers for a North American VIN, and nothing else. Counts calls to prove the cache works.
+const VPIC_SORENTO = {
+  Make: 'KIA', Model: 'Sorento', ModelYear: '2018', DisplacementL: '2.4', EngineCylinders: '4',
+  FuelTypePrimary: 'Gasoline', EngineModel: 'GDI THETA-II', Turbo: '', TransmissionStyle: 'Automatic',
+  BodyClass: 'Sport Utility Vehicle (SUV)/Multi-Purpose Vehicle (MPV)', PlantCountry: 'UNITED STATES (USA)', Trim: 'LX',
+};
+const vinLookups = [];
+async function fakeVinLookup(vin) {
+  vinLookups.push(vin);
+  return vin === '5XYPGDA30JG100001' ? VPIC_SORENTO : null;
+}
 const ADMIN = { 'x-admin-token': 'test-admin' };
 
 before(async () => {
   const db = openDb(':memory:');
   seedDemo(db);
-  const app = createApp(db, { adminToken: 'test-admin', writeLimit: { windowMs: 60_000, max: 10_000 } });
+  const app = createApp(db, { adminToken: 'test-admin', writeLimit: { windowMs: 60_000, max: 10_000 }, vinLookup: fakeVinLookup });
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -43,7 +57,7 @@ function makeClient() {
     const json = await res.json().catch(() => null);
     return { status: res.status, json };
   }
-  return { get: (p) => request('GET', p), post: (p, b) => request('POST', p, b) };
+  return { get: (p) => request('GET', p), post: (p, b) => request('POST', p, b), patch: (p, b) => request('PATCH', p, b) };
 }
 const post = (p, b, h) => call('POST', p, b, h);
 
@@ -278,6 +292,56 @@ test('bad input gets a clear message', async () => {
   const unknown = await get('/api/vehicles/RZZ999Z');
   assert.equal(unknown.status, 404);
   assert.equal(unknown.json.code, 'not_registered');
+});
+
+test('the online decoder\'s engine and fuel become our engine labels', () => {
+  assert.equal(vindecode.engineLabel({ DisplacementL: '2.4', FuelTypePrimary: 'Gasoline' }), '2.4L Petrol');
+  assert.equal(vindecode.engineLabel({ DisplacementL: '1.998', FuelTypePrimary: 'Gasoline', Turbo: 'Yes' }), '2.0L Turbo Petrol');
+  assert.equal(vindecode.engineLabel({ DisplacementL: '2.2', FuelTypePrimary: 'Diesel', Turbo: 'Yes' }), '2.2L Diesel');
+  assert.equal(vindecode.engineLabel({ DisplacementL: '2.5', FuelTypePrimary: 'Gasoline', ElectrificationLevel: 'Strong HEV (Hybrid Electric Vehicle)' }), '2.5L Hybrid');
+  assert.equal(vindecode.engineLabel({ DisplacementL: '', FuelTypePrimary: 'Electric' }), null);
+});
+
+test('a VIN the online decoder knows comes back as the exact car to confirm, and is looked up only once', async () => {
+  const before = vinLookups.length;
+  const r = await get('/api/vin/decode?vin=5XYPGDA30JG100001');
+  assert.equal(r.status, 200);
+  assert.deepEqual(
+    { make: r.json.car.make, model: r.json.car.model, year: r.json.car.year, generation: r.json.car.generation, engine: r.json.car.engine, origin: r.json.car.origin_market, source: r.json.car.source },
+    { make: 'Kia', model: 'Sorento', year: 2018, generation: 'UM', engine: '2.4L Petrol', origin: 'USA', source: 'vpic' });
+  await get('/api/vin/decode?vin=5XYPGDA30JG100001');
+  assert.equal(vinLookups.length - before, 1, 'the second decode is answered from the cache');
+});
+
+test('a VIN nobody knows yet gives the maker and year but no exact car', async () => {
+  const r = await get('/api/vin/decode?vin=KMHHT61DXCU900001');
+  assert.equal(r.json.maker, 'Hyundai');
+  assert.equal(r.json.car, null);
+});
+
+test('a VIN sharing its build characters with a saved car is suggested as the same build', async () => {
+  await post('/api/vehicles/register', {
+    vin: 'KNAFK4A61J7400001', make: 'Kia', model: 'Sportage', generation: 'QL', year: 2018, engine: '2.0L Diesel', origin_market: 'Korea',
+  });
+  const r = await get('/api/vin/decode?vin=KNAFK4A69J7400777');
+  assert.equal(r.json.car.source, 'saved');
+  assert.equal(r.json.car.model, 'Sportage');
+  assert.equal(r.json.car.engine, '2.0L Diesel');
+  assert.equal(r.json.car.year, 2018);
+});
+
+test('the owner can update the mileage at any time, and nobody else can', async () => {
+  const owner = makeClient();
+  await owner.post('/api/auth/signup', { name: 'Mileage Owner', email: 'mileage@example.com', password: 'Long-password123' });
+  const reg = await owner.post('/api/vehicles/register', { vin: 'JTMBK31V996400002', make: 'Toyota', model: 'RAV4', year: 2009 });
+  const id = reg.json.vehicle.id;
+  const first = await owner.patch(`/api/vehicles/id/${id}`, { mileage_km: 84500 });
+  assert.equal(first.json.vehicle.mileage_km, 84500);
+  const second = await owner.patch(`/api/vehicles/id/${id}`, { mileage_km: 86000 });
+  assert.equal(second.json.vehicle.mileage_km, 86000);
+  const stranger = await call('PATCH', `/api/vehicles/id/${id}`, { mileage_km: 1 });
+  assert.deepEqual(stranger.json.ignored, ['mileage_km']);
+  assert.equal(stranger.json.vehicle.mileage_km, 86000);
 });
 
 test('a customer registers by VIN alone, with no plate', async () => {

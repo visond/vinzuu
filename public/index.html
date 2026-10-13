@@ -34,40 +34,99 @@
     </div>
   </nav>
 
-  <main class="wrap" id="main">
-    <section id="start" aria-labelledby="page-title">
-      <h1 id="page-title">Type your VIN. See who has the right part.</h1>
+  <main id="main">
+    <!-- 1. Vehicle inquiry: the VIN is all we ask for. -->
+    <section id="start" class="inquiry wrap" aria-labelledby="page-title">
+      <h1 id="page-title">Find your car</h1>
+      <p class="inquiry-sub">Enter your VIN and we'll find your exact car, then only the parts that fit it.</p>
       <form id="vin-form" class="vinbox-form" novalidate>
         <div>
-          <label for="vin" class="sr-only">VIN (17 characters)</label>
+          <label for="vin" class="field-label">Vehicle Identification Number (VIN)</label>
           <div class="vinbox">
             <span class="vinbox-tag" aria-hidden="true">VIN</span>
             <input id="vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters"
-                   autocomplete="off" maxlength="17" placeholder="e.g. JTMBK31V996054321">
+                   autocomplete="off" maxlength="17" placeholder="e.g. JTMBK31V996054321" aria-describedby="vin-hint">
           </div>
-          <p class="hint">The 17-character number on the dashboard corner by the windscreen, or inside the driver door.<span id="demo-try" hidden> No VIN to hand? <button class="btn-link" type="button" id="demo-try-btn">Try a demo car</button>.</span></p>
+          <p class="hint" id="vin-hint">17 letters and numbers.<span id="demo-try" hidden> No VIN to hand? <button class="btn-link" type="button" id="demo-try-btn">Try a demo car</button>.</span></p>
         </div>
-        <button id="vin-go" class="btn btn-primary btn-block" type="submit">Find my car</button>
+        <button id="vin-go" class="btn btn-primary btn-block" type="submit">View my car</button>
       </form>
       <p id="vin-status" class="status" role="status" aria-live="polite"></p>
-    </section>
 
-    <section id="register" hidden aria-labelledby="register-title"></section>
+      <div class="vin-help">
+        <h2>What is a VIN?</h2>
+        <p>Your car's own 17-character number, like an ID number for the car. No two cars share one, and it never changes, so it tells us exactly which parts fit.</p>
+        <div class="vin-anatomy" aria-hidden="true">
+          <div class="vin-chars"><span class="seg seg-wmi">KMH</span><span class="seg seg-vds">J3813</span><span class="seg">D</span><span class="seg seg-year">H</span><span class="seg">U888881</span></div>
+        </div>
+        <ul class="vin-legend">
+          <li><span class="swatch seg-wmi"></span><strong>1st to 3rd:</strong> the maker and the country it was built in</li>
+          <li><span class="swatch seg-vds"></span><strong>4th to 8th:</strong> the model, body and engine</li>
+          <li><span class="swatch seg-year"></span><strong>10th:</strong> the model year</li>
+        </ul>
 
-    <section id="vehicle" hidden>
-      <div id="vehicle-bar"></div>
-      <div id="picker" class="picker" aria-labelledby="picker-title">
-        <h2 id="picker-title">What does it need?</h2>
-        <label for="part-q" class="sr-only">Describe the problem or type a part name</label>
-        <input id="part-q" type="search" placeholder="Try: brake noise, oil filter, battery" autocomplete="off">
-        <ul id="part-list" class="part-list"></ul>
+        <h2>Where do I find it?</h2>
+        <div class="vin-where">
+          <svg class="vin-where-car" viewBox="0 0 242 110" aria-hidden="true">
+            <ellipse cx="121" cy="100" rx="112" ry="5" fill="#10283B" opacity="0.14"/>
+            <path d="M12 76 L12 58 Q14 47 30 45 L60 43 L78 21 Q82 16 92 16 L184 16 Q194 16 200 25 L214 44 Q229 46 230 57 L230 76 Q230 81 224 81 L18 81 Q12 81 12 76 Z" fill="#DCE6EE" stroke="#9FB3C2" stroke-width="2"/>
+            <path d="M68 43 L83 23 Q86 20 92 20 L132 20 L132 43 Z M138 20 L184 20 Q190 20 194 26 L206 43 L138 43 Z" fill="#fff"/>
+            <path d="M134 18 L134 80" stroke="#9FB3C2" stroke-width="1.5"/>
+            <circle cx="60" cy="81" r="17" fill="#4A5B68"/><circle cx="188" cy="81" r="17" fill="#4A5B68"/>
+            <g font-family="Arial, sans-serif" font-weight="700" font-size="12" text-anchor="middle" fill="#10283B">
+              <circle cx="74" cy="40" r="10" fill="#F5B700"/><text x="74" y="44">1</text>
+              <circle cx="134" cy="58" r="10" fill="#F5B700"/><text x="134" y="62">2</text>
+              <circle cx="32" cy="52" r="10" fill="#F5B700"/><text x="32" y="56">3</text>
+            </g>
+          </svg>
+          <ol class="vin-places">
+            <li><strong>Bottom corner of the windscreen</strong>, on the driver's side. Look in from outside.</li>
+            <li><strong>Inside the driver's door frame</strong>, on the sticker you see when the door is open.</li>
+            <li><strong>Under the bonnet</strong>, stamped near the top of the engine bay.</li>
+          </ol>
+        </div>
+        <p class="small muted">It is also printed on your vehicle registration card and your insurance papers.</p>
       </div>
     </section>
 
-    <section id="results" hidden tabindex="-1" aria-labelledby="results-title"></section>
-    <p id="results-status" class="sr-only" role="status" aria-live="polite"></p>
+    <!-- 2. "Is this your car?" when the VIN told us the exact build. -->
+    <section id="confirm" class="wrap" hidden aria-labelledby="confirm-title"></section>
 
-    <footer class="site-footer">
+    <!-- 2b. Pick the details when it didn't. -->
+    <section id="register" class="wrap" hidden aria-labelledby="register-title"></section>
+
+    <!-- 3. Basic information, once, for a newly added car. -->
+    <section id="basic" class="wrap" hidden aria-labelledby="basic-title"></section>
+
+    <!-- 4. My garage: parts, inspection items and repair shops for the chosen car. -->
+    <section id="vehicle" hidden>
+      <div id="vehicle-bar"></div>
+      <div class="wrap-wide garage-body">
+        <section id="picker" class="g-section" aria-labelledby="picker-title">
+          <h2 id="picker-title" class="g-title">Purchase parts</h2>
+          <label for="part-q" class="sr-only">Describe the problem or type a part name</label>
+          <input id="part-q" type="search" placeholder="Search parts, or describe the problem: brake noise, battery…" autocomplete="off">
+          <div class="part-strip">
+            <button class="strip-arrow prev" type="button" aria-label="Previous parts" data-dir="-1">&#8249;</button>
+            <ul id="part-list" class="part-carousel"></ul>
+            <button class="strip-arrow next" type="button" aria-label="More parts" data-dir="1">&#8250;</button>
+          </div>
+          <div class="g-more"><button class="btn btn-secondary" type="button" id="all-parts" aria-expanded="false">View all parts</button></div>
+        </section>
+
+        <section id="results" class="g-section" hidden tabindex="-1" aria-labelledby="results-title"></section>
+        <p id="results-status" class="sr-only" role="status" aria-live="polite"></p>
+
+        <section id="inspection" class="g-section" aria-labelledby="inspection-title"></section>
+
+        <section id="shops-near" class="g-section" aria-labelledby="shops-title">
+          <h2 id="shops-title" class="g-title">Repair shops near me</h2>
+          <div class="garage-grid flush" id="garage-grid" aria-live="polite"></div>
+        </section>
+      </div>
+    </section>
+
+    <footer class="site-footer wrap">
       <p>Your VIN is only used to find parts that fit your car. Your location is used to measure distance and is not saved.</p>
       <p class="small"><a href="/about.html">About us</a> · <a href="/contact.html">Contact us</a></p>
     </footer>

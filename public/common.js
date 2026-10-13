@@ -144,12 +144,36 @@ const ICONS = {
   shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z" fill="currentColor"/><path d="m8.4 12.2 2.5 2.5 4.7-5.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   check: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m7.8 12.4 3 3 5.4-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   alert: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4L12 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.5M12 17.2v.1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.5" stroke="currentColor" stroke-width="2"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   ruler: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="8" width="19" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
 };
 function icon(name) {
   const t = document.createElement('template');
   t.innerHTML = ICONS[name] || '';
   return t.content.firstElementChild;
+}
+
+/* A garage card for the homepage's "Garages near you" and the garage page's "Repair shops near
+   me". Photos are placeholders until garages upload their own: they are assigned in order. */
+const GARAGE_PHOTOS = ['/img/garages/garage-1.jpg', '/img/garages/garage-2.jpg', '/img/garages/garage-3.jpg', '/img/garages/garage-4.jpg'];
+function garageCard(g, i, message) {
+  const digits = String(g.whatsapp || g.phone || '').replace(/\D/g, '');
+  const text = message || `Hello ${g.name}, I found your garage on Vinzuu and would like to book a repair.`;
+  const bookHref = digits ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : `tel:${g.phone}`;
+  const mapHref = `https://www.google.com/maps/search/?api=1&query=${g.latitude},${g.longitude}`;
+  const tags = String(g.specialties || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 3);
+  return h('article', { class: 'garage-card' },
+    h('div', { class: 'gc-photo' },
+      h('img', { src: GARAGE_PHOTOS[i % GARAGE_PHOTOS.length], alt: '', loading: 'lazy', width: 400, height: 250 }),
+      h('span', { class: 'gc-distance', text: `${g.distance_km} km` })),
+    h('div', { class: 'gc-body' },
+      h('h3', { text: g.name }),
+      h('p', { class: 'gc-address' }, icon('pin'), g.address || 'Kigali'),
+      tags.length ? h('ul', { class: 'gc-tags' }, ...tags.map((t) => h('li', { text: t }))) : null,
+      h('div', { class: 'gc-actions' },
+        h('a', { class: 'btn btn-primary', href: bookHref, target: '_blank', rel: 'noopener' }, icon('calendar'), 'Book now'),
+        h('a', { class: 'btn', href: mapHref, target: '_blank', rel: 'noopener', 'aria-label': `Location of ${g.name} on the map` }, icon('pin'), 'Location'))));
 }
 
 const BADGE_ICON = {

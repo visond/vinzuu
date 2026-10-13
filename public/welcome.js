@@ -94,31 +94,7 @@
   });
 
   // ---------------------------------------------------------------- garages near you
-  // Photos are placeholders until garages upload their own: they are assigned in order.
-  const GARAGE_PHOTOS = ['/img/garages/garage-1.jpg', '/img/garages/garage-2.jpg', '/img/garages/garage-3.jpg', '/img/garages/garage-4.jpg'];
-  const ICON_PIN = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.5" stroke="currentColor" stroke-width="2"/></svg>';
-  const ICON_CAL = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-  const icon = (svg) => { const s = document.createElement('span'); s.innerHTML = svg; return s.firstChild; }; // fixed markup above, never server data
-
-  function garageCard(g, i) {
-    const digits = String(g.whatsapp || g.phone || '').replace(/\D/g, '');
-    const bookHref = digits
-      ? `https://wa.me/${digits}?text=${encodeURIComponent(`Hello ${g.name}, I found your garage on Vinzuu and would like to book a repair.`)}`
-      : `tel:${g.phone}`;
-    const mapHref = `https://www.google.com/maps/search/?api=1&query=${g.latitude},${g.longitude}`;
-    const tags = String(g.specialties || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 3);
-    return h('article', { class: 'garage-card' },
-      h('div', { class: 'gc-photo' },
-        h('img', { src: GARAGE_PHOTOS[i % GARAGE_PHOTOS.length], alt: '', loading: 'lazy', width: 400, height: 250 }),
-        h('span', { class: 'gc-distance', text: `${g.distance_km} km` })),
-      h('div', { class: 'gc-body' },
-        h('h3', { text: g.name }),
-        h('p', { class: 'gc-address' }, icon(ICON_PIN), g.address || 'Kigali'),
-        tags.length ? h('ul', { class: 'gc-tags' }, ...tags.map((t) => h('li', { text: t }))) : null,
-        h('div', { class: 'gc-actions' },
-          h('a', { class: 'btn btn-primary', href: bookHref, target: '_blank', rel: 'noopener' }, icon(ICON_CAL), 'Book now'),
-          h('a', { class: 'btn', href: mapHref, target: '_blank', rel: 'noopener', 'aria-label': `Location of ${g.name} on the map` }, icon(ICON_PIN), 'Location'))));
-  }
+  // garageCard() is in common.js: the garage page shows the same cards.
 
   async function loadGarages(coords) {
     const grid = $('garage-grid');
@@ -127,7 +103,7 @@
     try {
       const { garages } = await api(`/api/garages/nearby?${q}`);
       grid.replaceChildren(...(garages.length
-        ? garages.slice(0, 6).map(garageCard)
+        ? garages.slice(0, 6).map((g, i) => garageCard(g, i))
         : [h('p', { class: 'muted', text: 'No garages are listed yet. Check back soon.' })]));
     } catch (err) {
       grid.replaceChildren(h('p', { class: 'muted', text: 'We could not load garages right now. Refresh the page to try again.' }));

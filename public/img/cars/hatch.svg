@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 242 104" role="img" aria-label="hatch">
+<ellipse cx="121" cy="98" rx="112" ry="5" fill="#10283B" opacity="0.14"/>
+<path d="M14 75 L16 61 Q20 53 40 51 L64 49 Q84 27 104 25 L160 25 Q177 26 187 36 L197 56 Q205 60 205 68 L205 75 Q205 80 199 80 L20 80 Q14 80 14 75 Z" fill="#0F4C81"/>
+<path d="M14 75 L16 61 Q20 53 40 51 L64 49 Q84 27 104 25 L160 25 Q177 26 187 36 L197 56 Q205 60 205 68 L205 75 Q205 80 199 80 L20 80 Q14 80 14 75 Z" fill="none" stroke="#0B3A63" stroke-width="2" stroke-linejoin="round"/>
+<path d="M72 49 Q88 30 106 29 L126 29 L126 49 Z M132 29 L160 29 Q173 30 181 39 L188 50 L132 50 Z" fill="#CFE2F1"/>
+<path d="M16 64 L204 64" stroke="#0B3A63" stroke-width="1.5" opacity="0.45"/>
+<rect x="15" y="58" width="8" height="5" rx="2" fill="#F5B700"/>
+<circle cx="54" cy="81" r="17" fill="#1B2A36"/><circle cx="54" cy="81" r="8" fill="#C9D3DA"/><circle cx="54" cy="81" r="2.5" fill="#1B2A36"/><circle cx="168" cy="81" r="17" fill="#1B2A36"/><circle cx="168" cy="81" r="8" fill="#C9D3DA"/><circle cx="168" cy="81" r="2.5" fill="#1B2A36"/>
+</svg>

@@ -62,6 +62,14 @@ CREATE TABLE IF NOT EXISTS vehicles (
 CREATE INDEX IF NOT EXISTS idx_vehicles_plate ON vehicles (plate_number);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_vin ON vehicles (vin) WHERE vin IS NOT NULL;
 
+-- Answers from the online VIN decoder (lib/vindecode.js), kept so each VIN is looked up once.
+CREATE TABLE IF NOT EXISTS vin_lookups (
+  vin TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  data TEXT NOT NULL,
+  fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Spec 8.5. "keywords" powers the symptom search ("brake noise" -> Front Brake Pad).
 CREATE TABLE IF NOT EXISTS part_categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -171,6 +179,9 @@ function openDb(dbPath = process.env.DB_PATH || DEFAULT_DB_PATH) {
   db.exec(SCHEMA);
   ensureColumn(db, 'vehicles', 'user_id', 'INTEGER REFERENCES users(id)');
   ensureColumn(db, 'users', 'phone', 'TEXT');
+  // The odometer reading the owner last gave, for the "My garage" inspection reminders.
+  ensureColumn(db, 'vehicles', 'mileage_km', 'INTEGER');
+  ensureColumn(db, 'vehicles', 'mileage_at', 'TEXT');
   migratePlateNotUnique(db);
   ensureCategories(db);
   return db;

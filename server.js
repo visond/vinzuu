@@ -15,6 +15,7 @@ const alg = require('./lib/algorithms');
 const auth = require('./lib/auth');
 const { findCompatible, logGap, resolveListings, buildCatalog } = require('./lib/matching');
 const { withLineup } = require('./lib/lineup');
+const vindecode = require('./lib/vindecode');
 
 const APP_NAME = 'Vinzuu';
 
@@ -138,6 +139,10 @@ function createApp(db, config = {}) {
     // Tests pass their own client id and token check, so Google sign-in can be tested offline.
     googleClientId: config.googleClientId || null,
     verifyGoogleIdToken: config.verifyGoogleIdToken || auth.verifyGoogleIdToken,
+    // The online VIN decoder. Tests pass their own (or null to stay offline); VIN_LOOKUP=off
+    // turns it off on a server with no internet.
+    vinLookup: config.vinLookup !== undefined ? config.vinLookup
+      : process.env.VIN_LOOKUP === 'off' ? null : vindecode.vpicLookup,
   };
   const googleClientId = () => cfg.googleClientId || process.env.GOOGLE_CLIENT_ID || null;
   const app = express();
@@ -221,6 +226,8 @@ function createApp(db, config = {}) {
     id: v.id, plate_number: v.plate_number, make: v.make, model: v.model, generation: v.generation,
     year: v.year, engine: v.engine, transmission: v.transmission, origin_market: v.origin_market,
     drive_side: v.drive_side, has_vin: !!v.vin, vin_masked: alg.maskVin(v.vin),
+    mileage_km: v.mileage_km == null ? null : v.mileage_km, mileage_at: v.mileage_at || null,
+    created_at: v.created_at,
   });
   const parseOrigin = (query) => {
     if (query.lat == null && query.lon == null) return { origin: alg.KIGALI_CENTER, used: 'default' };
@@ -359,12 +366,23 @@ function createApp(db, config = {}) {
     });
   });
 
-  app.get('/api/vin/decode', (req, res) => {
+  // The maker, build country and model year come from the VIN itself. `car` is the exact build
+  // (model, generation, engine) when a saved car or the online decoder knows it, for the customer
+  // to confirm; null when they need to pick it themselves.
+  app.get('/api/vin/decode', asyncRoute(async (req, res) => {
     const vin = String(req.query.vin || '').toUpperCase().trim();
     if (!alg.isValidVin(vin)) return res.json({ valid: false });
     const year = alg.decodeModelYear(vin);
-    res.json({ valid: true, ...alg.decodeWmi(vin), model_year: year.year, model_year_code: year.code });
-  });
+    const wmi = alg.decodeWmi(vin);
+    const car = await vindecode.findCar(db, vin, {
+      lineupMakes: withLineup(buildCatalog(db)), year: year.year, lookup: cfg.vinLookup,
+    });
+    if (car) {
+      car.year = car.year || year.year;
+      car.origin_market = car.origin_market || wmi.origin || null;
+    }
+    res.json({ valid: true, ...wmi, model_year: year.year, model_year_code: year.code, car });
+  }));
 
   // Algorithm A. VIN-first: a VIN never changes, so it is the trusted key that decides whether
   // this is a car we already know. The plate is checked only as a fallback for cars that don't
@@ -496,6 +514,15 @@ function createApp(db, config = {}) {
       if (value == null || value === v[name]) continue;
       if (v[name] && !admin) { ignored.push(name); continue; }
       updates[name] = value;
+    }
+    // The odometer reading changes all the time, so its owner can always update it (anyone can
+    // while the car has no owner yet, as with every other detail here).
+    if (b.mileage_km != null && String(b.mileage_km).trim() !== '') {
+      if (v.user_id && v.user_id !== req.userId && !admin) ignored.push('mileage_km');
+      else {
+        updates.mileage_km = integer(b.mileage_km, { field: 'mileage_km', min: 0, max: 2_000_000 });
+        updates.mileage_at = new Date().toISOString().slice(0, 10);
+      }
     }
     const names = Object.keys(updates);
     if (names.length) {

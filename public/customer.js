@@ -1,6 +1,9 @@
-/* Customer page: VIN -> car -> part -> shops -> book a garage. Uses helpers from common.js.
-   The VIN is the only thing a customer types or sees to identify a car: its first three
-   characters give the maker and country, the 10th gives the model year. */
+/* Customer page, laid out like a parts site's "my garage":
+     1. Vehicle inquiry: the VIN is all we ask for.
+     2. "Is this your car?" when the VIN told us the exact build, or pick the details when not.
+     3. Basic information and mileage, once, for a newly added car.
+     4. My garage: purchase parts (-> shops -> book a garage), inspection items, repair shops.
+   The VIN is the only thing a customer types or sees to identify a car. Uses common.js. */
 (() => {
   'use strict';
 
@@ -43,7 +46,12 @@
 
     $('vin').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/\s/g, ''); });
     $('vin-form').addEventListener('submit', onVinSubmit);
-    $('part-q').addEventListener('input', renderPartList);
+    $('part-q').addEventListener('input', () => { if ($('part-q').value) showAllParts(true); renderPartList(); });
+    $('all-parts').addEventListener('click', () => showAllParts($('all-parts').getAttribute('aria-expanded') !== 'true'));
+    document.querySelectorAll('.strip-arrow').forEach((b) => b.addEventListener('click', () => {
+      const list = $('part-list');
+      list.scrollBy({ left: Number(b.dataset.dir) * list.clientWidth * 0.8, behavior: motion() });
+    }));
 
     // A VIN in the URL (from the homepage's quick-search box) wins over a remembered car,
     // since typing a different VIN there is a deliberate new search. A part in the URL (a
@@ -95,9 +103,15 @@
   const validVin = (v) => /^[A-HJ-NPR-Z0-9]{17}$/.test(v); // I, O, Q are never used in a real VIN
 
   function hideSections() {
-    $('register').hidden = true;
-    $('vehicle').hidden = true;
-    $('results').hidden = true;
+    for (const id of ['confirm', 'register', 'basic', 'vehicle', 'results']) $(id).hidden = true;
+  }
+
+  /** Shows one step of the flow and brings it to the top of the screen. */
+  function showStep(id) {
+    hideSections();
+    $('start').hidden = id !== 'start';
+    $(id).hidden = false;
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
   // ---------------------------------------------------------------- VIN -> car
@@ -123,8 +137,11 @@
       setVehicle(vehicle);
     } catch (err) {
       if (err.code === 'not_registered') {
+        setStatus($('vin-status'), 'Reading your VIN…');
+        const d = await decodeVin(vin);
         setStatus($('vin-status'), '');
-        showRegister(vin);
+        if (d && d.car && findModelIn(d.car.make, d.car.model)) showConfirm(vin, d);
+        else showRegister(vin, d);
       } else {
         setStatus($('vin-status'), err.message, 'error');
       }
@@ -163,9 +180,9 @@
       h('span', { class: 'vinbox-text' }, v.vin_masked || 'No VIN saved'));
   }
 
-  function makeLogo(make) {
+  function makeLogo(make, cls = 'make-logo') {
     const m = state.catalog.makes.find((x) => x.make.toLowerCase() === String(make).toLowerCase());
-    return m && m.logo ? h('img', { class: 'make-logo', src: m.logo, alt: '', width: 28, height: 28 }) : null;
+    return m && m.logo ? h('img', { class: cls, src: m.logo, alt: '', width: 28, height: 28 }) : null;
   }
 
   function setVehicle(vehicle) {
@@ -173,18 +190,13 @@
     state.category = null;
     state.query = null;
     store.set(VEHICLE_ID_KEY, String(vehicle.id));
-    hideSections();
-    $('start').hidden = true;
-    $('vehicle').hidden = false;
+    showStep('vehicle');
     $('part-q').value = '';
-    $('vehicle-bar').replaceChildren(
-      h('div', { class: 'vehicle-bar' },
-        vinPill(vehicle),
-        h('div', { class: 'vehicle-text' },
-          h('strong', {}, makeLogo(vehicle.make), vehicleTitle(vehicle)),
-          h('span', { text: vehicleDetails(vehicle) })),
-        h('button', { class: 'btn btn-quiet', type: 'button', onclick: changeCar, text: 'Change car' })));
+    renderGarageHero();
+    showAllParts(false);
     renderPartList();
+    renderInspection();
+    loadShopsNear();
     if (state.wantedPart) {
       const wanted = state.wantedPart;
       state.wantedPart = null; // only once: picking another car later starts from the list
@@ -195,11 +207,237 @@
   function changeCar() {
     store.remove(VEHICLE_ID_KEY);
     state.vehicle = null;
-    hideSections();
+    showStep('start');
     $('start').hidden = false;
     $('vin').value = '';
     $('vin').focus();
     loadMyCars();
+  }
+
+  // ---------------------------------------------------------------- the exact car
+
+  const sameText = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
+  const findMake = (make) => state.catalog.makes.find((m) => sameText(m.make, make)) || null;
+  function findModelIn(make, model) {
+    const m = findMake(make);
+    return (m && m.models.find((x) => sameText(x.model, model))) || null;
+  }
+
+  /** Which silhouette to draw for a model's body ("Sedan, hatchback" -> sedan). */
+  function bodyShape(v) {
+    const model = findModelIn(v.make, v.model);
+    const body = String((model && model.body) || v.body || '').toLowerCase();
+    if (/pickup|truck/.test(body)) return 'pickup';
+    if (/mpv|van|minibus/.test(body)) return 'van';
+    if (/suv|crossover|sport utility/.test(body)) return 'suv';
+    if (/^hatch/.test(body)) return 'hatch';
+    return 'sedan';
+  }
+  const carArt = (v) => h('img', { class: 'car-art', src: `/img/cars/${bodyShape(v)}.svg`, alt: '', width: 242, height: 104 });
+
+  /** "2.4L Petrol (G4KJ)": the engine with its codes for that generation, when we know them. */
+  function engineText(v) {
+    if (!v.engine) return null;
+    const engines = enginesFor(findModelIn(v.make, v.model), v.generation);
+    const e = engines.find((x) => sameText(x.label, v.engine));
+    return e && e.codes.length ? `${v.engine} (${e.codes.join(', ')})` : v.engine;
+  }
+  function generationLabel(v) {
+    const model = findModelIn(v.make, v.model);
+    const g = model && model.generations.find((x) => sameText(x.generation, v.generation));
+    return g ? generationText(g) : v.generation || null;
+  }
+  const fuelOf = (engine) => {
+    const m = String(engine || '').match(/(Plug-in Hybrid|Hybrid|Diesel|LPG|CNG|Petrol|Electric|Hydrogen)/i);
+    return m ? m[1] : null;
+  };
+
+  /** Step 2: the decoder found the exact build. Same question PartZone asks before going on. */
+  function showConfirm(vin, d) {
+    const c = d.car;
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    const facts = [
+      ['Model year', c.year],
+      ['Generation', generationLabel(c)],
+      ['Engine', engineText(c)],
+      ['Transmission', c.transmission],
+      ['Built in', c.origin_market],
+    ].filter(([, value]) => value);
+    const source = c.source === 'vpic'
+      ? 'Found in the vehicle makers\' database for this VIN.'
+      : `Matched to ${c.matches === 1 ? 'a car' : `${c.matches} cars`} already saved with the same VIN pattern.`;
+    const yes = h('button', { class: 'btn btn-primary btn-block', type: 'button', text: 'Yes, that is my car', onclick: onYes });
+    $('confirm').replaceChildren(h('div', { class: 'confirm-card' },
+      h('div', { class: 'cc-top' },
+        h('div', { class: 'cc-text' },
+          makeLogo(c.make, 'cc-logo'),
+          h('p', { class: 'cc-model', text: `${c.make} ${c.model}` }),
+          h('p', { class: 'cc-sub', text: [c.year, c.engine].filter(Boolean).join(' · ') })),
+        carArt(c)),
+      h('dl', { class: 'spec-list' }, ...facts.flatMap(([k, value]) => [h('dt', { text: k }), h('dd', { text: String(value) })])),
+      h('p', { class: 'small muted', text: source })),
+    h('h2', { id: 'confirm-title', class: 'confirm-q', text: 'Is the vehicle information correct?' }),
+    h('div', { class: 'confirm-actions' },
+      yes,
+      h('button', { class: 'btn btn-secondary btn-block', type: 'button', text: 'No, I\'ll choose the details', onclick: () => showRegister(vin, d, c) })),
+    status);
+    showStep('confirm');
+    yes.focus({ preventScroll: true });
+
+    async function onYes() {
+      yes.disabled = true;
+      setStatus(status, 'Saving your car…');
+      try {
+        const res = await api('/api/vehicles/register', { method: 'POST', body: {
+          vin, make: c.make, model: c.model, year: c.year, generation: c.generation || null, engine: c.engine || null,
+          transmission: c.transmission || null, origin_market: state.meta.origins.includes(c.origin_market) ? c.origin_market : null,
+        } });
+        showBasic(res.vehicle);
+      } catch (err) {
+        yes.disabled = false;
+        setStatus(status, err.message, 'error');
+      }
+    }
+  }
+
+  /** Step 3: the car's details at a glance, and its mileage for the inspection reminders. */
+  function showBasic(vehicle) {
+    const v = vehicle;
+    const mileage = h('input', { id: 'b-mileage', type: 'number', inputMode: 'numeric', min: 0, max: 2000000, step: 1, placeholder: 'For example 84500' });
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    const rows = [
+      ['Manufacturer', v.make], ['Model', v.model], ['Generation', generationLabel(v) || 'Not sure'],
+      ['Engine', engineText(v) || 'Not sure'], ['Fuel', fuelOf(v.engine) || 'Not sure'], ['Model year', v.year],
+      ['Transmission', v.transmission || 'Not sure'], ['Built in', v.origin_market || 'Not sure'], ['VIN', v.vin_masked],
+    ];
+    const done = async (event) => {
+      event.preventDefault();
+      if (mileage.value === '') return setVehicle(v);
+      setStatus(status, 'Saving…');
+      try {
+        const res = await api(`/api/vehicles/id/${enc(v.id)}`, { method: 'PATCH', body: { mileage_km: Number(mileage.value) } });
+        setVehicle(res.vehicle);
+      } catch (err) { setStatus(status, err.message, 'error'); }
+    };
+    $('basic').replaceChildren(
+      h('div', { class: 'basic-hero' },
+        h('div', {}, makeLogo(v.make, 'cc-logo'), h('h1', { id: 'basic-title', text: `${v.make} ${v.model}` }),
+          h('p', { class: 'cc-sub', text: `${v.year}${v.engine ? ` · ${v.engine}` : ''}` })),
+        carArt(v)),
+      h('h2', { class: 'g-title', text: 'Vehicle basic information' }),
+      h('dl', { class: 'spec-grid' }, ...rows.map(([k, value]) => h('div', {}, h('dt', { text: k }), h('dd', { text: String(value) })))),
+      h('form', { class: 'basic-form', novalidate: true, onsubmit: done },
+        h('label', { for: 'b-mileage', text: 'Current mileage' }),
+        h('div', { class: 'unit-input' }, mileage, h('span', { text: 'km' })),
+        h('p', { class: 'hint', text: 'The number on your odometer. We use it to show when oil, filters and brake pads are due. You can change it any time.' }),
+        status,
+        h('button', { class: 'btn btn-primary btn-block', type: 'submit', text: 'Complete input' }),
+        h('button', { class: 'btn btn-quiet btn-block', type: 'button', text: 'Skip for now', onclick: () => setVehicle(v) })));
+    showStep('basic');
+    mileage.focus({ preventScroll: true });
+  }
+
+  // ---------------------------------------------------------------- my garage
+
+  const kmFmt = (n) => `${rwf.format(n)} km`;
+  const monthYear = (iso) => {
+    const d = new Date(String(iso).replace(' ', 'T') + (String(iso).includes('Z') ? '' : 'Z'));
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  };
+
+  function renderGarageHero() {
+    const v = state.vehicle;
+    const since = v.created_at ? monthYear(v.created_at) : null;
+    const mileageBox = h('span', { class: 'gh-mileage' });
+    const showMileage = () => mileageBox.replaceChildren(
+      h('span', { text: v.mileage_km != null ? kmFmt(v.mileage_km) : 'Mileage not added' }),
+      h('button', { class: 'btn-link', type: 'button', text: v.mileage_km != null ? 'Update' : 'Add', onclick: editMileage }));
+    function editMileage() {
+      const input = h('input', { type: 'number', inputMode: 'numeric', min: 0, max: 2000000, value: v.mileage_km ?? '', 'aria-label': 'Current mileage in km' });
+      const save = async (event) => {
+        event.preventDefault();
+        if (input.value === '') return showMileage();
+        try {
+          const res = await api(`/api/vehicles/id/${enc(v.id)}`, { method: 'PATCH', body: { mileage_km: Number(input.value) } });
+          state.vehicle = res.vehicle;
+          renderGarageHero();
+          renderInspection();
+        } catch (err) { input.setCustomValidity(err.message); input.reportValidity(); }
+      };
+      mileageBox.replaceChildren(h('form', { class: 'gh-mileage-form', onsubmit: save },
+        input, h('span', { text: 'km' }), h('button', { class: 'btn btn-small btn-primary', type: 'submit', text: 'Save' })));
+      input.focus();
+    }
+    showMileage();
+    $('vehicle-bar').replaceChildren(h('div', { class: 'garage-hero' },
+      h('div', { class: 'wrap-wide gh-inner' },
+        h('div', { class: 'gh-text' },
+          h('div', { class: 'gh-title' }, makeLogo(v.make, 'gh-logo'), h('h1', { text: `${v.make} ${v.model}` })),
+          h('p', { class: 'gh-sub' }, h('span', { text: `${v.year}${v.engine ? ` · ${v.engine}` : ''}` }), h('span', { class: 'gh-sep', 'aria-hidden': 'true' }), mileageBox),
+          h('div', { class: 'gh-row' }, vinPill(v), since ? h('span', { class: 'gh-since', text: `In your garage since ${since}` }) : null),
+          h('button', { class: 'btn btn-secondary btn-small gh-change', type: 'button', text: 'Change car', onclick: changeCar })),
+        h('div', { class: 'gh-art' }, carArt(v)))));
+  }
+
+  // Usual service intervals from the makers' owner's manuals for normal driving. Without the car's
+  // service history these are estimates counted from 0 km, and the card says so.
+  const INSPECTIONS = [
+    { name: 'Engine oil', km: 10000, months: 12, category: 'Engine Oil' },
+    { name: 'Oil filter', km: 10000, months: 12, category: 'Oil Filter' },
+    { name: 'Front brake pads', km: 30000, months: 24, category: 'Front Brake Pad' },
+    { name: 'Rear brake pads', km: 40000, months: 36, category: 'Rear Brake Pad' },
+    { name: 'Air filter', km: 20000, months: 24, category: 'Air Filter' },
+    { name: 'Battery', months: 36, category: 'Battery' },
+    { name: 'Wiper blades', months: 12, category: 'Wiper Blade' },
+  ];
+
+  function renderInspection() {
+    const v = state.vehicle;
+    const km = v.mileage_km;
+    const cards = INSPECTIONS.map((item, i) => {
+      const every = [item.km ? kmFmt(item.km) : null, `${item.months} months`].filter(Boolean).join(' or ');
+      let tag = null;
+      if (item.km && km != null) {
+        const next = (Math.floor(km / item.km) + 1) * item.km;
+        const soon = next - km <= item.km * 0.15;
+        tag = h('span', { class: `insp-tag${soon ? ' due' : ''}`, text: soon ? `Due at ${kmFmt(next)}` : `Next at ${kmFmt(next)}` });
+      }
+      const cat = state.catalog.categories.find((c) => c.name === item.category);
+      return h('article', { class: 'insp-card', hidden: i >= 3 },
+        h('span', { class: 'insp-check', 'aria-hidden': 'true' }, icon('check')),
+        h('div', { class: 'insp-body' },
+          h('h3', { text: item.name }),
+          h('p', { text: `Replace every ${every}` }),
+          tag,
+          cat ? h('div', {}, h('button', { class: 'btn-link', type: 'button', text: `Find ${item.name.toLowerCase()}`, onclick: () => pickCategory(cat) })) : null));
+    });
+    const more = h('button', { class: 'btn btn-secondary', type: 'button', text: 'View all inspection items', onclick: () => {
+      cards.forEach((c) => { c.hidden = false; });
+      more.remove();
+    } });
+    $('inspection').replaceChildren(
+      h('h2', { id: 'inspection-title', class: 'g-title', text: 'Let\'s check the inspection items' }),
+      h('p', { class: 'small muted', text: km != null
+        ? `Counted from ${kmFmt(km)} using the usual service intervals. If you replaced something recently, go by your service record instead.`
+        : 'Add your mileage above to see when each one is due.' }),
+      h('div', { class: 'insp-grid' }, ...cards),
+      h('div', { class: 'g-more' }, more));
+  }
+
+  async function loadShopsNear() {
+    const grid = $('garage-grid');
+    const v = state.vehicle;
+    const q = new URLSearchParams({ radius_km: 'any' });
+    if (state.coords) { q.set('lat', state.coords.lat); q.set('lon', state.coords.lon); }
+    try {
+      const { garages } = await api(`/api/garages/nearby?${q}`);
+      const message = (g) => `Hello ${g.name}, I found your garage on Vinzuu and would like to book a repair for my ${vehicleTitle(v)}.`;
+      grid.replaceChildren(...(garages.length
+        ? garages.slice(0, 4).map((g, i) => garageCard(g, i, message(g)))
+        : [h('p', { class: 'muted', text: 'No repair shops are listed yet. Check back soon.' })]));
+    } catch (err) {
+      grid.replaceChildren(h('p', { class: 'muted', text: 'We could not load repair shops right now. Refresh the page to try again.' }));
+    }
   }
 
   // ---------------------------------------------------------------- register a new car
@@ -215,8 +453,9 @@
       h('label', { for: id, text: labelText }), control, hint ? h('p', { class: 'hint', text: hint }) : null);
   }
 
-  function showRegister(vin) {
-    hideSections();
+  /** Step 2b: pick the details. `known` is what the VIN told us (decoded once by lookupVin);
+   *  `prefill` is a suggested car the customer said was wrong, kept so they only fix what is. */
+  function showRegister(vin, known, prefill) {
     const makes = state.catalog.makes;
     const mount = $('register');
     const f = {};
@@ -309,7 +548,7 @@
     f.generation.addEventListener('change', () => { f.generation.dataset.auto = ''; syncEngines(); });
     syncMake();
     const decoded = h('div', { class: 'vin-decoded', 'aria-live': 'polite' });
-    decodeVin(vin).then((d) => {
+    (known !== undefined ? Promise.resolve(known) : decodeVin(vin)).then((d) => {
       if (!d) return;
       // Fill in only what the person has not chosen yet; the VIN is a strong hint, not the last word.
       if (d.maker && !f.make.value && makes.some((m) => m.make === d.maker)) { f.make.value = d.maker; syncMake(); }
@@ -321,6 +560,12 @@
         f.year.dispatchEvent(new Event('input'));
       }
       decoded.replaceChildren(...decodedFacts(d));
+      if (prefill && f.make.value === prefill.make) {
+        if ([...f.model.options].some((o) => o.value === prefill.model)) { f.model.value = prefill.model; syncModel(); }
+        if (prefill.generation && [...f.generation.options].some((o) => o.value === prefill.generation)) { f.generation.value = prefill.generation; syncEngines(); }
+        if (prefill.engine && [...f.engineSelect.options].some((o) => o.value === prefill.engine)) f.engineSelect.value = prefill.engine;
+        if (prefill.transmission) f.transmission.value = prefill.transmission;
+      }
     }).finally(() => {
       // Start where the person has something to do: the model when the VIN gave the make.
       if (f.make.value && !f.model.hidden) f.model.focus({ preventScroll: true });
@@ -343,7 +588,7 @@
       f.status,
       h('div', { class: 'dialog-actions' },
         h('button', { class: 'btn btn-primary', type: 'submit', text: 'Save my car' }),
-        h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: () => { mount.hidden = true; $('vin').focus(); } })));
+        h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: () => { showStep('start'); $('vin').focus(); } })));
 
     async function onSubmit(event) {
       event.preventDefault();
@@ -363,8 +608,7 @@
             import_source: f.importSource.value || null,
           },
         });
-        mount.hidden = true;
-        setVehicle(res.vehicle);
+        showBasic(res.vehicle);
         if (res.warnings && res.warnings.length) setStatus($('results-status'), res.warnings.join(' '));
       } catch (err) {
         setStatus(f.status, err.message, 'error');
@@ -372,8 +616,7 @@
     }
 
     mount.replaceChildren(form);
-    mount.hidden = false;
-    mount.scrollIntoView({ behavior: motion(), block: 'start' });
+    showStep('register');
   }
 
   /** "SUV. 4 generations since 2000, the latest from 2020." */
@@ -451,11 +694,21 @@
     }
     list.replaceChildren(...cats.map(({ c }) => h('li', {},
       h('button', {
-        class: 'part-btn', type: 'button', 'aria-pressed': String(state.category === c.name),
+        class: 'part-tile', type: 'button', 'aria-pressed': String(state.category === c.name),
         onclick: () => pickCategory(c),
       },
-      PART_PHOTOS[c.name] ? h('img', { class: 'part-thumb', src: `/img/parts/${PART_PHOTOS[c.name]}`, alt: '', width: 44, height: 44, loading: 'lazy' }) : null,
-      h('span', { text: c.name })))));
+      h('span', { class: 'pt-photo' }, PART_PHOTOS[c.name]
+        ? h('img', { src: `/img/parts/${PART_PHOTOS[c.name]}`, alt: '', width: 120, height: 120, loading: 'lazy' })
+        : h('span', { class: 'pt-initial', 'aria-hidden': 'true', text: c.name.charAt(0) })),
+      h('span', { class: 'pt-name', text: c.name })))));
+  }
+
+  /** The parts strip scrolls sideways; "View all parts" lays every part out in a grid instead. */
+  function showAllParts(all) {
+    $('part-list').classList.toggle('show-all', all);
+    $('picker').classList.toggle('all-open', all);
+    $('all-parts').setAttribute('aria-expanded', String(all));
+    $('all-parts').textContent = all ? 'Show fewer parts' : 'View all parts';
   }
 
   async function pickCategory(cat) {
