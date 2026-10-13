@@ -430,7 +430,6 @@ label .optional { font-weight: 400; color: var(--ink-2); }
 button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; }
 .header-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .header-actions .nav-link { white-space: nowrap; }
-#account-slot { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 
 /* ---------- marketing nav (welcome / about / contact) ---------- */
 

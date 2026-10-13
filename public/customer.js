@@ -69,17 +69,9 @@
   // ---------------------------------------------------------------- account state
 
   async function loadAccount() {
-    const slot = $('account-slot');
     try {
       const { user } = await api('/api/auth/me');
-      if (!user) { slot.replaceChildren(h('a', { class: 'nav-link', href: '/', text: 'Sign in' })); return; }
-      slot.replaceChildren(
-        h('span', { class: 'small muted', text: user.name }), ' ',
-        h('button', {
-          class: 'btn-quiet', type: 'button', text: 'Sign out',
-          onclick: async () => { try { await api('/api/auth/logout', { method: 'POST' }); } finally { location.href = '/'; } },
-        }));
-      loadMyCars();
+      if (user) loadMyCars();
     } catch (err) { /* not signed in, or offline: the page still works without this */ }
   }
 

@@ -228,7 +228,6 @@
 
   function afterSignIn() { location.href = '/index.html'; }
 
-  // If already signed in, skip straight to the app rather than showing the form again.
   api('/api/meta').then((meta) => {
     $('demo-banner').hidden = !meta.demo;
     // Demo data only: a one-tap way in, since nobody visiting has a demo car's VIN to hand.
@@ -237,7 +236,6 @@
       $('hs-demo').hidden = false;
     }
   }).catch(() => {});
-  api('/api/auth/me').then((r) => { if (r.user) afterSignIn(); }).catch(() => {});
 
   // ---------------------------------------------------------------- email sign in / sign up
 

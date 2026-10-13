@@ -203,6 +203,21 @@ function resizeImage(file, maxSide = 640) {
   }));
 })();
 
+/* The top navigation is the same on every customer page. Signed in, its "Sign in" button
+   becomes "Sign out" in the same place and style; nothing else in the bar changes. */
+(() => {
+  const signIn = document.querySelector('.site-nav [data-auth="sign-in"]');
+  if (!signIn) return;
+  api('/api/auth/me').then(({ user }) => {
+    if (!user) return;
+    const signOut = h('button', {
+      class: signIn.className, type: 'button', text: 'Sign out',
+      onclick: async () => { try { await api('/api/auth/logout', { method: 'POST' }); } finally { location.href = '/'; } },
+    });
+    signIn.replaceWith(signOut);
+  }).catch(() => { /* offline: leave Sign in as it is */ });
+})();
+
 /* Tapping the dimmed area outside an open dialog closes it, like most apps. Dialogs have no
    padding, so a click whose target is the <dialog> itself landed on the backdrop. The press
    must also start there, so a text selection dragged out of a field doesn't close it. */
