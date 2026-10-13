@@ -242,6 +242,20 @@ function resizeImage(file, maxSide = 640) {
       },
     });
     signIn.replaceWith(signOut);
+    // Who is signed in, with a green dot for online: first name and an initial avatar.
+    const name = String(user.name || '').trim() || String(user.email || '').split('@')[0] || 'You';
+    const first = name.split(/\s+/)[0];
+    signOut.before(h('span', { class: 'nav-user', title: `Signed in as ${name}${user.email ? ` (${user.email})` : ''}` },
+      h('span', { class: 'nav-avatar', 'aria-hidden': 'true' }, first.charAt(0).toUpperCase(), h('span', { class: 'nav-online' })),
+      h('span', { class: 'nav-user-text' },
+        h('span', { class: 'nav-user-name', text: first }),
+        h('span', { class: 'nav-user-status', text: 'Online' }))));
+    // On a phone the links fold into the menu, so the avatar also sits next to the menu button.
+    const toggle = document.getElementById('nav-toggle');
+    if (toggle) {
+      toggle.before(h('span', { class: 'nav-avatar nav-avatar-mini', title: `Signed in as ${name}`, 'aria-label': `Signed in as ${name}, online`, role: 'img' },
+        first.charAt(0).toUpperCase(), h('span', { class: 'nav-online' })));
+    }
     // Signed in, the nav stays in your own garage (/index.html) instead of the public homepage:
     // the logo opens it, "Find parts" and "Popular parts" jump to the parts that fit your car,
     // "Garages" to the repair shops near you. Other links into the homepage use /welcome.html,
