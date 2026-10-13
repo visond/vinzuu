@@ -298,6 +298,51 @@ test('a customer cannot overwrite a detail that is already set, but an admin can
   assert.equal(invalid.status, 400);
 });
 
+test('a "Not sure" generation is settled by the year when only one generation covers it', async () => {
+  // 2018 Corolla: the catalog only has E170 for that year, so "Not sure" must not dead-end.
+  const both = await post('/api/vehicles/register', {
+    plate_number: 'RXD001A', make: 'Toyota', model: 'Corolla', year: 2018, origin_market: 'Japan',
+  });
+  const unsure = await get(`/api/parts/search?vehicle_id=${both.json.vehicle.id}&part_category=Front%20Brake%20Pad`);
+  assert.equal(unsure.json.match_type, 'relaxed', 'the engine is still unknown, so the match is only a close one');
+  assert.equal(unsure.json.oe_numbers[0].oe_number, 'DEMO-TYT-E170-FBP-01');
+  assert.ok(unsure.json.oe_numbers.every((o) => o.confidence === 'LOW'));
+
+  const genOnly = await post('/api/vehicles/register', {
+    plate_number: 'RXD002B', make: 'Toyota', model: 'Corolla', year: 2018, engine: '1.8L Petrol', origin_market: 'Japan',
+  });
+  const exact = await get(`/api/parts/search?vehicle_id=${genOnly.json.vehicle.id}&part_category=Front%20Brake%20Pad`);
+  assert.equal(exact.json.match_type, 'exact');
+  assert.equal(exact.json.oe_numbers[0].confidence, 'HIGH');
+  const stored = await get(`/api/vehicles/id/${genOnly.json.vehicle.id}`);
+  assert.equal(stored.json.vehicle.generation, null, 'the stored car is not silently rewritten');
+});
+
+test('a "Not sure" generation is never guessed when two generations were sold that year', async () => {
+  const row = {
+    part_category: 'Front Brake Pad', make: 'Honda', model: 'Fit', engine: null, origin_market: null,
+    confidence_level: 'MEDIUM', source: 'Test data',
+  };
+  await post('/api/admin/fitment-reference', { ...row, oe_number: 'TEST-FIT-GD', generation: 'GD', year_start: 2001, year_end: 2008 }, ADMIN);
+  await post('/api/admin/fitment-reference', { ...row, oe_number: 'TEST-FIT-GE', generation: 'GE', year_start: 2007, year_end: 2014 }, ADMIN);
+
+  const overlap = await post('/api/vehicles/register', { plate_number: 'RXD003C', make: 'Honda', model: 'Fit', year: 2008 });
+  const r = await get(`/api/parts/search?vehicle_id=${overlap.json.vehicle.id}&part_category=Front%20Brake%20Pad`);
+  assert.equal(r.json.match_type, 'none');
+  assert.equal(r.json.reason, 'generation_unknown');
+  assert.match(r.json.message, /which one/);
+
+  const patched = await call('PATCH', `/api/vehicles/id/${overlap.json.vehicle.id}`, { generation: 'GE' });
+  assert.deepEqual(patched.json.updated, ['generation']);
+  const fixed = await get(`/api/parts/search?vehicle_id=${overlap.json.vehicle.id}&part_category=Front%20Brake%20Pad`);
+  assert.equal(fixed.json.match_type, 'exact');
+  assert.equal(fixed.json.oe_numbers[0].oe_number, 'TEST-FIT-GE');
+
+  const later = await post('/api/vehicles/register', { plate_number: 'RXD004D', make: 'Honda', model: 'Fit', year: 2012 });
+  const single = await get(`/api/parts/search?vehicle_id=${later.json.vehicle.id}&part_category=Front%20Brake%20Pad`);
+  assert.equal(single.json.oe_numbers[0].oe_number, 'TEST-FIT-GE');
+});
+
 test('a search we cannot answer is logged for the admin gaps report', async () => {
   await post('/api/vehicles/register', { plate_number: 'RXB007G', make: 'Mazda', model: 'CX-5', year: 2019, origin_market: 'Japan' });
   await get('/api/parts/search?plate_number=RXB007G&part_category=Front%20Brake%20Pad');

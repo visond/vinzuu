@@ -506,6 +506,7 @@ function createApp(db, config = {}) {
     const messages = {
       not_in_database: "We don't have part numbers for your car yet. We noted your request and will research it.",
       origin_unknown: 'Parts for this model differ by where the car was built. Tell us where yours was built to see the right ones.',
+      generation_unknown: 'More than one generation of this model was made that year, and their parts differ. Tell us which one yours is to see the right parts.',
       no_match_for_spec: 'We have this model, but not for your exact engine or build yet. We noted your request.',
     };
     if (found.match_type === 'none') logGap(db, vehicle, category.name);

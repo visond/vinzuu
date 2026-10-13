@@ -201,6 +201,8 @@
       f.engineSelect.hidden = engines.length === 0;
       f.engineText.hidden = engines.length !== 0;
       fillSelect(f.engineSelect, engines.map((e) => ({ value: e, text: e })), 'Not sure');
+      syncGenerationToYear(f.generation, gens, f.year.value);
+      pickOnlyChoice(f.engineSelect);
     }
     function syncMake() {
       const make = currentMake();
@@ -212,7 +214,14 @@
     }
     f.make.addEventListener('change', syncMake);
     f.model.addEventListener('change', syncModel);
+    f.year.addEventListener('input', () => {
+      const model = currentModel();
+      syncGenerationToYear(f.generation, model ? model.generations : [], f.year.value);
+    });
+    f.generation.addEventListener('change', () => { f.generation.dataset.auto = ''; });
     syncMake();
+    prefillFromVin(f.vin.value.trim().toUpperCase(), f, syncMake);
+    f.vin.addEventListener('change', () => prefillFromVin(f.vin.value.trim().toUpperCase(), f, syncMake));
 
     const form = h('form', { class: 'panel', novalidate: true, onsubmit: onSubmit },
       h('h3', { text: 'Not on file yet -- register it now' }),
