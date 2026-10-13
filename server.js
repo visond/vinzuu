@@ -170,9 +170,9 @@ function createApp(db, config = {}) {
           "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; " +
           "frame-src https://accounts.google.com/gsi/; " +
           "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
-        // Car photos come from Wikimedia (lib/carphotos.js), and the browser may look them up
+        // Car photos come from Wikimedia's image hosts (lib/carphotos.js), and the browser may look them up
         // itself when the server can't reach Wikipedia.
-        : "default-src 'self'; img-src 'self' data: https://upload.wikimedia.org; " +
+        : "default-src 'self'; img-src 'self' data: https://upload.wikimedia.org https://thumb.wikimedia.org; " +
           "connect-src 'self' https://en.wikipedia.org https://commons.wikimedia.org; " +
           "frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
     });

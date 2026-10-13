@@ -440,6 +440,8 @@ test('the customer page is allowed to show Wikimedia photos and look them up', a
   const res = await fetch(`${base}/index.html`);
   const csp = res.headers.get('content-security-policy');
   assert.match(csp, /img-src [^;]*https:\/\/upload\.wikimedia\.org/);
+  // Commons now hands out resized photos from thumb.wikimedia.org.
+  assert.match(csp, /img-src [^;]*https:\/\/thumb\.wikimedia\.org/);
   assert.match(csp, /connect-src [^;]*https:\/\/en\.wikipedia\.org/);
 });
 
