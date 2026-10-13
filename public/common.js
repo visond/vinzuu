@@ -236,7 +236,10 @@ function resizeImage(file, maxSide = 640) {
     if (!user) return;
     const signOut = h('button', {
       class: signIn.className, type: 'button', text: 'Sign out',
-      onclick: async () => { try { await api('/api/auth/logout', { method: 'POST' }); } finally { location.href = '/'; } },
+      onclick: async () => {
+        store.remove('kpf.vehicle_id'); // the customer page's remembered car belongs to this account
+        try { await api('/api/auth/logout', { method: 'POST' }); } finally { location.href = '/'; }
+      },
     });
     signIn.replaceWith(signOut);
   }).catch(() => { /* offline: leave Sign in as it is */ });

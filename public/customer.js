@@ -60,27 +60,35 @@
     const fromUrl = params.get('vin');
     state.wantedPart = state.catalog.categories.find((c) => c.name === params.get('part')) || null;
     if (fromUrl || params.has('part')) history.replaceState(null, '', location.pathname); // tidy the URL, keep the lookup
-    if (state.wantedPart && !fromUrl && !store.get(VEHICLE_ID_KEY)) {
+    // Who is signed in decides which cars this page may reopen and list.
+    state.user = await api('/api/auth/me').then((r) => r.user).catch(() => null);
+    const rememberedId = rememberedCar();
+    if (state.wantedPart && !fromUrl && !rememberedId) {
       setStatus($('vin-status'), `Enter your VIN and we'll show the ${state.wantedPart.name.toLowerCase()} that fits your car.`);
     }
     if (fromUrl) {
       const vin = normalizeVin(fromUrl);
       $('vin').value = vin;
       await lookupVin(vin);
-    } else {
-      const storedId = store.get(VEHICLE_ID_KEY);
-      if (storedId) await lookupById(storedId);
+    } else if (rememberedId) {
+      await lookupById(rememberedId);
     }
-    loadAccount();
+    if (state.user) loadMyCars();
   }
 
   // ---------------------------------------------------------------- account state
 
-  async function loadAccount() {
-    try {
-      const { user } = await api('/api/auth/me');
-      if (user) loadMyCars();
-    } catch (err) { /* not signed in, or offline: the page still works without this */ }
+  // The last car opened is remembered per account ("userId:vehicleId"), so signing in as someone
+  // else on the same browser never reopens the previous person's car. Signed out, nothing is
+  // reopened.
+  function rememberedCar() {
+    const [userId, vehicleId] = String(store.get(VEHICLE_ID_KEY) || '').split(':');
+    if (state.user && vehicleId && userId === String(state.user.id)) return vehicleId;
+    store.remove(VEHICLE_ID_KEY);
+    return null;
+  }
+  function rememberCar(vehicle) {
+    if (state.user) store.set(VEHICLE_ID_KEY, `${state.user.id}:${vehicle.id}`);
   }
 
   async function loadMyCars() {
@@ -189,7 +197,7 @@
     state.vehicle = vehicle;
     state.category = null;
     state.query = null;
-    store.set(VEHICLE_ID_KEY, String(vehicle.id));
+    rememberCar(vehicle);
     showStep('vehicle');
     $('part-q').value = '';
     renderGarageHero();
