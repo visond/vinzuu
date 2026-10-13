@@ -53,6 +53,7 @@ async function fakeWiki(url) {
   wikiCalls.push(url);
   const u = new URL(url);
   if (u.hostname === 'en.wikipedia.org') {
+    if (u.searchParams.get('page') === 'Kia Picanto') return null; // as if Wikipedia were unreachable
     return u.searchParams.get('page') === 'Hyundai Tucson'
       ? { parse: { title: 'Hyundai Tucson', wikitext: TUCSON_WIKITEXT } }
       : { error: { code: 'missingtitle' } };
@@ -414,6 +415,32 @@ test('a generation with no infobox of its own matches by years, or falls back to
   assert.equal(carphotos.imageName(boxes[2].fields.image), '2016 Hyundai Tucson TL front.jpg');
   assert.equal(carphotos.pickInfobox(boxes, { generation: 'XX', year_start: 2015, year_end: 2021 }), boxes[2]);
   assert.equal(carphotos.pickInfobox(boxes, { generation: 'NX4', year_start: 2021, year_end: 2027 }), null);
+});
+
+test('when the server cannot reach Wikipedia it says so, does not cache it, and hands the browser what it needs', async () => {
+  const first = await get('/api/car-photo?make=Kia&model=Picanto');
+  assert.equal(first.json.photo, null);
+  assert.equal(first.json.reason, 'unreachable');
+  assert.equal(first.json.lookup.model, 'Picanto');
+  const before = wikiCalls.length;
+  await get('/api/car-photo?make=Kia&model=Picanto');
+  assert.ok(wikiCalls.length > before, 'tried again rather than cached');
+  const lib = await fetch(`${base}/carphotos.js`);
+  assert.equal(lib.status, 200);
+  assert.match(await lib.text(), /root\.carphotos = factory\(\)/);
+});
+
+test('a model with no Wikipedia article is reported as such', async () => {
+  const r = await get('/api/car-photo?make=Kia&model=Rio');
+  assert.equal(r.json.photo, null);
+  assert.equal(r.json.reason, 'no_article');
+});
+
+test('the customer page is allowed to show Wikimedia photos and look them up', async () => {
+  const res = await fetch(`${base}/index.html`);
+  const csp = res.headers.get('content-security-policy');
+  assert.match(csp, /img-src [^;]*https:\/\/upload\.wikimedia\.org/);
+  assert.match(csp, /connect-src [^;]*https:\/\/en\.wikipedia\.org/);
 });
 
 test('photos are only looked up for models in our lineup', async () => {

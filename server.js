@@ -170,7 +170,11 @@ function createApp(db, config = {}) {
           "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; " +
           "frame-src https://accounts.google.com/gsi/; " +
           "frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
-        : "default-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+        // Car photos come from Wikimedia (lib/carphotos.js), and the browser may look them up
+        // itself when the server can't reach Wikipedia.
+        : "default-src 'self'; img-src 'self' data: https://upload.wikimedia.org; " +
+          "connect-src 'self' https://en.wikipedia.org https://commons.wikimedia.org; " +
+          "frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
     });
     next();
   });
@@ -375,17 +379,20 @@ function createApp(db, config = {}) {
   app.get('/api/car-photo', asyncRoute(async (req, res) => {
     const make = text(req.query.make, { field: 'make', max: 40, required: true });
     const modelName = text(req.query.model, { field: 'model', max: 60, required: true });
-    if (!cfg.wikiJson) return res.json({ photo: null });
+    if (!cfg.wikiJson) return res.json({ photo: null, reason: 'off' });
     const lineupMake = withLineup(buildCatalog(db)).find((m) => m.make.toLowerCase() === make.toLowerCase());
     const model = lineupMake && lineupMake.models.find((m) => m.model.toLowerCase() === modelName.toLowerCase());
     // Only cars in our lineup, so this can't be used to fetch arbitrary Wikipedia pages.
-    if (!model) return res.json({ photo: null });
+    if (!model) return res.json({ photo: null, reason: 'not_in_lineup' });
     const generation = req.query.generation
       ? model.generations.find((g) => g.generation.toLowerCase() === String(req.query.generation).toLowerCase()) || null
       : null;
-    const photo = await carphotos.photoFor(db, { make: lineupMake.make, model: model.model, aka: model.aka, generation }, cfg.wikiJson);
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.json({ photo });
+    const found = await carphotos.photoFor(db, { make: lineupMake.make, model: model.model, aka: model.aka, generation }, cfg.wikiJson);
+    if (found.reason === 'unreachable') {
+      console.warn(`Car photos: could not reach Wikipedia for the ${lineupMake.make} ${model.model}; the browser will try instead.`);
+    } else res.set('Cache-Control', 'public, max-age=86400');
+    // The browser needs the article names and generation years to look the photo up itself.
+    res.json({ ...found, ...(found.reason === 'unreachable' ? { lookup: { make: lineupMake.make, model: model.model, aka: model.aka, generation } } : {}) });
   }));
 
   // The maker, build country and model year come from the VIN itself. `car` is the exact build
@@ -916,6 +923,8 @@ function createApp(db, config = {}) {
   app.use('/api', (req, res) => res.status(404).json({ error: 'Unknown API route.' }));
   // "/" serves welcome.html (sign in / create account) rather than the plate-finder app directly,
   // so every visitor lands on the account page first. /index.html is still reachable directly.
+  // The photo lookup also runs in the browser when this server can't reach Wikipedia.
+  app.get('/carphotos.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'lib', 'carphotos.js')));
   app.use(express.static(path.join(__dirname, 'public'), { index: 'welcome.html' }));
 
   // eslint-disable-next-line no-unused-vars

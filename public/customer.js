@@ -258,12 +258,24 @@
     return fig;
   }
   const photoCache = new Map();
+  /** When the server can't reach Wikipedia, this browser looks the photo up itself. */
+  let photoLib = null;
+  function photoFromBrowser(lookup) {
+    photoLib = photoLib || new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = '/carphotos.js';
+      s.onload = () => resolve(window.carphotos);
+      s.onerror = () => resolve(null);
+      document.head.append(s);
+    });
+    return photoLib.then((lib) => lib && lib.findPhoto(lookup)).then((p) => (p && p.src ? p : null)).catch(() => null);
+  }
   function carPhoto(v) {
     const key = [v.make, v.model, v.generation || ''].join('|');
     if (!photoCache.has(key)) {
       const q = new URLSearchParams({ make: v.make, model: v.model });
       if (v.generation) q.set('generation', v.generation);
-      photoCache.set(key, api(`/api/car-photo?${q}`).then((r) => r.photo).catch(() => null));
+      photoCache.set(key, api(`/api/car-photo?${q}`).then((r) => (r.photo || (r.reason === 'unreachable' && r.lookup ? photoFromBrowser(r.lookup) : null))).catch(() => null));
     }
     return photoCache.get(key);
   }
