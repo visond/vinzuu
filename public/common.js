@@ -242,6 +242,13 @@ function resizeImage(file, maxSide = 640) {
       },
     });
     signIn.replaceWith(signOut);
+    // Signed in, the logo goes to your garage, and links into the public homepage's sections
+    // ("Popular parts", "Garages") use /welcome.html, since "/" itself now opens the garage.
+    document.querySelectorAll('a.nav-logo').forEach((a) => { a.href = '/index.html'; });
+    document.querySelectorAll('a[href^="/#"]').forEach((a) => {
+      const hash = a.getAttribute('href').slice(1);
+      a.href = hash === '#find' ? '/index.html' : `/welcome.html${hash}`;
+    });
   }).catch(() => { /* offline: leave Sign in as it is */ });
 })();
 

@@ -965,6 +965,9 @@ function createApp(db, config = {}) {
   // so every visitor lands on the account page first. /index.html is still reachable directly.
   // The photo lookup also runs in the browser when this server can't reach Wikipedia.
   app.get('/carphotos.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'lib', 'carphotos.js')));
+  // Signed in, "/" (and the logo) is your own home, the garage. The public homepage's sections
+  // stay reachable at /welcome.html, which the nav links point to for signed-in visitors.
+  app.get('/', (req, res, next) => (req.userId ? res.redirect(302, '/index.html') : next()));
   app.use(express.static(path.join(__dirname, 'public'), { index: 'welcome.html' }));
 
   // eslint-disable-next-line no-unused-vars

@@ -1022,3 +1022,18 @@ test('the mileage can be given when the car is first saved', async () => {
   assert.equal(reg.json.vehicle.mileage_km, 84500);
   assert.equal((await post('/api/vehicles/register', { vin: 'KMHSU81XDCU777003', make: 'Hyundai', model: 'Santa Fe', year: 2012, mileage_km: -5 })).status, 400);
 });
+
+test('signed in, "/" opens your garage; signed out it is the public homepage', async () => {
+  const out = await fetch(`${base}/`, { redirect: 'manual' });
+  assert.equal(out.status, 200);
+  const c = makeClient();
+  await c.post('/api/auth/signup', { name: 'Logo', email: 'logo@example.com', password: 'Long-password123' });
+  const me = await c.get('/api/auth/me');
+  assert.ok(me.json.user);
+  const cookieRes = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'logo@example.com', password: 'Long-password123' }) });
+  const cookie = cookieRes.headers.getSetCookie()[0].split(';')[0];
+  const signedIn = await fetch(`${base}/`, { redirect: 'manual', headers: { cookie } });
+  assert.equal(signedIn.status, 302);
+  assert.equal(signedIn.headers.get('location'), '/index.html');
+  assert.equal((await fetch(`${base}/welcome.html`, { redirect: 'manual', headers: { cookie } })).status, 200);
+});
