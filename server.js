@@ -230,13 +230,21 @@ function createApp(db, config = {}) {
     if (!v) throw new HttpError(404, 'Car not found.', 'not_registered');
     return v;
   };
-  const publicVehicle = (v) => ({
-    id: v.id, plate_number: v.plate_number, make: v.make, model: v.model, generation: v.generation,
-    year: v.year, engine: v.engine, transmission: v.transmission, origin_market: v.origin_market,
-    drive_side: v.drive_side, has_vin: !!v.vin, vin_masked: alg.maskVin(v.vin),
-    mileage_km: v.mileage_km == null ? null : v.mileage_km, mileage_at: v.mileage_at || null,
-    created_at: v.created_at,
-  });
+  // The car's own facts (what its VIN decodes to) go to anyone who has the VIN. Its owner's
+  // details stay with the owner: mileage and when it was saved are only sent to the account
+  // that owns it (or to anyone while it has no owner), and the owner is never named.
+  const publicVehicle = (v, req) => {
+    const mine = !!(req && req.userId && v.user_id === req.userId);
+    const showPrivate = mine || !v.user_id;
+    return {
+      id: v.id, plate_number: v.plate_number, make: v.make, model: v.model, generation: v.generation,
+      year: v.year, engine: v.engine, transmission: v.transmission, origin_market: v.origin_market,
+      drive_side: v.drive_side, has_vin: !!v.vin, vin_masked: alg.maskVin(v.vin), mine,
+      mileage_km: showPrivate && v.mileage_km != null ? v.mileage_km : null,
+      mileage_at: showPrivate ? v.mileage_at || null : null,
+      created_at: showPrivate ? v.created_at : null,
+    };
+  };
   const parseOrigin = (query) => {
     if (query.lat == null && query.lon == null) return { origin: alg.KIGALI_CENTER, used: 'default' };
     return {
@@ -354,7 +362,7 @@ function createApp(db, config = {}) {
   app.get('/api/me/vehicles', (req, res) => {
     if (!req.userId) throw new HttpError(401, 'Sign in to see your cars.');
     const rows = db.prepare('SELECT * FROM vehicles WHERE user_id = ? ORDER BY id DESC').all(req.userId);
-    res.json({ vehicles: rows.map(publicVehicle) });
+    res.json({ vehicles: rows.map((v) => publicVehicle(v, req)) });
   });
 
   // =====================  PUBLIC API  =====================
@@ -455,7 +463,7 @@ function createApp(db, config = {}) {
           ...(plate && byVin.plate_number !== plate ? { plate_number: plate } : {}),
           ...(req.userId && !byVin.user_id ? { user_id: req.userId } : {}),
         });
-        return res.json({ vehicle: publicVehicle(db.prepare('SELECT * FROM vehicles WHERE id = ?').get(byVin.id)), existing: true, warnings: [] });
+        return res.json({ vehicle: publicVehicle(db.prepare('SELECT * FROM vehicles WHERE id = ?').get(byVin.id), req), existing: true, warnings: [] });
       }
     }
 
@@ -470,7 +478,7 @@ function createApp(db, config = {}) {
         ...(req.userId && !existingByPlate.user_id ? { user_id: req.userId } : {}),
         ...(vin ? { vin, wmi_code: decoded.wmi } : {}),
       });
-      return res.json({ vehicle: publicVehicle(getVehicleByPlate(plate)), existing: true, warnings: [] });
+      return res.json({ vehicle: publicVehicle(getVehicleByPlate(plate), req), existing: true, warnings: [] });
     }
 
     const warnings = [];
@@ -499,12 +507,12 @@ function createApp(db, config = {}) {
       origin, driveSide, importSource, phone(b.owner_phone, 'owner_phone', false), registeredBy, req.userId || null);
 
     res.status(201).json({
-      vehicle: publicVehicle(getVehicleById(Number(inserted.lastInsertRowid))), existing: false, origin_source: originSource, warnings,
+      vehicle: publicVehicle(getVehicleById(Number(inserted.lastInsertRowid)), req), existing: false, origin_source: originSource, warnings,
     });
   });
 
   app.get('/api/vehicles/:plate', (req, res) => {
-    res.json({ vehicle: publicVehicle(needVehicle(req.params.plate)) });
+    res.json({ vehicle: publicVehicle(needVehicle(req.params.plate), req) });
   });
 
   // Lets a garage (or anyone) look a car up the trusted way, by VIN, instead of by whatever
@@ -514,14 +522,14 @@ function createApp(db, config = {}) {
     if (!alg.isValidVin(vin)) throw new HttpError(400, 'A VIN has exactly 17 letters and numbers (the letters I, O and Q are never used).');
     const v = getVehicleByVin(vin);
     if (!v) throw new HttpError(404, 'This VIN is not registered yet.', 'not_registered');
-    res.json({ vehicle: publicVehicle(v) });
+    res.json({ vehicle: publicVehicle(v, req) });
   });
 
   // Once a car has been found (by VIN above, or from the signed-in person's own saved cars), the
   // client refers back to it by this id for every other call -- never by VIN, which is never sent
   // to the browser in full, and never by plate, which can be reassigned to a different car later.
   app.get('/api/vehicles/id/:id', (req, res) => {
-    res.json({ vehicle: publicVehicle(needVehicleById(req.params.id)) });
+    res.json({ vehicle: publicVehicle(needVehicleById(req.params.id), req) });
   });
 
   // Anyone can FILL IN a missing detail (for example where the car was built), but only an admin
@@ -558,7 +566,7 @@ function createApp(db, config = {}) {
       db.prepare(`UPDATE vehicles SET ${names.map((n) => `${n} = ?`).join(', ')} WHERE id = ?`)
         .run(...names.map((n) => updates[n]), v.id);
     }
-    res.json({ vehicle: publicVehicle(getVehicleById(v.id)), updated: names, ignored });
+    res.json({ vehicle: publicVehicle(getVehicleById(v.id), req), updated: names, ignored });
   }
   app.patch('/api/vehicles/:plate', limitWrites, (req, res) => {
     patchVehicle(needVehicle(req.params.plate), req, res);

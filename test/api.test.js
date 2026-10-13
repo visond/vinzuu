@@ -388,7 +388,8 @@ test('the owner can update the mileage at any time, and nobody else can', async 
   assert.equal(second.json.vehicle.mileage_km, 86000);
   const stranger = await call('PATCH', `/api/vehicles/id/${id}`, { mileage_km: 1 });
   assert.deepEqual(stranger.json.ignored, ['mileage_km']);
-  assert.equal(stranger.json.vehicle.mileage_km, 86000);
+  assert.equal(stranger.json.vehicle.mileage_km, null, 'and the stranger is not shown it');
+  assert.equal((await owner.get(`/api/vehicles/id/${id}`)).json.vehicle.mileage_km, 86000);
 });
 
 test('the photo for a generation comes from its own infobox, with the photographer and licence', async () => {
@@ -450,6 +451,24 @@ test('photos are only looked up for models in our lineup', async () => {
   const r = await get('/api/car-photo?make=Hyundai&model=Not%20A%20Car');
   assert.equal(r.json.photo, null);
   assert.equal(wikiCalls.length, before);
+});
+
+test('anyone with the VIN sees the car, but only its owner sees the mileage and when it was saved', async () => {
+  const owner = makeClient();
+  await owner.post('/api/auth/signup', { name: 'Car Owner', email: 'owner2@example.com', password: 'Long-password123' });
+  const reg = await owner.post('/api/vehicles/register', { vin: 'KMHB3516BRW400003', make: 'Hyundai', model: 'Casper', year: 2024 });
+  await owner.patch(`/api/vehicles/id/${reg.json.vehicle.id}`, { mileage_km: 12000 });
+  const mine = await owner.get('/api/vehicles/by-vin/KMHB3516BRW400003');
+  assert.equal(mine.json.vehicle.mine, true);
+  assert.equal(mine.json.vehicle.mileage_km, 12000);
+  const other = makeClient();
+  await other.post('/api/auth/signup', { name: 'Someone Else', email: 'else@example.com', password: 'Long-password123' });
+  const theirs = await other.get('/api/vehicles/by-vin/KMHB3516BRW400003');
+  assert.equal(theirs.json.vehicle.model, 'Casper');
+  assert.equal(theirs.json.vehicle.mine, false);
+  assert.equal(theirs.json.vehicle.mileage_km, null);
+  assert.equal(theirs.json.vehicle.created_at, null);
+  assert.equal((await other.get('/api/me/vehicles')).json.vehicles.length, 0);
 });
 
 test('a customer registers by VIN alone, with no plate', async () => {

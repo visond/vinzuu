@@ -72,6 +72,10 @@
       await lookupVin(vin);
     } else if (rememberedId) {
       await lookupById(rememberedId);
+    } else if (state.user) {
+      // Signing in opens your garage: your most recently saved car, like a parts site's My Garage.
+      const mine = await api('/api/me/vehicles').then((r) => r.vehicles).catch(() => []);
+      if (mine.length) setVehicle(mine[0]);
     }
     if (state.user) loadMyCars();
   }
@@ -400,7 +404,9 @@
 
   function renderGarageHero() {
     const v = state.vehicle;
-    const since = v.created_at ? monthYear(v.created_at) : null;
+    // Another account's car (found by its VIN) shows the car itself, not its owner's mileage.
+    const since = v.mine && v.created_at ? monthYear(v.created_at) : null;
+    const ownerDetails = v.mine || v.created_at != null;
     const mileageBox = h('span', { class: 'gh-mileage' });
     const showMileage = () => mileageBox.replaceChildren(
       h('span', { text: v.mileage_km != null ? kmFmt(v.mileage_km) : 'Mileage not added' }),
@@ -426,7 +432,8 @@
       h('div', { class: 'wrap-wide gh-inner' },
         h('div', { class: 'gh-text' },
           h('div', { class: 'gh-title' }, makeLogo(v.make, 'gh-logo'), h('h1', { text: `${v.make} ${v.model}` })),
-          h('p', { class: 'gh-sub' }, h('span', { text: `${v.year}${v.engine ? ` · ${v.engine}` : ''}` }), h('span', { class: 'gh-sep', 'aria-hidden': 'true' }), mileageBox),
+          h('p', { class: 'gh-sub' }, h('span', { text: `${v.year}${v.engine ? ` · ${v.engine}` : ''}` }),
+            ownerDetails ? h('span', { class: 'gh-sep', 'aria-hidden': 'true' }) : null, ownerDetails ? mileageBox : null),
           h('div', { class: 'gh-row' }, vinPill(v), since ? h('span', { class: 'gh-since', text: `In your garage since ${since}` }) : null),
           h('button', { class: 'btn btn-secondary btn-small gh-change', type: 'button', text: 'Change car', onclick: changeCar })),
         h('div', { class: 'gh-art' }, carArt(v)))));
@@ -472,7 +479,7 @@
       h('h2', { id: 'inspection-title', class: 'g-title', text: 'Let\'s check the inspection items' }),
       h('p', { class: 'small muted', text: km != null
         ? `Counted from ${kmFmt(km)} using the usual service intervals. If you replaced something recently, go by your service record instead.`
-        : 'Add your mileage above to see when each one is due.' }),
+        : v.mine || v.created_at != null ? 'Add your mileage above to see when each one is due.' : 'The usual service intervals for this car.' }),
       h('div', { class: 'insp-grid' }, ...cards),
       h('div', { class: 'g-more' }, more));
   }
