@@ -496,15 +496,19 @@ function createApp(db, config = {}) {
     const driveSide = b.drive_side ? oneOf(String(b.drive_side).toUpperCase(), ['LHD', 'RHD'], 'drive_side') : 'LHD';
     const importSource = text(b.import_source, { field: 'import_source', max: 40 });
 
+    const mileage = b.mileage_km != null && String(b.mileage_km).trim() !== ''
+      ? integer(b.mileage_km, { field: 'mileage_km', min: 0, max: 2_000_000 }) : null;
+
     const registeredBy = isAdmin(req) ? 'admin' : (shopFromReq(req) ? `shop:${shopFromReq(req).name}` : 'customer');
     const inserted = db.prepare(`INSERT INTO vehicles
       (plate_number, vin, wmi_code, make, model, generation, year, engine, transmission, origin_market,
-       drive_side, import_source, owner_phone, registered_by, user_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+       drive_side, import_source, owner_phone, registered_by, user_id, mileage_km, mileage_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
       plate, vin, decoded.wmi, make, model,
       text(b.generation, { field: 'generation', max: 30 }), year,
       text(b.engine, { field: 'engine', max: 40 }), text(b.transmission, { field: 'transmission', max: 20 }),
-      origin, driveSide, importSource, phone(b.owner_phone, 'owner_phone', false), registeredBy, req.userId || null);
+      origin, driveSide, importSource, phone(b.owner_phone, 'owner_phone', false), registeredBy, req.userId || null,
+      mileage, mileage != null ? new Date().toISOString().slice(0, 10) : null);
 
     res.status(201).json({
       vehicle: publicVehicle(getVehicleById(Number(inserted.lastInsertRowid)), req), existing: false, origin_source: originSource, warnings,
@@ -596,6 +600,34 @@ function createApp(db, config = {}) {
       part_category: category.name, type: 'model_specific', match_type: found.match_type,
       oe_numbers: found.results, reason: found.reason || null, message: found.reason ? messages[found.reason] : null,
     });
+  });
+
+  // Every part category for one car, saying whether we have something that fits it and how many
+  // shops stock it, so the garage page can list only the parts that fit this car.
+  //   fit: 'exact' (part number matches this exact build), 'relaxed' (matches all but the engine),
+  //        'universal' (standard sizes, no part number), or 'none'.
+  app.get('/api/parts/for-vehicle', (req, res) => {
+    const vehicle = needVehicleById(req.query.vehicle_id);
+    const categories = db.prepare('SELECT name, type FROM part_categories ORDER BY id').all().map((c) => {
+      let fit = 'none';
+      let listings = [];
+      if (c.type === 'universal') {
+        fit = 'universal';
+        listings = resolveListings(db, { category: c.name, radiusKm: null });
+      } else {
+        const found = findCompatible(db, vehicle, c.name);
+        if (found.match_type !== 'none') {
+          fit = found.match_type;
+          listings = resolveListings(db, { oeNumbers: found.results.map((r) => r.oe_number), vehicle, radiusKm: null });
+        }
+      }
+      return {
+        name: c.name, type: c.type, fit,
+        shops: new Set(listings.map((l) => l.shop_id)).size,
+        from_price_rwf: listings.length ? Math.min(...listings.map((l) => l.price_rwf)) : null,
+      };
+    });
+    res.json({ vehicle_id: vehicle.id, categories });
   });
 
   // Algorithm C (+ D for distance)

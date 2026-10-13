@@ -1000,3 +1000,25 @@ test('nearby garages come back nearest first, with coordinates for the map link'
   const fromKanombe = await get('/api/garages/nearby?radius_km=any&lat=-1.974&lon=30.137');
   assert.equal(fromKanombe.json.garages[0].name, 'Demo Garage Kanombe');
 });
+
+test('the garage lists only the parts that fit this car, with how many shops stock each', async () => {
+  const v = (await get('/api/vehicles/by-vin/KNDPM3AC8J7100002')).json.vehicle;
+  const r = await get(`/api/parts/for-vehicle?vehicle_id=${v.id}`);
+  assert.equal(r.status, 200);
+  const bumper = r.json.categories.find((c) => c.name === 'Front Bumper');
+  assert.ok(['exact', 'relaxed'].includes(bumper.fit));
+  const wiper = r.json.categories.find((c) => c.name === 'Wiper Blade');
+  assert.equal(wiper.fit, 'universal');
+  // A car we have no part numbers for gets nothing but the standard-size parts.
+  const reg = await post('/api/vehicles/register', { vin: 'KMHSU81XDCU777001', make: 'Hyundai', model: 'Santa Fe', year: 2012 });
+  const none = await get(`/api/parts/for-vehicle?vehicle_id=${reg.json.vehicle.id}`);
+  assert.ok(none.json.categories.filter((c) => c.type !== 'universal').every((c) => c.fit === 'none' && c.shops === 0));
+  assert.equal((await get('/api/parts/for-vehicle?vehicle_id=999999')).status, 404);
+});
+
+test('the mileage can be given when the car is first saved', async () => {
+  const reg = await post('/api/vehicles/register', { vin: 'KMHSU81XDCU777002', make: 'Hyundai', model: 'Santa Fe', year: 2012, mileage_km: 84500 });
+  assert.equal(reg.status, 201);
+  assert.equal(reg.json.vehicle.mileage_km, 84500);
+  assert.equal((await post('/api/vehicles/register', { vin: 'KMHSU81XDCU777003', make: 'Hyundai', model: 'Santa Fe', year: 2012, mileage_km: -5 })).status, 400);
+});

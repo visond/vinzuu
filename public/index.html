@@ -89,29 +89,33 @@
       </div>
     </section>
 
-    <!-- 2. "Is this your car?" when the VIN told us the exact build. -->
+    <!-- 2. Vehicle verification: "Is your car a 2021 Hyundai?", from the VIN's maker and year code. -->
     <section id="confirm" class="wrap" hidden aria-labelledby="confirm-title"></section>
 
-    <!-- 2b. Pick the details when it didn't. -->
+    <!-- 3. The car's details: the ones parts depend on are required, the rest optional. -->
     <section id="register" class="wrap" hidden aria-labelledby="register-title"></section>
 
-    <!-- 3. Basic information, once, for a newly added car. -->
+    <!-- 4. Check everything once more and save. -->
     <section id="basic" class="wrap" hidden aria-labelledby="basic-title"></section>
 
-    <!-- 4. My garage: parts, inspection items and repair shops for the chosen car. -->
+    <!-- 5. My garage: parts, inspection items and repair shops for the chosen car. -->
     <section id="vehicle" hidden>
       <div id="vehicle-bar"></div>
       <div class="wrap-wide garage-body">
         <section id="picker" class="g-section" aria-labelledby="picker-title">
-          <h2 id="picker-title" class="g-title">Purchase parts</h2>
-          <label for="part-q" class="sr-only">Describe the problem or type a part name</label>
-          <input id="part-q" type="search" placeholder="Search parts, or describe the problem: brake noise, battery…" autocomplete="off">
-          <div class="part-strip">
-            <button class="strip-arrow prev" type="button" aria-label="Previous parts" data-dir="-1">&#8249;</button>
-            <ul id="part-list" class="part-carousel"></ul>
-            <button class="strip-arrow next" type="button" aria-label="More parts" data-dir="1">&#8250;</button>
+          <div class="g-head">
+            <div>
+              <h2 id="picker-title" class="g-title">Parts that fit your car</h2>
+              <p id="picker-sub" class="g-sub"></p>
+            </div>
+            <div class="g-search">
+              <label for="part-q" class="sr-only">Search parts that fit your car</label>
+              <input id="part-q" type="search" placeholder="Search: brake pads, oil, bumper…" autocomplete="off">
+            </div>
           </div>
+          <ul id="part-list" class="fit-grid"></ul>
           <div class="g-more"><button class="btn btn-secondary" type="button" id="all-parts" aria-expanded="false">View all parts</button></div>
+          <div id="part-unlisted"></div>
         </section>
 
         <section id="results" class="g-section" hidden tabindex="-1" aria-labelledby="results-title"></section>
@@ -120,7 +124,13 @@
         <section id="inspection" class="g-section" aria-labelledby="inspection-title"></section>
 
         <section id="shops-near" class="g-section" aria-labelledby="shops-title">
-          <h2 id="shops-title" class="g-title">Repair shops near me</h2>
+          <div class="g-head">
+            <div>
+              <h2 id="shops-title" class="g-title">Repair shops near you</h2>
+              <p class="g-sub">Book a garage to fit the part for you.</p>
+            </div>
+            <a class="btn btn-secondary btn-small" href="/#garages">View all repair shops</a>
+          </div>
           <div class="garage-grid flush" id="garage-grid" aria-live="polite"></div>
         </section>
       </div>
@@ -133,6 +143,7 @@
   </main>
 
   <dialog id="booking-dialog" aria-labelledby="booking-title"></dialog>
+  <dialog id="saved-dialog" class="saved-dialog" aria-labelledby="saved-title"></dialog>
 
   <script src="/common.js"></script>
   <script src="/customer.js"></script>
