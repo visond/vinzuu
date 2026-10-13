@@ -1,7 +1,6 @@
 /* Customer page: VIN -> car -> part -> shops -> book a garage. Uses helpers from common.js.
-   VIN is the only identifier that ever finds or unlocks a car here. A plate can still be shown
-   as a label once a car is found (and is stored for the car's own record), but typing a plate
-   never looks anything up. */
+   The VIN is the only thing a customer types or sees to identify a car: its first three
+   characters give the maker and country, the 10th gives the model year. */
 (() => {
   'use strict';
 
@@ -89,21 +88,19 @@
       const { vehicles } = await api('/api/me/vehicles');
       document.querySelector('.my-cars')?.remove();
       if (!vehicles.length || state.vehicle) return; // don't clutter the screen once a car is already chosen
-      // These came straight from the signed-in account, so there is no need to search again --
-      // the plate shown here is just a label, same as everywhere else.
-      const row = h('div', { class: 'my-cars' }, ...vehicles.map((v) => h('button', {
-        class: 'plate plate-sm', type: 'button', onclick: () => setVehicle(v),
-      },
-        h('span', { class: 'plate-strip', 'aria-hidden': 'true' }, 'RW'),
-        h('span', { class: 'plate-text', text: formatPlate(v.plate_number) }))));
+      // These came straight from the signed-in account, so there is no need to search again.
+      // Each is shown by its make's logo, model and the end of its VIN, never by plate.
+      const row = h('div', { class: 'my-cars' },
+        h('p', { class: 'hint', text: 'Your cars' }),
+        ...vehicles.map((v) => h('button', { class: 'btn btn-secondary my-car', type: 'button', onclick: () => setVehicle(v) },
+          makeLogo(v.make), h('span', { text: vehicleTitle(v) }),
+          v.vin_masked ? h('span', { class: 'small muted', text: `VIN …${v.vin_masked.slice(-2)}` }) : null)));
       $('start').insertBefore(row, $('vin-form'));
     } catch (err) { /* offline, or nothing saved yet */ }
   }
 
   const normalizeVin = (raw) => String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const validVin = (v) => /^[A-HJ-NPR-Z0-9]{17}$/.test(v); // I, O, Q are never used in a real VIN
-  const normalizePlate = (raw) => String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const validPlate = (p) => /^[A-Z0-9]{4,10}$/.test(p) && /[A-Z]/.test(p) && /[0-9]/.test(p);
 
   function hideSections() {
     $('register').hidden = true;
@@ -167,10 +164,11 @@
     ].filter(Boolean).join(', ');
   }
 
-  function platePill(text) {
-    return h('span', { class: 'plate plate-sm' },
-      h('span', { class: 'plate-strip', 'aria-hidden': 'true' }, 'RW'),
-      h('span', { class: 'plate-text' }, text));
+  /** The car's VIN as a small label (masked: the server never sends the full VIN back). */
+  function vinPill(v) {
+    return h('span', { class: 'vinbox vinbox-sm', title: 'VIN' },
+      h('span', { class: 'vinbox-tag', 'aria-hidden': 'true' }, 'VIN'),
+      h('span', { class: 'vinbox-text' }, v.vin_masked || 'No VIN saved'));
   }
 
   function makeLogo(make) {
@@ -189,7 +187,7 @@
     $('part-q').value = '';
     $('vehicle-bar').replaceChildren(
       h('div', { class: 'vehicle-bar' },
-        platePill(formatPlate(vehicle.plate_number)),
+        vinPill(vehicle),
         h('div', { class: 'vehicle-text' },
           h('strong', {}, makeLogo(vehicle.make), vehicleTitle(vehicle)),
           h('span', { text: vehicleDetails(vehicle) })),
@@ -231,7 +229,6 @@
     const mount = $('register');
     const f = {};
 
-    f.plate = h('input', { id: 'r-plate', type: 'text', maxLength: 12, autocomplete: 'off', autocapitalize: 'characters', placeholder: 'RAE 123 A' });
     // The make is picked by logo. The hidden select keeps the value, so everything below reads
     // f.make.value exactly as before.
     f.make = h('select', { id: 'r-make', hidden: true, 'aria-hidden': 'true', tabIndex: -1 });
@@ -338,8 +335,6 @@
       else f.makeTiles.focus();
     });
 
-    f.plate.addEventListener('input', () => { f.plate.value = f.plate.value.toUpperCase(); });
-    f.plate.addEventListener('blur', () => { f.plate.value = formatPlate(f.plate.value); });
 
     const form = h('form', { class: 'panel', novalidate: true, onsubmit: onSubmit },
       h('h2', { id: 'register-title', text: 'Tell us about your car' }),
@@ -353,7 +348,6 @@
       field('Transmission', f.transmission),
       field('Where was it built?', f.origin, 'This matters. The same model built in Korea and in the USA can need different parts.'),
       field('Where was it imported from?', f.importSource),
-      field('Plate number', f.plate, 'Shown as a label on your car once saved. It is not used to search.'),
       f.status,
       h('div', { class: 'dialog-actions' },
         h('button', { class: 'btn btn-primary', type: 'submit', text: 'Save my car' }),
@@ -361,8 +355,6 @@
 
     async function onSubmit(event) {
       event.preventDefault();
-      const plate = normalizePlate(f.plate.value);
-      if (!validPlate(plate)) return setStatus(f.status, 'Enter the plate as shown on your car, for example RAE 123 A.', 'error');
       const make = f.make.value === '__other' ? f.makeOther.value.trim() : f.make.value;
       const model = (f.make.value === '__other' || f.model.value === '__other') ? f.modelOther.value.trim() : f.model.value;
       if (!make || !model) return setStatus(f.status, 'Choose the make and the model.', 'error');
@@ -372,7 +364,7 @@
         const res = await api('/api/vehicles/register', {
           method: 'POST',
           body: {
-            plate_number: plate, vin, make, model, year: Number(f.year.value),
+            vin, make, model, year: Number(f.year.value),
             generation: f.generation.value || null,
             engine: (f.engineSelect.hidden ? f.engineText.value : f.engineSelect.value) || null,
             transmission: f.transmission.value || null, origin_market: f.origin.value || null,
@@ -630,7 +622,7 @@
   function shopMessage(l) {
     const v = state.vehicle;
     const what = `${l.part_category}${l.oe_number ? ` (${l.oe_number})` : l.universal_spec ? ` (${l.universal_spec})` : ''}`;
-    return `Hello, I saw ${what} for ${fmtRwf(l.price_rwf)} on ${state.meta.app_name}. Is it still in stock? My car: ${vehicleTitle(v)}, plate ${v.plate_number}.`;
+    return `Hello, I saw ${what} for ${fmtRwf(l.price_rwf)} on ${state.meta.app_name}. Is it still in stock? My car: ${vehicleTitle(v)}${v.vin_masked ? `, VIN ${v.vin_masked}` : ''}.`;
   }
 
   /** Why a part number fits, the way a parts catalogue lists its "applicable cars". */

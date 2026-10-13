@@ -280,6 +280,29 @@ test('bad input gets a clear message', async () => {
   assert.equal(unknown.json.code, 'not_registered');
 });
 
+test('a customer registers by VIN alone, with no plate', async () => {
+  const one = await post('/api/vehicles/register', {
+    vin: 'JTMBK31V996077001', make: 'Toyota', model: 'RAV4', year: 2016,
+  });
+  assert.equal(one.status, 201);
+  assert.equal(one.json.vehicle.plate_number, '');
+  assert.equal(one.json.vehicle.origin_market, 'Japan');
+  // A second plate-less car is a separate record, not merged on the empty plate.
+  const two = await post('/api/vehicles/register', {
+    vin: 'KNDPMCAC5J7077002', make: 'Kia', model: 'Sportage', year: 2018,
+  });
+  assert.equal(two.status, 201);
+  assert.notEqual(two.json.vehicle.id, one.json.vehicle.id);
+  // The same VIN again finds the same car.
+  const again = await post('/api/vehicles/register', {
+    vin: 'JTMBK31V996077001', make: 'Toyota', model: 'RAV4', year: 2016,
+  });
+  assert.equal(again.json.vehicle.id, one.json.vehicle.id);
+  // Neither a VIN nor a plate: nothing to identify the car by.
+  const none = await post('/api/vehicles/register', { make: 'Kia', model: 'Rio', year: 2015 });
+  assert.equal(none.status, 400);
+});
+
 test('a VIN that contradicts the chosen make produces a warning, not an error', async () => {
   const r = await post('/api/vehicles/register', {
     plate_number: 'RXB004D', vin: 'KMHB3516BRW102898', make: 'Toyota', model: 'RAV4', year: 2023,

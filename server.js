@@ -379,8 +379,12 @@ function createApp(db, config = {}) {
 
   app.post('/api/vehicles/register', limitWrites, (req, res) => {
     const b = req.body || {};
+    // Customers register by VIN alone, so the plate is optional when a VIN is given (stored as
+    // '' since the column is NOT NULL). Without a VIN the plate is still the only handle, so it
+    // stays required there (shop console and older clients).
     const plate = alg.normalizePlate(b.plate_number);
-    if (!alg.isValidPlate(plate)) {
+    const hasVin = b.vin != null && String(b.vin).trim() !== '';
+    if ((plate || !hasVin) && !alg.isValidPlate(plate)) {
       throw new HttpError(400, 'Enter the plate number as shown on the car, for example RAE 123 A.');
     }
 
@@ -401,7 +405,7 @@ function createApp(db, config = {}) {
       const byVin = getVehicleByVin(vin);
       if (byVin) {
         updateRow('vehicles', byVin.id, {
-          ...(byVin.plate_number !== plate ? { plate_number: plate } : {}),
+          ...(plate && byVin.plate_number !== plate ? { plate_number: plate } : {}),
           ...(req.userId && !byVin.user_id ? { user_id: req.userId } : {}),
         });
         return res.json({ vehicle: publicVehicle(db.prepare('SELECT * FROM vehicles WHERE id = ?').get(byVin.id)), existing: true, warnings: [] });
@@ -413,7 +417,7 @@ function createApp(db, config = {}) {
     // time), so it is reused and enriched rather than duplicated. A plate match that already HAS
     // a different VIN means the plate has moved on to a different car since -- that old row is
     // left alone, and a fresh car is registered below.
-    const existingByPlate = getVehicleByPlate(plate);
+    const existingByPlate = plate ? getVehicleByPlate(plate) : null;
     if (existingByPlate && !existingByPlate.vin) {
       updateRow('vehicles', existingByPlate.id, {
         ...(req.userId && !existingByPlate.user_id ? { user_id: req.userId } : {}),
@@ -438,7 +442,7 @@ function createApp(db, config = {}) {
     const importSource = text(b.import_source, { field: 'import_source', max: 40 });
 
     const registeredBy = isAdmin(req) ? 'admin' : (shopFromReq(req) ? `shop:${shopFromReq(req).name}` : 'customer');
-    db.prepare(`INSERT INTO vehicles
+    const inserted = db.prepare(`INSERT INTO vehicles
       (plate_number, vin, wmi_code, make, model, generation, year, engine, transmission, origin_market,
        drive_side, import_source, owner_phone, registered_by, user_id)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
@@ -448,7 +452,7 @@ function createApp(db, config = {}) {
       origin, driveSide, importSource, phone(b.owner_phone, 'owner_phone', false), registeredBy, req.userId || null);
 
     res.status(201).json({
-      vehicle: publicVehicle(getVehicleByPlate(plate)), existing: false, origin_source: originSource, warnings,
+      vehicle: publicVehicle(getVehicleById(Number(inserted.lastInsertRowid))), existing: false, origin_source: originSource, warnings,
     });
   });
 
@@ -579,7 +583,8 @@ function createApp(db, config = {}) {
     const info = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, note)
       VALUES (?,?,?,?,?)`).run(customerPhone, vehicle.id, listingId, garageId, note);
 
-    const car = `${vehicle.year} ${vehicle.make} ${vehicle.model}, plate ${vehicle.plate_number}`;
+    const car = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.plate_number ? `, plate ${vehicle.plate_number}`
+      : vehicle.vin ? `, VIN ending ${vehicle.vin.slice(-6)}` : ''}`;
     const partText = listing ? `${listing.part_category}${listing.oe_number ? ` (${listing.oe_number})` : ''}` : null;
     const whatsapp = {
       shop: listing ? alg.whatsappLink(listing.shop_wa || listing.shop_phone,

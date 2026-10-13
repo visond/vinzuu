@@ -421,6 +421,9 @@ label .optional { font-weight: 400; color: var(--ink-2); }
 @media (max-width: 480px) { .auth-body { padding: 24px 18px 16px; } .auth-title { font-size: 24px; } }
 
 .my-cars { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.my-cars .hint { flex-basis: 100%; margin: 0; }
+.my-car { display: inline-flex; align-items: center; gap: 8px; }
+.my-car .make-logo { width: 22px; height: 22px; margin: 0; vertical-align: 0; }
 /* Author styles always beat the browser's own button chrome, so this only needs to clear the
    parts a <button> adds that <span> (the plate pill's original element) did not have. The
    border, radius and shadow still come from .plate / .plate-sm below, unchanged. */
