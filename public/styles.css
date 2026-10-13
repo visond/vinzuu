@@ -525,7 +525,7 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
 
 .vin-guide { background: #EEF3F6; padding: 30px 28px; border-left: 1px solid var(--line); }
 .vin-guide h3, .vin-howto h3 { font-size: 20px; margin: 0 0 14px; }
-.vin-howto { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
+.vin-howto { margin: 0 0 22px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
 .vin-anatomy { display: flex; gap: 4px; margin-bottom: 16px; }
 .vin-seg { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .vin-seg b {
