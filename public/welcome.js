@@ -163,6 +163,9 @@
   function showAuthDialog() {
     if (typeof authDialog.showModal === 'function') { if (!authDialog.open) authDialog.showModal(); }
     else authDialog.setAttribute('open', '');
+    // Google's button was drawn while the popup was closed (no width to measure, so 400px, wider
+    // than a phone's popup). Redraw it now that it can be measured.
+    requestAnimationFrame(() => renderGoogleButton());
     // Start on the heading rather than the first button, so the close X doesn't open highlighted.
     $('auth-head').focus({ preventScroll: true });
   }
@@ -315,7 +318,9 @@
   function renderGoogleButton() {
     if (!googleReady) return;
     const slot = $('google-btn');
-    const width = Math.min(400, Math.round(slot.getBoundingClientRect().width) || 400);
+    const measured = Math.round(slot.getBoundingClientRect().width);
+    if (!measured) return; // popup closed: drawn when it opens
+    const width = Math.min(400, measured);
     slot.replaceChildren();
     window.google.accounts.id.renderButton(slot, {
       theme: 'outline', size: 'large', shape: 'rectangular', width, logo_alignment: 'center',

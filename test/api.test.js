@@ -677,6 +677,48 @@ test('Google sign-in is refused cleanly when the server has no client id configu
   assert.equal(g.status, 503);
 });
 
+test('Google sign-in creates an account, links a verified email to a password account, and the password still works', async () => {
+  const { openDb: open } = require('../db');
+  const tokens = {
+    new: { sub: 'g-1', email: 'new.google@example.com', email_verified: true, name: 'New Person' },
+    verified: { sub: 'g-2', email: 'both@example.com', email_verified: true, name: 'Both Ways' },
+    unverified: { sub: 'g-3', email: 'victim@example.com', email_verified: false, name: 'Someone Else' },
+  };
+  const app = createApp(open(':memory:'), {
+    writeLimit: { windowMs: 60_000, max: 10_000 },
+    googleClientId: 'test-client.apps.googleusercontent.com',
+    verifyGoogleIdToken: async (idToken) => { if (!tokens[idToken]) throw new Error('That sign-in could not be verified.'); return tokens[idToken]; },
+  });
+  const srv = await new Promise((resolve) => { const s = app.listen(0, () => resolve(s)); });
+  const url = `http://127.0.0.1:${srv.address().port}`;
+  const send = (path, body) => fetch(url + path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    .then(async (r) => ({ status: r.status, json: await r.json() }));
+  try {
+    assert.equal((await fetch(`${url}/api/auth/config`).then((r) => r.json())).google, true);
+
+    const fresh = await send('/api/auth/google', { id_token: 'new' });
+    assert.equal(fresh.status, 200);
+    assert.equal(fresh.json.user.email, 'new.google@example.com');
+    assert.equal(fresh.json.user.provider, 'google');
+
+    assert.equal((await send('/api/auth/google', { id_token: 'forged' })).status, 401);
+
+    const pw = 'Both-ways1';
+    assert.equal((await send('/api/auth/signup', { name: 'Both Ways', email: 'both@example.com', password: pw })).status, 201);
+    const linked = await send('/api/auth/google', { id_token: 'verified' });
+    assert.equal(linked.status, 200);
+    assert.equal(linked.json.user.email, 'both@example.com', 'the same account, not a new one');
+    const again = await send('/api/auth/login', { email: 'both@example.com', password: pw });
+    assert.equal(again.status, 200, 'the password still works after Google was added');
+
+    assert.equal((await send('/api/auth/signup', { name: 'Victim', email: 'victim@example.com', password: 'Victim-pass1' })).status, 201);
+    const takeover = await send('/api/auth/google', { id_token: 'unverified' });
+    assert.equal(takeover.status, 409, 'an unverified Google email never opens someone else\'s account');
+  } finally {
+    srv.close();
+  }
+});
+
 // ---------- admin: add or remove a car ----------
 
 test('admin can add a car directly, correct it by re-posting the same plate, and delete it', async () => {

@@ -135,7 +135,11 @@ function createApp(db, config = {}) {
   const cfg = {
     adminToken: config.adminToken || 'dev-admin-token',
     writeLimit: config.writeLimit || { windowMs: 60_000, max: 40 },
+    // Tests pass their own client id and token check, so Google sign-in can be tested offline.
+    googleClientId: config.googleClientId || null,
+    verifyGoogleIdToken: config.verifyGoogleIdToken || auth.verifyGoogleIdToken,
   };
+  const googleClientId = () => cfg.googleClientId || process.env.GOOGLE_CLIENT_ID || null;
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '1mb' }));
@@ -247,11 +251,17 @@ function createApp(db, config = {}) {
 
   /** Find or create the local account for a Google sign-in. Matches by provider id first,
    *  then by email (so someone who signed up with a password can later add Google with the same
-   *  address), and only creates a new row if neither matched. */
-  function upsertOAuthUser(provider, providerId, email, name) {
+   *  address), and only creates a new row if neither matched. Linking by email needs Google to
+   *  have verified that address; otherwise anyone could add an unverified address to a Google
+   *  account and walk into someone else's Vinzuu account. The password stays, so the person can
+   *  still sign in with either. */
+  function upsertOAuthUser(provider, providerId, email, name, emailVerified) {
     const byProvider = db.prepare('SELECT * FROM users WHERE auth_provider = ? AND provider_id = ?').get(provider, providerId);
     if (byProvider) return byProvider;
     const normalizedEmail = email ? String(email).toLowerCase().trim() : null;
+    if (normalizedEmail && db.prepare('SELECT 1 FROM users WHERE email = ?').get(normalizedEmail) && !emailVerified) {
+      throw new HttpError(409, 'An account with that email already exists. Sign in with your email and password instead.');
+    }
     if (normalizedEmail) {
       const byEmail = db.prepare('SELECT * FROM users WHERE email = ?').get(normalizedEmail);
       if (byEmail) {
@@ -270,7 +280,7 @@ function createApp(db, config = {}) {
   // GOOGLE_CLIENT_ID is set; until then it says Google isn't available yet.
   app.get('/api/auth/config', (req, res) => {
     res.json({
-      google: !!process.env.GOOGLE_CLIENT_ID, google_client_id: process.env.GOOGLE_CLIENT_ID || null,
+      google: !!googleClientId(), google_client_id: googleClientId(),
     });
   });
 
@@ -299,7 +309,7 @@ function createApp(db, config = {}) {
     const email = normalizeEmail(b.email);
     const password = String(b.password || '');
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-    if (!user || user.auth_provider !== 'local' || !auth.verifyPassword(password, user.password_hash)) {
+    if (!user || !user.password_hash || !auth.verifyPassword(password, user.password_hash)) {
       throw new HttpError(401, 'That email and password do not match. If you signed up with Google, use the Google button instead.');
     }
     auth.setSessionCookie(req, res, user.id);
@@ -312,14 +322,16 @@ function createApp(db, config = {}) {
   });
 
   app.post('/api/auth/google', limitWrites, asyncRoute(async (req, res) => {
-    if (!process.env.GOOGLE_CLIENT_ID) throw new HttpError(503, 'Google sign-in is not set up on this server yet.');
+    if (!googleClientId()) throw new HttpError(503, 'Google sign-in is not set up on this server yet.');
     let payload;
     try {
-      payload = await auth.verifyGoogleIdToken((req.body || {}).id_token, process.env.GOOGLE_CLIENT_ID);
+      payload = await cfg.verifyGoogleIdToken((req.body || {}).id_token, googleClientId());
     } catch (err) {
       throw new HttpError(401, err.message);
     }
-    const user = upsertOAuthUser('google', payload.sub, payload.email, payload.name);
+    // Google sends email_verified as a boolean (older tokens used the string "true").
+    const verified = payload.email_verified === true || payload.email_verified === 'true';
+    const user = upsertOAuthUser('google', payload.sub, payload.email, payload.name, verified);
     auth.setSessionCookie(req, res, user.id);
     res.json({ user: publicUser(user) });
   }));
