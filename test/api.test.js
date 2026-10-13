@@ -67,6 +67,18 @@ test('WMI decodes where a car was built', () => {
   assert.equal(alg.decodeWmi('XXXBAAAA1J0000001').origin, null);
 });
 
+test('the 10th VIN character gives the model year, and an unused code gives no year', () => {
+  const now = new Date('2026-10-13');
+  assert.equal(alg.decodeModelYear('KNDPM3AC8J7100002', now).year, 2018);
+  assert.equal(alg.decodeModelYear('KMHB3516BRW102898', now).year, 2024);
+  assert.equal(alg.decodeModelYear('JTMBK31V996054321', now).year, 2009, '9 is 2009; 2039 is in the future');
+  // North America: a digit in position 7 means the 1980-2009 cycle.
+  assert.equal(alg.decodeModelYear('1HGCM82633A004352', now).year, 2003);
+  assert.equal(alg.decodeModelYear('4T1BF1FK5CU123456', now).year, 2012);
+  assert.equal(alg.decodeModelYear('SB1ZS3JE50E123456', now).year, null, '0 is never a year code');
+  assert.equal(alg.decodeModelYear('SHORT', now).year, null);
+});
+
 test('haversine gives a sensible Kigali distance', () => {
   const d = alg.haversineKm({ lat: -1.9441, lon: 30.0619 }, { lat: -1.9490, lon: 30.1265 });
   assert.ok(d > 6 && d < 8, `expected about 7 km, got ${d}`);
@@ -90,6 +102,50 @@ test('meta and catalog load, and the demo banner flag is on', async () => {
   assert.ok(cat.json.categories.length >= 9);
   const kia = cat.json.makes.find((m) => m.make === 'Kia');
   assert.ok(kia.models.find((m) => m.model === 'Sportage').generations.length > 0);
+});
+
+test('the catalog lists the full Hyundai, Kia and Toyota lineups with their logos', async () => {
+  const cat = await get('/api/catalog');
+  for (const [make, model] of [['Hyundai', 'Santa Fe'], ['Kia', 'Picanto'], ['Toyota', 'Land Cruiser Prado']]) {
+    const m = cat.json.makes.find((x) => x.make === make);
+    assert.match(m.logo, /^\/img\/makes\/[a-z]+\.svg$/);
+    const found = m.models.find((x) => x.model === model);
+    assert.ok(found, `${make} ${model} is in the list`);
+    assert.deepEqual(found.generations, [], 'no part numbers yet, so no generations to choose');
+  }
+  const toyota = cat.json.makes.find((x) => x.make === 'Toyota');
+  assert.equal(toyota.models.filter((x) => x.model === 'RAV4').length, 1, 'a model with part numbers is not listed twice');
+  assert.ok(toyota.models.find((x) => x.model === 'RAV4').generations.length > 0);
+});
+
+test('VIN decode returns the maker, build country and model year together', async () => {
+  const r = await get('/api/vin/decode?vin=KNDPM3AC8J7100002');
+  assert.equal(r.json.valid, true);
+  assert.equal(r.json.maker, 'Kia');
+  assert.equal(r.json.origin, 'Korea');
+  assert.equal(r.json.model_year, 2018);
+  assert.equal(r.json.model_year_code, 'J');
+  assert.equal((await get('/api/vin/decode?vin=nope')).json.valid, false);
+});
+
+test('a lineup model with no part numbers yet registers, and a part search for it is logged as a gap', async () => {
+  const reg = await post('/api/vehicles/register', {
+    plate_number: 'RXA321Z', vin: 'KMHSU81XDCU123321', make: 'Hyundai', model: 'Santa Fe', year: 2012,
+  });
+  assert.equal(reg.status, 201);
+  const s = await get(`/api/parts/search?vehicle_id=${reg.json.vehicle.id}&part_category=Oil%20Filter`);
+  assert.equal(s.json.match_type, 'none');
+  assert.equal(s.json.reason, 'not_in_database');
+});
+
+test('each matched part number says which cars it fits', async () => {
+  const v = (await get('/api/vehicles/by-vin/KNDPM3AC8J7100002')).json.vehicle;
+  const s = await get(`/api/parts/search?vehicle_id=${v.id}&part_category=Front%20Bumper`);
+  const fit = s.json.oe_numbers[0];
+  assert.equal(fit.oe_number, 'DEMO-KIA-QL-FB-KR');
+  assert.equal(fit.origin_market, 'Korea');
+  assert.equal(fit.year_start, 2016);
+  assert.equal(fit.year_end, 2021);
 });
 
 test('registering with a VIN derives the origin market from the WMI', async () => {

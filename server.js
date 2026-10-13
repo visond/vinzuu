@@ -14,6 +14,7 @@ const { openDb, tx, seedDemo, isDemo, DEMO_VIN } = require('./db');
 const alg = require('./lib/algorithms');
 const auth = require('./lib/auth');
 const { findCompatible, logGap, resolveListings, buildCatalog } = require('./lib/matching');
+const { withLineup } = require('./lib/lineup');
 
 const APP_NAME = 'Vinzuu';
 
@@ -342,14 +343,15 @@ function createApp(db, config = {}) {
   app.get('/api/catalog', (req, res) => {
     res.json({
       categories: db.prepare('SELECT name, type, keywords FROM part_categories ORDER BY id').all(),
-      makes: buildCatalog(db),
+      makes: withLineup(buildCatalog(db)),
     });
   });
 
   app.get('/api/vin/decode', (req, res) => {
     const vin = String(req.query.vin || '').toUpperCase().trim();
     if (!alg.isValidVin(vin)) return res.json({ valid: false });
-    res.json({ valid: true, ...alg.decodeWmi(vin) });
+    const year = alg.decodeModelYear(vin);
+    res.json({ valid: true, ...alg.decodeWmi(vin), model_year: year.year, model_year_code: year.code });
   });
 
   // Algorithm A. VIN-first: a VIN never changes, so it is the trusted key that decides whether

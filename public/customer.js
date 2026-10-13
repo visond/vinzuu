@@ -173,6 +173,11 @@
       h('span', { class: 'plate-text' }, text));
   }
 
+  function makeLogo(make) {
+    const m = state.catalog.makes.find((x) => x.make.toLowerCase() === String(make).toLowerCase());
+    return m && m.logo ? h('img', { class: 'make-logo', src: m.logo, alt: '', width: 28, height: 28 }) : null;
+  }
+
   function setVehicle(vehicle) {
     state.vehicle = vehicle;
     state.category = null;
@@ -186,7 +191,7 @@
       h('div', { class: 'vehicle-bar' },
         platePill(formatPlate(vehicle.plate_number)),
         h('div', { class: 'vehicle-text' },
-          h('strong', { text: vehicleTitle(vehicle) }),
+          h('strong', {}, makeLogo(vehicle.make), vehicleTitle(vehicle)),
           h('span', { text: vehicleDetails(vehicle) })),
         h('button', { class: 'btn btn-quiet', type: 'button', onclick: changeCar, text: 'Change car' })));
     renderPartList();
@@ -227,12 +232,16 @@
     const f = {};
 
     f.plate = h('input', { id: 'r-plate', type: 'text', maxLength: 12, autocomplete: 'off', autocapitalize: 'characters', placeholder: 'RAE 123 A' });
-    f.make = h('select', { id: 'r-make' });
+    // The make is picked by logo. The hidden select keeps the value, so everything below reads
+    // f.make.value exactly as before.
+    f.make = h('select', { id: 'r-make', hidden: true, 'aria-hidden': 'true', tabIndex: -1 });
     fillSelect(f.make, [...makes.map((m) => ({ value: m.make, text: m.make })), { value: '__other', text: 'Other make' }], 'Choose the make');
     f.makeOther = h('input', { id: 'r-make-other', type: 'text', placeholder: 'Type the make', hidden: true, 'aria-label': 'Make' });
+    f.makeTiles = makeTiles(makes, (value) => { f.make.value = value; syncMake(); });
     f.model = h('select', { id: 'r-model', hidden: true });
     f.modelOther = h('input', { id: 'r-model-other', type: 'text', placeholder: 'Type the model', hidden: true, 'aria-label': 'Model' });
     f.year = h('input', { id: 'r-year', type: 'number', inputMode: 'numeric', min: 1980, max: new Date().getFullYear() + 1, placeholder: 'For example 2018' });
+    f.yearHint = h('p', { class: 'hint', hidden: true });
     f.generation = h('select', { id: 'r-generation' });
     f.engineSelect = h('select', { id: 'r-engine' });
     f.engineText = h('input', { id: 'r-engine-text', type: 'text', placeholder: 'For example 2.0L Petrol', hidden: true, 'aria-label': 'Engine' });
@@ -268,6 +277,7 @@
     }
     function syncMake() {
       const make = currentMake();
+      f.makeTiles.select(f.make.value);
       f.makeOther.hidden = f.make.value !== '__other';
       wrapModel.hidden = !f.make.value;
       f.model.hidden = !make;
@@ -282,24 +292,41 @@
     });
     f.generation.addEventListener('change', () => { f.generation.dataset.auto = ''; });
     syncMake();
-    prefillFromVin(vin, f, syncMake);
+    const decoded = h('div', { class: 'vin-decoded', 'aria-live': 'polite' });
+    decodeVin(vin).then((d) => {
+      if (!d) return;
+      // Fill in only what the person has not chosen yet; the VIN is a strong hint, not the last word.
+      if (d.maker && !f.make.value && makes.some((m) => m.make === d.maker)) { f.make.value = d.maker; syncMake(); }
+      if (d.origin && !f.origin.value && state.meta.origins.includes(d.origin)) f.origin.value = d.origin;
+      if (d.model_year && !f.year.value) {
+        f.year.value = String(d.model_year);
+        f.yearHint.textContent = `Read from your VIN (10th character "${d.model_year_code}"). Change it if your papers say otherwise.`;
+        f.yearHint.hidden = false;
+        f.year.dispatchEvent(new Event('input'));
+      }
+      decoded.replaceChildren(...decodedFacts(d));
+    }).finally(() => {
+      // Start where the person has something to do: the model when the VIN gave the make.
+      if (f.make.value && !f.model.hidden) f.model.focus({ preventScroll: true });
+      else f.makeTiles.focus();
+    });
 
     f.plate.addEventListener('input', () => { f.plate.value = f.plate.value.toUpperCase(); });
     f.plate.addEventListener('blur', () => { f.plate.value = formatPlate(f.plate.value); });
 
     const form = h('form', { class: 'panel', novalidate: true, onsubmit: onSubmit },
-      h('h2', { id: 'register-title', text: 'We do not know this VIN yet' }),
-      h('p', { class: 'muted', text: `Tell us about this car once. Next time, VIN ${vin} is all you need.` }),
-      h('div', { class: 'field' }, h('label', { text: 'VIN' }), h('p', { class: 'vin-locked', text: vin })),
-      field('Plate number', f.plate, 'Shown as a label on your car once saved. It is not used to search.'),
-      h('div', { class: 'field' }, h('label', { for: 'r-make', text: 'Make' }), f.make, f.makeOther),
+      h('h2', { id: 'register-title', text: 'Tell us about your car' }),
+      h('p', { class: 'muted', text: `We read what we could from your VIN. Fill in the rest once, and next time VIN ${vin} is all you need.` }),
+      h('div', { class: 'field' }, h('label', { text: 'VIN' }), h('p', { class: 'vin-locked', text: vin }), decoded),
+      h('fieldset', { class: 'field' }, h('legend', { text: 'Make' }), f.makeTiles.el, f.make, f.makeOther),
       wrapModel,
-      field('Year', f.year),
+      h('div', { class: 'field' }, h('label', { for: 'r-year', text: 'Model year' }), f.year, f.yearHint),
       wrapGeneration,
       wrapEngine,
       field('Transmission', f.transmission),
       field('Where was it built?', f.origin, 'This matters. The same model built in Korea and in the USA can need different parts.'),
       field('Where was it imported from?', f.importSource),
+      field('Plate number', f.plate, 'Shown as a label on your car once saved. It is not used to search.'),
       f.status,
       h('div', { class: 'dialog-actions' },
         h('button', { class: 'btn btn-primary', type: 'submit', text: 'Save my car' }),
@@ -336,12 +363,58 @@
     mount.replaceChildren(form);
     mount.hidden = false;
     mount.scrollIntoView({ behavior: motion(), block: 'start' });
-    f.plate.focus({ preventScroll: true });
+  }
+
+  /** What the VIN alone tells us: maker, build country and model year. null when it says nothing. */
+  async function decodeVin(vin) {
+    try {
+      const d = await api(`/api/vin/decode?vin=${enc(vin)}`);
+      return d.valid ? d : null;
+    } catch (err) { return null; } // a convenience only: the person can still fill everything in
+  }
+
+  function decodedFacts(d) {
+    const make = d.maker && state.catalog.makes.find((m) => m.make === d.maker);
+    const facts = [
+      make && make.logo ? h('span', { class: 'fact' }, h('img', { class: 'fact-logo', src: make.logo, alt: make.make, width: 22, height: 22 })) : null,
+      d.origin ? h('span', { class: 'fact', text: `Built in ${d.origin}` }) : null,
+      d.model_year ? h('span', { class: 'fact', text: `${d.model_year} model year` }) : null,
+    ].filter(Boolean);
+    if (!facts.length) return [h('p', { class: 'hint', text: 'We could not read the maker or year from this VIN, so please choose them below.' })];
+    return [h('p', { class: 'hint', text: 'From your VIN:' }), h('div', { class: 'facts' }, ...facts)];
+  }
+
+  /**
+   * Hyundai, Kia and Toyota are chosen by their logos (radio buttons, so arrow keys and screen
+   * readers work as usual). "Other make" opens a text box for anything else.
+   */
+  function makeTiles(makes, onPick) {
+    const name = 'r-make-tile';
+    const tile = (value, content, label) => {
+      const input = h('input', { type: 'radio', name, value, class: 'make-radio', onchange: () => onPick(value) });
+      return { input, el: h('label', { class: 'make-tile', title: label }, input, content) };
+    };
+    const tiles = makes.map((m) => tile(m.make,
+      m.logo ? h('img', { src: m.logo, alt: m.make, width: 44, height: 44 }) : h('span', { class: 'make-name', text: m.make }), m.make));
+    tiles.push(tile('__other', h('span', { class: 'make-name', text: 'Other make' }), 'Other make'));
+    return {
+      el: h('div', { class: 'make-tiles' }, ...tiles.map((t) => t.el)),
+      select(value) { for (const t of tiles) t.input.checked = t.input.value === value; },
+      focus() { (tiles.find((t) => t.input.checked) || tiles[0]).input.focus({ preventScroll: true }); },
+    };
   }
 
   const motion = () => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
 
   // ---------------------------------------------------------------- pick a part
+
+  // The same photos as the homepage parts strip. Categories without one show just their name.
+  const PART_PHOTOS = {
+    'Front Bumper': 'front-bumper.jpg', 'Headlight Assembly': 'headlight.jpg',
+    'Front Brake Pad': 'brake-disc.jpg', 'Rear Brake Pad': 'brake-disc.jpg',
+    'Oil Filter': 'oil-filter.jpg', 'Air Filter': 'air-filter.jpg', 'Battery': 'battery.jpg',
+    'Wiper Blade': 'wiper-blade.jpg', 'Engine Oil': 'engine-oil.jpg',
+  };
 
   function renderPartList() {
     if (!state.catalog) return;
@@ -360,8 +433,10 @@
     list.replaceChildren(...cats.map(({ c }) => h('li', {},
       h('button', {
         class: 'part-btn', type: 'button', 'aria-pressed': String(state.category === c.name),
-        onclick: () => pickCategory(c), text: c.name,
-      }))));
+        onclick: () => pickCategory(c),
+      },
+      PART_PHOTOS[c.name] ? h('img', { class: 'part-thumb', src: `/img/parts/${PART_PHOTOS[c.name]}`, alt: '', width: 44, height: 44, loading: 'lazy' }) : null,
+      h('span', { text: c.name })))));
   }
 
   async function pickCategory(cat) {
@@ -523,8 +598,22 @@
     return `Hello, I saw ${what} for ${fmtRwf(l.price_rwf)} on ${state.meta.app_name}. Is it still in stock? My car: ${vehicleTitle(v)}, plate ${v.plate_number}.`;
   }
 
+  /** Why a part number fits, the way a parts catalogue lists its "applicable cars". */
+  function fitsText(oe) {
+    const fit = state.searchInfo && (state.searchInfo.oe_numbers || []).find((o) => o.oe_number === oe);
+    if (!fit) return null;
+    const v = state.vehicle;
+    return 'Fits ' + [
+      `${v.make} ${v.model}${fit.generation ? ` ${fit.generation}` : ''}`,
+      fit.year_start ? `${fit.year_start} to ${fit.year_end}` : null,
+      fit.engine || 'any engine',
+      fit.origin_market ? `built in ${fit.origin_market}` : 'any build country',
+    ].filter(Boolean).join(', ');
+  }
+
   function resultRow(l) {
     const detail = l.oe_number ? `Part number ${l.oe_number}` : `Size: ${l.universal_spec}`;
+    const fits = l.oe_number ? fitsText(l.oe_number) : null;
     const wa = whatsappLink(l.shop_whatsapp || l.shop_phone, shopMessage(l));
     return h('li', { class: 'result' },
       h('img', { class: 'photo', src: l.photo_url, alt: `${l.part_category} at ${l.shop_name}`, loading: 'lazy', width: 88, height: 88 }),
@@ -532,6 +621,7 @@
       h('div', { class: 'price' }, rwf.format(l.price_rwf), ' ', h('small', { text: 'RWF' })),
       h('div', { class: 'meta', text: `${l.distance_km} km away, ${l.condition === 'genuine' ? 'genuine part' : 'aftermarket part'}, ${l.in_stock} in stock` }),
       h('div', { class: 'meta', text: detail }),
+      fits ? h('div', { class: 'meta', text: fits }) : null,
       h('div', { class: 'badge-row' }, badgeEl(l.badge)),
       h('div', { class: 'actions' },
         wa ? h('a', { class: 'btn btn-secondary btn-small', href: wa, target: '_blank', rel: 'noopener', text: 'WhatsApp the shop' }) : null,
