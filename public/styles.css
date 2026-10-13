@@ -539,6 +539,9 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
 .vin-tips { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); line-height: 1.45; }
 .vin-tips b { color: var(--ink); }
 .vin-try { font-weight: 700; font-size: 14.5px; }
+.vin-where-pic { margin: 4px 0 14px; }
+.vin-where-pic img { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid var(--line); }
+.vin-where-pic figcaption { font-size: 13.5px; color: var(--ink-2); margin-top: 6px; }
 
 @media (max-width: 820px) {
   .finder-card { grid-template-columns: 1fr; }
