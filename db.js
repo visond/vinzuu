@@ -139,6 +139,92 @@ CREATE TABLE IF NOT EXISTS shop_listings (
 CREATE INDEX IF NOT EXISTS idx_listings_oe ON shop_listings (oe_number);
 CREATE INDEX IF NOT EXISTS idx_listings_cat ON shop_listings (part_category);
 
+-- A shop asking the vinzuu team to put a part on sale. Only an admin posts parts (so no shop
+-- can post a fake one): approving a request creates the shop_listings row it describes.
+CREATE TABLE IF NOT EXISTS listing_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  oe_number TEXT,
+  part_category TEXT NOT NULL,
+  universal_spec TEXT,
+  price_rwf INTEGER NOT NULL CHECK (price_rwf > 0),
+  stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
+  condition TEXT NOT NULL CHECK (condition IN ('genuine','aftermarket')),
+  photo_url TEXT NOT NULL,
+  brand TEXT,
+  description TEXT,
+  warranty_months INTEGER,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  admin_note TEXT,
+  listing_id INTEGER REFERENCES shop_listings(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT
+);
+
+-- A business applying on /sell.html to join Vinzuu Sellers & Garages. Nothing it sends is
+-- shown to customers: an admin checks the documents, then approving it creates the shop
+-- and/or garage and the owner's account (with the password chosen here).
+CREATE TABLE IF NOT EXISTS business_applications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL CHECK (kind IN ('shop','garage','both')),
+  business_name TEXT NOT NULL,
+  owner_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  whatsapp_number TEXT,
+  address_text TEXT NOT NULL,
+  latitude REAL NOT NULL,
+  longitude REAL NOT NULL,
+  tin TEXT NOT NULL,
+  certificate_photo TEXT NOT NULL,
+  front_photo TEXT NOT NULL,
+  specialties TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  admin_note TEXT,
+  shop_id INTEGER REFERENCES shops(id) ON DELETE SET NULL,
+  garage_id INTEGER REFERENCES garages(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_applications_email ON business_applications (email);
+
+-- A garage's fixed labour prices, shown to customers before they book. part_category links a
+-- service to the part it fits ("Fit front brake pads" -> Front Brake Pad) so the booking
+-- dialog can show the right price; it is NULL for general work such as a diagnosis.
+CREATE TABLE IF NOT EXISTS garage_services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  garage_id INTEGER NOT NULL REFERENCES garages(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  part_category TEXT,
+  price_rwf INTEGER NOT NULL CHECK (price_rwf > 0),
+  duration_minutes INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A customer's stars and comment on a shop or a garage. Only the customer who made the booking
+-- can review, and only once that side of it is finished (part collected / job done), so every
+-- review comes from a real customer. One review per booking per side; the business can reply.
+CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+  target TEXT NOT NULL CHECK (target IN ('shop','garage')),
+  shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+  garage_id INTEGER REFERENCES garages(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  author_name TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  reply TEXT,
+  replied_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_once ON reviews (booking_id, target) WHERE booking_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_reviews_shop ON reviews (shop_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_garage ON reviews (garage_id);
+
 -- Spec 8.6
 CREATE TABLE IF NOT EXISTS garages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -190,6 +276,27 @@ function openDb(dbPath = process.env.DB_PATH || DEFAULT_DB_PATH) {
   // The odometer reading the owner last gave, for the "My garage" inspection reminders.
   ensureColumn(db, 'vehicles', 'mileage_km', 'INTEGER');
   ensureColumn(db, 'vehicles', 'mileage_at', 'TEXT');
+  // Who an account belongs to: a customer, a business (it runs the shop in shop_id and/or the
+  // garage in garage_id) or an admin. Signing in sends each one to its own dashboard.
+  ensureColumn(db, 'users', 'role', "TEXT NOT NULL DEFAULT 'customer'");
+  ensureColumn(db, 'users', 'shop_id', 'INTEGER REFERENCES shops(id)');
+  ensureColumn(db, 'users', 'garage_id', 'INTEGER REFERENCES garages(id)');
+  // What the admin checked about a part: its brand, a description customers read, and the
+  // warranty. hidden = 1 takes it off sale without deleting it.
+  ensureColumn(db, 'shop_listings', 'brand', 'TEXT');
+  ensureColumn(db, 'shop_listings', 'description', 'TEXT');
+  ensureColumn(db, 'shop_listings', 'warranty_months', 'INTEGER');
+  ensureColumn(db, 'shop_listings', 'hidden', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'shops', 'opening_hours', 'TEXT');
+  ensureColumn(db, 'garages', 'opening_hours', 'TEXT');
+  // A booking is one request seen from two sides: the shop reserves the part, the garage
+  // schedules the fitting. Each side keeps its own progress.
+  ensureColumn(db, 'bookings', 'shop_status', "TEXT NOT NULL DEFAULT 'requested'");
+  ensureColumn(db, 'bookings', 'garage_status', "TEXT NOT NULL DEFAULT 'requested'");
+  ensureColumn(db, 'bookings', 'garage_time', 'TEXT');
+  ensureColumn(db, 'bookings', 'garage_note', 'TEXT');
+  // The signed-in customer who made the booking: they see it under "My bookings" and review it.
+  ensureColumn(db, 'bookings', 'user_id', 'INTEGER REFERENCES users(id)');
   migratePlateNotUnique(db);
   ensureCategories(db);
   return db;
@@ -367,7 +474,7 @@ function placeholderPhoto(text) {
 
 function seedDemo(db) {
   const already = db.prepare('SELECT COUNT(*) AS n FROM fitment_reference').get().n;
-  if (already > 0) { backfillDemoVins(db); return false; }
+  if (already > 0) { backfillDemoVins(db); ensureDemoAccounts(db); return false; }
 
   tx(db, () => {
     const insFit = db.prepare(`INSERT INTO fitment_reference
@@ -419,7 +526,95 @@ function seedDemo(db) {
 
     db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo', '1')").run();
   });
+  ensureDemoAccounts(db);
   return true;
+}
+
+// Demo sign-ins, so the admin console and Vinzuu Sellers & Garages can be tried. Invented,
+// like the rest of the demo data.
+const DEMO_ADMIN = { email: 'admin@vinzuu.rw', password: 'Admin-vinzuu1' };
+const DEMO_BUSINESS_PASSWORD = 'Vinzuu-demo1';
+
+// [name, part_category or null, price, minutes]: labour prices for each demo garage.
+const DEMO_SERVICES = [
+  ['Fit front brake pads', 'Front Brake Pad', 15000, 60],
+  ['Fit rear brake pads', 'Rear Brake Pad', 15000, 60],
+  ['Oil and filter change', 'Oil Filter', 10000, 45],
+  ['Replace air filter', 'Air Filter', 5000, 20],
+  ['Fit and test a battery', 'Battery', 5000, 20],
+  ['Fit wiper blades', 'Wiper Blade', 2000, 10],
+  ['Fit a headlight', 'Headlight Assembly', 20000, 90],
+  ['Fit a front bumper', 'Front Bumper', 35000, 180],
+  ['Engine diagnosis', null, 15000, 60],
+];
+
+/** Adds the demo admin, one business account per demo shop and garage, plus one account that
+ *  runs both a shop and a garage (it lands on the "shop or garage?" choice). Also labour prices
+ *  and a few bookings, so the dashboards are not empty. Runs on older demo databases too, and
+ *  never touches an account or row that already exists. */
+function ensureDemoAccounts(db) {
+  if (!isDemo(db)) return;
+  const { hashPassword } = require('./lib/auth');
+  const exists = (email) => db.prepare('SELECT 1 FROM users WHERE email = ?').get(email);
+  const ins = db.prepare(`INSERT INTO users (name, email, password_hash, auth_provider, role, shop_id, garage_id)
+    VALUES (?,?,?,'local',?,?,?)`);
+  const bizHash = hashPassword(DEMO_BUSINESS_PASSWORD);
+  tx(db, () => {
+    if (!exists(DEMO_ADMIN.email)) ins.run('Vinzuu Admin', DEMO_ADMIN.email, hashPassword(DEMO_ADMIN.password), 'admin', null, null);
+    const shops = db.prepare("SELECT id, name FROM shops WHERE onboarded_by = 'demo seed' ORDER BY id").all();
+    shops.forEach((shop, i) => {
+      const email = `shop${i + 1}@vinzuu.rw`;
+      if (!exists(email)) ins.run(shop.name, email, bizHash, 'business', shop.id, null);
+    });
+    const garages = db.prepare(`SELECT id, name FROM garages WHERE name LIKE 'Demo Garage %' ORDER BY id`).all();
+    garages.forEach((garage, i) => {
+      const email = `garage${i + 1}@vinzuu.rw`;
+      if (!exists(email)) ins.run(garage.name, email, bizHash, 'business', null, garage.id);
+    });
+    if (shops.length && garages.length && !exists('both@vinzuu.rw')) {
+      ins.run('Demo Shop and Garage', 'both@vinzuu.rw', bizHash, 'business', shops[0].id, garages[0].id);
+    }
+
+    if (db.prepare("SELECT 1 FROM meta WHERE key = 'demo_business'").get()) return;
+    const insSvc = db.prepare('INSERT INTO garage_services (garage_id, name, part_category, price_rwf, duration_minutes) VALUES (?,?,?,?,?)');
+    garages.forEach((garage, gi) => {
+      for (const [name, cat, price, mins] of DEMO_SERVICES) insSvc.run(garage.id, name, cat, price + gi * 1000, mins);
+    });
+    // Three bookings on the first demo shop's parts, fitted at the first demo garage.
+    const car = db.prepare("SELECT id FROM vehicles WHERE registered_by = 'demo seed' ORDER BY id LIMIT 1").get();
+    const listings = shops.length ? db.prepare('SELECT id FROM shop_listings WHERE shop_id = ? AND stock_quantity > 0 ORDER BY id LIMIT 3').all(shops[0].id) : [];
+    const insBk = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, note, shop_status, garage_status, garage_time, created_at)
+      VALUES (?,?,?,?,?,?,?,?, datetime('now', ?))`);
+    const plan = [
+      ['+250788000101', 'Please keep it for me until Saturday.', 'requested', 'requested', null, '-2 hours'],
+      ['+250788000102', null, 'confirmed', 'accepted', "date('now', '+1 day') || ' 10:00'", '-1 day'],
+      ['+250788000103', 'Car makes a noise when braking.', 'collected', 'done', "date('now', '-2 day') || ' 14:00'", '-3 day'],
+    ];
+    if (car && garages.length) {
+      listings.forEach((l, i) => {
+        const [ph, note, ss, gs, timeSql, ago] = plan[i];
+        const time = timeSql ? db.prepare(`SELECT ${timeSql} AS t`).get().t : null;
+        insBk.run(ph, car.id, l.id, garages[0].id, note, ss, gs, time, ago);
+      });
+    }
+    // A few invented reviews, so the stars and comments can be seen.
+    const insRv = db.prepare(`INSERT INTO reviews (target, shop_id, garage_id, author_name, rating, comment, reply, created_at)
+      VALUES (?,?,?,?,?,?,?, datetime('now', ?))`);
+    const DEMO_REVIEWS = [
+      [5, 'Genuine part, exactly what the site said. They kept it for me until I came.', 'Thank you, welcome back!'],
+      [4, 'Good price. I waited a little at the counter.', null],
+      [3, 'The part was fine but the shop was hard to find.', 'Sorry about that, we are next to the bus park.'],
+    ];
+    shops.forEach((shop, si) => DEMO_REVIEWS.slice(si % 2).forEach(([r, c, rep], i) =>
+      insRv.run('shop', shop.id, null, ['Eric M.', 'Aline U.', 'Jean B.'][i], r, c, rep, `-${si + i + 1} day`)));
+    const GARAGE_REVIEWS = [
+      [5, 'Fitted my brake pads in under an hour, fair price.', 'Thanks for choosing us.'],
+      [4, 'Good work, they explained what they changed.', null],
+    ];
+    garages.forEach((garage, gi) => GARAGE_REVIEWS.forEach(([r, c, rep], i) =>
+      insRv.run('garage', null, garage.id, ['Diane K.', 'Patrick N.'][i], r, c, rep, `-${gi + i + 1} day`)));
+    db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo_business', '1')").run();
+  });
 }
 
 /** Demo databases created before the demo cars had VINs: give each seeded car its VIN, so the
@@ -439,4 +634,4 @@ function isDemo(db) {
   return !!row && row.value === '1';
 }
 
-module.exports = { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH };
+module.exports = { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD };

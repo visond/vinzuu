@@ -24,11 +24,16 @@ Then open http://localhost:3000
 |---|---|---|
 | Welcome / sign in | `/` | Everyone starts here: sign in, or create an account |
 | Customer app | `/index.html` | Car owners: find parts, book installation, see "my cars" if signed in |
-| Shop console | `/shop.html` | Shops: add parts, update price and stock, see booking requests |
-| Admin console | `/admin.html` | You: part numbers, shops, missing-part report, stats, add or remove a car |
+| Sell on vinzuu | `/sell.html` | Parts shops and garages apply to join (RDB TIN, certificate and front photos) |
+| Vinzuu Sellers & Garages | `/business.html` | Approved shops and garages: parts (price and stock), part requests, bookings, jobs, labour prices, reviews |
+| Admin console | `/admin.html` | You: approve applications, post parts, part numbers, shops, reviews, stats |
 
-**Admin token.** Copy `.env.example` to `.env` and set `ADMIN_TOKEN` to a long random password.
-Without it the token is `dev-admin-token`, which is fine on your own laptop and nowhere else.
+**Who can post parts.** Only an admin account. A shop asks for a part from "Request a part"; an admin checks
+the photo, part number and price, then approves it. Shops change only their own price and stock.
+
+**Admin account.** Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`: the server makes that account an
+admin when it starts. With demo data, `admin@vinzuu.rw` / `Admin-vinzuu1` also works. The old
+`ADMIN_TOKEN` header still works for scripts (default `dev-admin-token`, laptop only).
 
 **Session secret.** Also set `SESSION_SECRET` in `.env` to a long random string before you share the
 server with anyone. It signs the "you are signed in" cookie; the default is fine for your own laptop only.
@@ -90,8 +95,9 @@ The first start loads **invented** demo data: fake shops, fake prices, and part 
 | Any other valid VIN, for example `JTMBK31V996000999` | The "we do not know this VIN yet" registration form |
 | Search "brake noise" | Symptom search finds the brake pads |
 | Sign up on the welcome page, then register a car | The car is saved to your account; "Change car" now shows it as a tap-to-select chip |
-| Shop console, code `111111` to `555555` | Sign in as a demo shop |
-| Admin console, your admin token, **Cars** tab | Add, correct, or delete a car directly |
+| `/business.html`, `shop1@vinzuu.rw` to `shop5@`, password `Vinzuu-demo1` | Sign in as a demo shop |
+| `/business.html`, `garage1@vinzuu.rw` to `garage3@`, or `both@vinzuu.rw` | A demo garage, or an account with both sides |
+| `/admin.html`, `admin@vinzuu.rw` / `Admin-vinzuu1`, **Cars** tab | Add, correct, or delete a car directly |
 
 The demo plates use the `RXA` series, which Rwanda has not issued, so they cannot belong to a real car. The
 demo VINs are invented too. A demo database created before the demo cars had VINs gets them filled in on the

@@ -10,7 +10,7 @@
 </head>
 <body>
   <div id="demo-banner" class="demo-banner" hidden>
-    Demo data is loaded. To start clean: stop the server, run "npm run reset-db", then start with "npm run start:real".
+    Demo data is loaded. Demo admin: <b>admin@vinzuu.rw</b>, password <b>Admin-vinzuu1</b>. To start clean: stop the server, run "npm run reset-db", then start with "npm run start:real".
   </div>
 
   <header class="site-header wrap-wide">
@@ -23,19 +23,24 @@
       <h1 id="login-title">Admin sign in</h1>
       <form id="login-form" class="panel" novalidate>
         <div class="field">
-          <label for="token">Admin token</label>
-          <input id="token" type="password" autocomplete="off">
-          <p class="hint">Set with the ADMIN_TOKEN environment variable when you start the server.</p>
+          <label for="ad-email">Admin email</label>
+          <input id="ad-email" type="email" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="ad-password">Password</label>
+          <input id="ad-password" type="password" autocomplete="current-password">
         </div>
         <button class="btn btn-primary" type="submit">Sign in</button>
         <p id="login-status" class="status" role="status" aria-live="polite"></p>
+        <p class="small muted">Only admin accounts can open this page. Admins are the only ones who can post parts.</p>
       </form>
     </section>
 
     <section id="console" hidden>
       <div class="console-head">
         <h1>Admin</h1>
-        <button id="sign-out" class="btn btn-secondary btn-small" type="button">Sign out</button>
+        <span class="admin-head-right"><span id="admin-who" class="small muted"></span>
+        <button id="sign-out" class="btn btn-secondary btn-small" type="button">Sign out</button></span>
       </div>
       <div class="tabs" role="tablist" id="tabs"></div>
       <div id="panel" role="tabpanel"></div>

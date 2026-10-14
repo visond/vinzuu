@@ -10,7 +10,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
-const { openDb, tx, seedDemo, isDemo, DEMO_VIN } = require('./db');
+const { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD } = require('./db');
 const alg = require('./lib/algorithms');
 const auth = require('./lib/auth');
 const { findCompatible, logGap, resolveListings, buildCatalog } = require('./lib/matching');
@@ -190,17 +190,34 @@ function createApp(db, config = {}) {
   const limitWrites = rateLimit(cfg.writeLimit);
 
   // ----- auth helpers -----
-  const isAdmin = (req) => safeEqual(req.get('x-admin-token'), cfg.adminToken);
+  // Each account has a role. An admin runs the platform and is the only one who posts parts. A
+  // business account runs a shop (users.shop_id), a garage (users.garage_id) or both, and works in
+  // Vinzuu Sellers & Garages. Everyone else is a customer.
+  const roleOf = (u) => (!u ? null : u.role === 'admin' ? 'admin'
+    : (u.role === 'business' && (u.shop_id || u.garage_id)) ? 'business' : 'customer');
+  const homeFor = (u) => ({ admin: '/admin.html', business: '/business.html' }[roleOf(u)] || '/index.html');
+  const sessionUser = (req) => (req.userId == null ? null : db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId));
+  // The admin token still works for scripts and tests; people sign in with an admin account.
+  const isAdmin = (req) => roleOf(sessionUser(req)) === 'admin' || safeEqual(req.get('x-admin-token'), cfg.adminToken);
   const shopFromReq = (req) => {
+    const u = sessionUser(req);
+    if (roleOf(u) === 'business' && u.shop_id) return db.prepare('SELECT * FROM shops WHERE id = ?').get(u.shop_id);
     const code = req.get('x-shop-code');
     return code ? db.prepare('SELECT * FROM shops WHERE access_code = ?').get(String(code).trim()) : null;
   };
   const requireAdmin = (req, res, next) => (isAdmin(req)
-    ? next() : res.status(401).json({ error: 'Admin token required.' }));
+    ? next() : res.status(401).json({ error: 'Sign in with an admin account.' }));
   const requireShop = (req, res, next) => {
     const shop = shopFromReq(req);
-    if (!shop) return res.status(401).json({ error: 'Shop access code required.' });
+    if (!shop) return res.status(401).json({ error: 'Sign in with your shop account.' });
     req.shop = shop;
+    next();
+  };
+  const requireGarage = (req, res, next) => {
+    const u = sessionUser(req);
+    const garage = roleOf(u) === 'business' && u.garage_id ? db.prepare('SELECT * FROM garages WHERE id = ?').get(u.garage_id) : null;
+    if (!garage) return res.status(401).json({ error: 'Sign in with your garage account.' });
+    req.garage = garage;
     next();
   };
   const ownShop = (req, res, next) => (Number(req.params.shop_id) === req.shop.id
@@ -259,7 +276,10 @@ function createApp(db, config = {}) {
   };
 
   const getUserById = (id) => (id == null ? null : db.prepare('SELECT * FROM users WHERE id = ?').get(id));
-  const publicUser = (u) => (u && { id: u.id, name: u.name, email: u.email, phone: u.phone || null, provider: u.auth_provider });
+  const publicUser = (u) => (u && {
+    id: u.id, name: u.name, email: u.email, phone: u.phone || null, provider: u.auth_provider,
+    role: roleOf(u), home: homeFor(u),
+  });
 
   /** New passwords: at least 8 characters with an uppercase letter, a number and a symbol.
    *  (Only checked when an account is created, so older accounts can still sign in.) */
@@ -332,6 +352,16 @@ function createApp(db, config = {}) {
     const email = normalizeEmail(b.email);
     const password = String(b.password || '');
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (!user) {
+      // A business that applied but is not approved yet: say where its application is.
+      const app = db.prepare('SELECT * FROM business_applications WHERE email = ? ORDER BY id DESC LIMIT 1').get(email);
+      if (app && app.status !== 'approved' && auth.verifyPassword(password, app.password_hash)) {
+        throw new HttpError(403, app.status === 'pending'
+          ? 'Thanks for applying. We are still checking your business, so you cannot sign in yet. We will contact you on your phone or email.'
+          : `Your application was not approved: ${app.admin_note || 'no reason given'}. You can apply again on the Sell on vinzuu page.`,
+        `application_${app.status}`);
+      }
+    }
     if (!user || !user.password_hash || !auth.verifyPassword(password, user.password_hash)) {
       throw new HttpError(401, 'That email and password do not match. If you signed up with Google, use the Google button instead.');
     }
@@ -507,7 +537,9 @@ function createApp(db, config = {}) {
       plate, vin, decoded.wmi, make, model,
       text(b.generation, { field: 'generation', max: 30 }), year,
       text(b.engine, { field: 'engine', max: 40 }), text(b.transmission, { field: 'transmission', max: 20 }),
-      origin, driveSide, importSource, phone(b.owner_phone, 'owner_phone', false), registeredBy, req.userId || null,
+      // A shop or garage looking up a customer's car does not become its owner.
+      origin, driveSide, importSource, phone(b.owner_phone, 'owner_phone', false), registeredBy,
+      roleOf(sessionUser(req)) === 'customer' ? req.userId : null,
       mileage, mileage != null ? new Date().toISOString().slice(0, 10) : null);
 
     res.status(201).json({
@@ -654,8 +686,10 @@ function createApp(db, config = {}) {
       .sort((a, b) => a.distance_km - b.distance_km)
       .map((g) => ({
         id: g.id, name: g.name, phone: g.phone, whatsapp: g.whatsapp_number, address: g.address_text,
-        specialties: g.specialties, latitude: g.latitude, longitude: g.longitude,
+        specialties: g.specialties, opening_hours: g.opening_hours, latitude: g.latitude, longitude: g.longitude,
         distance_km: Math.round(g.distance_km * 10) / 10,
+        rating: ratingFor('garage', g.id),
+        services: db.prepare('SELECT name, part_category, price_rwf, duration_minutes FROM garage_services WHERE garage_id = ? ORDER BY price_rwf').all(g.id),
       }));
     res.json({ count: garages.length, garages });
   });
@@ -676,8 +710,9 @@ function createApp(db, config = {}) {
     if (garageId && !garage) throw new HttpError(404, 'That garage no longer exists.');
     const note = text(b.note, { field: 'note', max: 300 });
 
-    const info = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, note)
-      VALUES (?,?,?,?,?)`).run(customerPhone, vehicle.id, listingId, garageId, note);
+    if (listing && listing.hidden) throw new HttpError(404, 'That listing no longer exists.');
+    const info = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, note, user_id)
+      VALUES (?,?,?,?,?,?)`).run(customerPhone, vehicle.id, listingId, garageId, note, req.userId ?? null);
 
     const car = `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.plate_number ? `, plate ${vehicle.plate_number}`
       : vehicle.vin ? `, VIN ending ${vehicle.vin.slice(-6)}` : ''}`;
@@ -697,80 +732,356 @@ function createApp(db, config = {}) {
     res.type('image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(placeholderSvg(req.query.text));
   });
 
-  // =====================  SHOP API  =====================
+  // =====================  VINZUU SELLERS & GARAGES  =====================
+  // The business side. A shop or garage applies on /sell.html; an admin checks it and approves
+  // it; the owner then signs in and lands on /business.html. Only an admin posts parts, so no
+  // shop can put a fake part on sale: shops send requests and keep their own price and stock.
+
+  const APPLICATION_KINDS = ['shop', 'garage', 'both'];
+
+  app.post('/api/business/apply', limitWrites, (req, res) => {
+    const b = req.body || {};
+    const email = normalizeEmail(b.email);
+    const password = String(b.password || '');
+    checkNewPassword(password);
+    if (db.prepare('SELECT 1 FROM business_applications WHERE email = ? AND status = ?').get(email, 'pending')) {
+      throw new HttpError(409, 'We already have an application from this email and are checking it. Sign in with it to see where it is.');
+    }
+    const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (existing && roleOf(existing) !== 'customer') {
+      throw new HttpError(409, 'This email already has a business or admin account. Sign in instead.');
+    }
+    const tin = text(b.tin, { field: 'TIN', max: 20, required: true }).replace(/\s/g, '');
+    if (!/^\d{9}$/.test(tin)) throw new HttpError(400, 'The TIN is the 9-digit number on your RDB certificate.');
+    const kind = oneOf(b.kind, APPLICATION_KINDS, 'business type');
+    const info = db.prepare(`INSERT INTO business_applications
+      (kind, business_name, owner_name, email, password_hash, phone, whatsapp_number, address_text, latitude, longitude,
+       tin, certificate_photo, front_photo, specialties, note)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      kind, text(b.business_name, { field: 'Business name', max: 80, required: true }),
+      text(b.owner_name, { field: 'Owner name', max: 60, required: true }), email, auth.hashPassword(password),
+      phone(b.phone, 'Phone'), phone(b.whatsapp_number, 'WhatsApp', false),
+      text(b.address_text, { field: 'Address', max: 120, required: true }),
+      number(b.latitude, { field: 'Latitude', min: -3, max: -1 }), number(b.longitude, { field: 'Longitude', min: 28.8, max: 31 }),
+      tin, photoUrl(b.certificate_photo), photoUrl(b.front_photo),
+      kind === 'shop' ? null : text(b.specialties, { field: 'What you are good at', max: 160 }),
+      text(b.note, { field: 'Note', max: 300 }));
+    res.status(201).json({ application: { id: Number(info.lastInsertRowid), status: 'pending' } });
+  });
+
+  /** What a business account sees about itself: its shop and/or its garage. */
+  function businessView(u) {
+    const shop = u.shop_id ? db.prepare('SELECT * FROM shops WHERE id = ?').get(u.shop_id) : null;
+    const garage = u.garage_id ? db.prepare('SELECT * FROM garages WHERE id = ?').get(u.garage_id) : null;
+    return {
+      user: publicUser(u),
+      shop: shop && {
+        id: shop.id, name: shop.name, phone: shop.phone, whatsapp_number: shop.whatsapp_number,
+        address_text: shop.address_text, opening_hours: shop.opening_hours, vetted: !!shop.vetted,
+        latitude: shop.latitude, longitude: shop.longitude, rating: ratingFor('shop', shop.id),
+      },
+      garage: garage && {
+        id: garage.id, name: garage.name, phone: garage.phone, whatsapp_number: garage.whatsapp_number,
+        address_text: garage.address_text, opening_hours: garage.opening_hours, specialties: garage.specialties,
+        latitude: garage.latitude, longitude: garage.longitude, rating: ratingFor('garage', garage.id),
+      },
+    };
+  }
+
+  app.get('/api/business/me', (req, res) => {
+    const u = sessionUser(req);
+    if (!u) throw new HttpError(401, 'Sign in to open Vinzuu Sellers & Garages.');
+    if (roleOf(u) !== 'business') throw new HttpError(403, 'This account is not a shop or garage account.', 'not_business');
+    res.json(businessView(u));
+  });
+
+  // ----- ratings and reviews (shared by the shop side, the garage side and customers) -----
+
+  function ratingFor(target, id) {
+    const col = target === 'shop' ? 'shop_id' : 'garage_id';
+    const r = db.prepare(`SELECT ROUND(AVG(rating), 1) AS average, COUNT(*) AS count FROM reviews WHERE target = ? AND ${col} = ?`).get(target, id);
+    return { average: r.count ? r.average : null, count: r.count };
+  }
+  const reviewRows = (target, id, limit = 100) => db.prepare(`
+    SELECT id, author_name, rating, comment, reply, replied_at, created_at FROM reviews
+    WHERE target = ? AND ${target === 'shop' ? 'shop_id' : 'garage_id'} = ? ORDER BY id DESC LIMIT ?`).all(target, id, limit);
+
+  // Anyone can read a shop's or garage's reviews before choosing it.
+  app.get('/api/reviews', (req, res) => {
+    const target = oneOf(req.query.shop_id ? 'shop' : req.query.garage_id ? 'garage' : '', ['shop', 'garage'], 'shop_id or garage_id');
+    const id = Number(target === 'shop' ? req.query.shop_id : req.query.garage_id);
+    res.json({ rating: ratingFor(target, id), reviews: reviewRows(target, id, 50) });
+  });
+
+  function replyToReview(target, ownerId, req, res) {
+    const col = target === 'shop' ? 'shop_id' : 'garage_id';
+    const review = db.prepare(`SELECT * FROM reviews WHERE id = ? AND target = ? AND ${col} = ?`).get(Number(req.params.id), target, ownerId);
+    if (!review) throw new HttpError(404, 'Review not found.');
+    const reply = text((req.body || {}).reply, { field: 'Reply', max: 300 });
+    db.prepare('UPDATE reviews SET reply = ?, replied_at = CASE WHEN ? IS NULL THEN NULL ELSE datetime(\'now\') END WHERE id = ?')
+      .run(reply, reply, review.id);
+    res.json({ review: db.prepare('SELECT * FROM reviews WHERE id = ?').get(review.id) });
+  }
+
+  // ----- the shop side -----
 
   app.get('/api/shop/me', requireShop, (req, res) => {
     const { id, name, phone: p, address_text, vetted } = req.shop;
     res.json({ shop: { id, name, phone: p, address: address_text, vetted: !!vetted } });
   });
 
+  // Name and map location stay with the admin, so a shop cannot pass itself off as another one.
+  app.put('/api/shop/profile', limitWrites, requireShop, (req, res) => {
+    const b = req.body || {};
+    db.prepare('UPDATE shops SET phone = ?, whatsapp_number = ?, address_text = ?, opening_hours = ? WHERE id = ?').run(
+      phone(b.phone, 'Phone'), phone(b.whatsapp_number, 'WhatsApp', false),
+      text(b.address_text, { field: 'Address', max: 120 }), text(b.opening_hours, { field: 'Opening hours', max: 120 }), req.shop.id);
+    res.json(businessView(sessionUser(req) || { shop_id: req.shop.id, role: 'business' }));
+  });
+
   // The fitment table is the core asset, so only signed-in shops (and admins) can browse part numbers.
-  app.get('/api/shop/oe-numbers', requireShop, (req, res) => {
+  const oeNumberRows = (req, res) => {
     const category = getCategory(String(req.query.part_category || ''));
     if (!category) throw new HttpError(400, 'Choose a part category.');
     const rows = db.prepare(`
       SELECT oe_number, make, model, generation, year_start, year_end, engine, origin_market, confidence_level
       FROM fitment_reference WHERE part_category = ? ORDER BY make, model, year_start, oe_number`).all(category.name);
     res.json({ part_category: category.name, type: category.type, rows });
-  });
+  };
+  app.get('/api/shop/oe-numbers', requireShop, oeNumberRows);
 
-  const listingRows = (shopId) => db.prepare(
-    'SELECT * FROM shop_listings WHERE shop_id = ? ORDER BY updated_at DESC, id DESC').all(shopId);
+  /** The checked fields of a part for sale, shared by a shop's request and the admin's post.
+   *  A model-specific part must use a part number from the fitment table, so it only ever
+   *  shows for cars it is known to fit. */
+  function partFields(b) {
+    const category = getCategory(String(b.part_category || ''));
+    if (!category) throw new HttpError(400, 'Choose a part category from the list.');
+    let oe = null;
+    let spec = null;
+    if (category.type === 'model_specific') {
+      oe = text(b.oe_number, { field: 'Part number', max: 60, required: true });
+      const known = db.prepare('SELECT 1 FROM fitment_reference WHERE oe_number = ? AND part_category = ? LIMIT 1').get(oe, category.name);
+      if (!known) {
+        throw new HttpError(422, `We do not have part number ${oe} for ${category.name} yet. It has to be added under Part numbers first.`, 'unknown_oe');
+      }
+    } else {
+      spec = text(b.universal_spec, { field: 'Size or specification', max: 80, required: true });
+    }
+    return {
+      oe_number: oe, part_category: category.name, universal_spec: spec,
+      price_rwf: integer(b.price_rwf, { field: 'Price', min: 1, max: 100_000_000 }),
+      stock_quantity: integer(b.stock_quantity, { field: 'Stock', min: 0, max: 10_000 }),
+      condition: oneOf(b.condition, ['genuine', 'aftermarket'], 'condition'),
+      photo_url: photoUrl(b.photo_url),
+      brand: text(b.brand, { field: 'Brand', max: 60 }),
+      description: text(b.description, { field: 'Description', max: 600 }),
+      warranty_months: integer(b.warranty_months, { field: 'Warranty (months)', min: 0, max: 120, required: false }),
+    };
+  }
+  const insertListing = (shopId, p) => Number(db.prepare(`INSERT INTO shop_listings
+      (shop_id, oe_number, part_category, universal_spec, price_rwf, stock_quantity, condition, photo_url, brand, description, warranty_months)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(shopId, p.oe_number, p.part_category, p.universal_spec,
+    p.price_rwf, p.stock_quantity, p.condition, p.photo_url, p.brand, p.description, p.warranty_months).lastInsertRowid);
+
+  /** "Toyota RAV4 XA40, 2013 to 2018, 2.0L Petrol" for each car a part number fits. */
+  const fitsFor = (oe) => (oe ? db.prepare(`
+    SELECT DISTINCT make, model, generation, year_start, year_end, engine, origin_market FROM fitment_reference
+    WHERE oe_number = ? ORDER BY make, model, year_start`).all(oe) : []);
+
+  const listingRows = (shopId) => db.prepare(`
+    SELECT l.*, (SELECT COUNT(*) FROM bookings b WHERE b.shop_listing_id = l.id) AS bookings
+    FROM shop_listings l WHERE l.shop_id = ? ORDER BY l.updated_at DESC, l.id DESC`).all(shopId)
+    .map((l) => ({ ...l, hidden: !!l.hidden, fits: fitsFor(l.oe_number) }));
 
   app.get('/api/shops/:shop_id/listings', requireShop, ownShop, (req, res) => {
     res.json({ listings: listingRows(req.shop.id) });
   });
 
-  app.post('/api/shops/:shop_id/listings', limitWrites, requireShop, ownShop, (req, res) => {
-    const b = req.body || {};
-    const category = getCategory(String(b.part_category || ''));
-    if (!category) throw new HttpError(400, 'Choose a part category from the list.');
-
-    let oe = null;
-    let spec = null;
-    if (category.type === 'model_specific') {
-      oe = text(b.oe_number, { field: 'oe_number', max: 60, required: true });
-      const known = db.prepare('SELECT 1 FROM fitment_reference WHERE oe_number = ? AND part_category = ? LIMIT 1').get(oe, category.name);
-      if (!known) {
-        throw new HttpError(422, `We do not have part number ${oe} for ${category.name} yet. Ask the platform team to add it, then list it.`, 'unknown_oe');
-      }
-    } else {
-      spec = text(b.universal_spec, { field: 'size or specification', max: 80, required: true });
-    }
-    const info = db.prepare(`INSERT INTO shop_listings
-      (shop_id, oe_number, part_category, universal_spec, price_rwf, stock_quantity, condition, photo_url)
-      VALUES (?,?,?,?,?,?,?,?)`).run(
-      req.shop.id, oe, category.name, spec,
-      integer(b.price_rwf, { field: 'price', min: 1, max: 100_000_000 }),
-      integer(b.stock_quantity, { field: 'stock', min: 0, max: 10_000 }),
-      oneOf(b.condition, ['genuine', 'aftermarket'], 'condition'),
-      photoUrl(b.photo_url));
-    res.status(201).json({ listing: db.prepare('SELECT * FROM shop_listings WHERE id = ?').get(Number(info.lastInsertRowid)) });
+  // Only the vinzuu team posts parts. A shop sends a request instead (below).
+  app.post('/api/shops/:shop_id/listings', requireShop, ownShop, () => {
+    throw new HttpError(403, 'Only the vinzuu team can post parts. Send it from "Request a part" and we will check it.', 'admin_only');
   });
 
+  // A shop keeps its own price and stock current. What the part is (number, type, photo,
+  // description) is what the admin checked, so only an admin can change that.
   app.put('/api/shops/:shop_id/listings/:listing_id', limitWrites, requireShop, ownShop, (req, res) => {
     const listing = db.prepare('SELECT * FROM shop_listings WHERE id = ? AND shop_id = ?')
       .get(Number(req.params.listing_id), req.shop.id);
-    if (!listing) throw new HttpError(404, 'Listing not found.');
+    if (!listing) throw new HttpError(404, 'Part not found.');
     const b = req.body || {};
-    db.prepare(`UPDATE shop_listings SET price_rwf = ?, stock_quantity = ?, condition = ?, photo_url = ?,
-      updated_at = datetime('now') WHERE id = ?`).run(
-      b.price_rwf != null ? integer(b.price_rwf, { field: 'price', min: 1, max: 100_000_000 }) : listing.price_rwf,
-      b.stock_quantity != null ? integer(b.stock_quantity, { field: 'stock', min: 0, max: 10_000 }) : listing.stock_quantity,
-      b.condition != null ? oneOf(b.condition, ['genuine', 'aftermarket'], 'condition') : listing.condition,
-      b.photo_url != null ? photoUrl(b.photo_url) : listing.photo_url,
+    for (const locked of ['condition', 'photo_url', 'brand', 'description', 'warranty_months', 'oe_number', 'part_category', 'universal_spec']) {
+      if (b[locked] != null && b[locked] !== listing[locked]) {
+        throw new HttpError(403, 'Only the vinzuu team can change what the part is. Send a request to change it.', 'admin_only');
+      }
+    }
+    db.prepare(`UPDATE shop_listings SET price_rwf = ?, stock_quantity = ?, updated_at = datetime('now') WHERE id = ?`).run(
+      b.price_rwf != null ? integer(b.price_rwf, { field: 'Price', min: 1, max: 100_000_000 }) : listing.price_rwf,
+      b.stock_quantity != null ? integer(b.stock_quantity, { field: 'Stock', min: 0, max: 10_000 }) : listing.stock_quantity,
       listing.id);
     res.json({ listing: db.prepare('SELECT * FROM shop_listings WHERE id = ?').get(listing.id) });
   });
 
+  app.get('/api/shops/:shop_id/listing-requests', requireShop, ownShop, (req, res) => {
+    res.json({ requests: db.prepare('SELECT * FROM listing_requests WHERE shop_id = ? ORDER BY id DESC LIMIT 100').all(req.shop.id) });
+  });
+
+  app.post('/api/shops/:shop_id/listing-requests', limitWrites, requireShop, ownShop, (req, res) => {
+    const b = req.body || {};
+    const p = partFields(b);
+    const info = db.prepare(`INSERT INTO listing_requests
+      (shop_id, oe_number, part_category, universal_spec, price_rwf, stock_quantity, condition, photo_url, brand, description, warranty_months, note)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(req.shop.id, p.oe_number, p.part_category, p.universal_spec,
+      p.price_rwf, p.stock_quantity, p.condition, p.photo_url, p.brand, p.description, p.warranty_months,
+      text(b.note, { field: 'Note', max: 300 }));
+    res.status(201).json({ request: db.prepare('SELECT * FROM listing_requests WHERE id = ?').get(Number(info.lastInsertRowid)) });
+  });
+
+  // Bookings, seen from either side: the car, the part, the shop and the garage, each side's progress.
+  const bookingSelect = `
+    SELECT b.id, b.created_at, b.customer_phone, b.note, b.status,
+           b.shop_status, b.garage_status, b.garage_time, b.garage_note,
+           v.plate_number, v.make, v.model, v.year, v.generation, v.engine, v.vin,
+           l.id AS listing_id, l.part_category, l.oe_number, l.universal_spec, l.price_rwf, l.photo_url,
+           s.id AS shop_id, s.name AS shop_name, s.phone AS shop_phone, s.whatsapp_number AS shop_whatsapp, s.address_text AS shop_address,
+           g.id AS garage_id, g.name AS garage_name, g.phone AS garage_phone, g.whatsapp_number AS garage_whatsapp, g.address_text AS garage_address
+    FROM bookings b JOIN vehicles v ON v.id = b.vehicle_id
+    LEFT JOIN shop_listings l ON l.id = b.shop_listing_id
+    LEFT JOIN shops s ON s.id = l.shop_id
+    LEFT JOIN garages g ON g.id = b.garage_id`;
+  const bookingOut = (r) => {
+    const { vin, ...rest } = r;
+    return { ...rest, vin_masked: alg.maskVin(vin) };
+  };
+
   app.get('/api/shops/:shop_id/bookings', requireShop, ownShop, (req, res) => {
-    const rows = db.prepare(`
-      SELECT b.id, b.status, b.created_at, b.customer_phone, b.note,
-             v.plate_number, v.make, v.model, v.year, l.part_category, l.oe_number, l.price_rwf
-      FROM bookings b JOIN vehicles v ON v.id = b.vehicle_id
-      JOIN shop_listings l ON l.id = b.shop_listing_id
-      WHERE l.shop_id = ? ORDER BY b.id DESC LIMIT 100`).all(req.shop.id);
-    res.json({ bookings: rows });
+    const rows = db.prepare(`${bookingSelect} WHERE l.shop_id = ? ORDER BY b.id DESC LIMIT 200`).all(req.shop.id);
+    res.json({ bookings: rows.map(bookingOut) });
+  });
+
+  const SHOP_STATUSES = ['requested', 'confirmed', 'collected', 'cancelled'];
+  app.put('/api/shops/:shop_id/bookings/:booking_id', limitWrites, requireShop, ownShop, (req, res) => {
+    const row = db.prepare(`${bookingSelect} WHERE b.id = ? AND l.shop_id = ?`).get(Number(req.params.booking_id), req.shop.id);
+    if (!row) throw new HttpError(404, 'Booking not found.');
+    const status = oneOf((req.body || {}).status, SHOP_STATUSES.slice(1), 'status');
+    db.prepare('UPDATE bookings SET shop_status = ? WHERE id = ?').run(status, row.id);
+    res.json({ booking: bookingOut(db.prepare(`${bookingSelect} WHERE b.id = ?`).get(row.id)) });
+  });
+
+  app.get('/api/shop/reviews', requireShop, (req, res) => {
+    res.json({ rating: ratingFor('shop', req.shop.id), reviews: reviewRows('shop', req.shop.id) });
+  });
+  app.put('/api/shop/reviews/:id', limitWrites, requireShop, (req, res) => replyToReview('shop', req.shop.id, req, res));
+
+  // ----- the garage side -----
+
+  app.put('/api/garage/profile', limitWrites, requireGarage, (req, res) => {
+    const b = req.body || {};
+    db.prepare('UPDATE garages SET phone = ?, whatsapp_number = ?, address_text = ?, opening_hours = ?, specialties = ? WHERE id = ?').run(
+      phone(b.phone, 'Phone'), phone(b.whatsapp_number, 'WhatsApp', false),
+      text(b.address_text, { field: 'Address', max: 120 }), text(b.opening_hours, { field: 'Opening hours', max: 120 }),
+      text(b.specialties, { field: 'What you are good at', max: 160 }), req.garage.id);
+    res.json(businessView(sessionUser(req)));
+  });
+
+  app.get('/api/garage/jobs', requireGarage, (req, res) => {
+    const rows = db.prepare(`${bookingSelect} WHERE b.garage_id = ? ORDER BY b.id DESC LIMIT 200`).all(req.garage.id);
+    res.json({ jobs: rows.map(bookingOut) });
+  });
+
+  // accept (with a date and time), decline (with a reason), or done.
+  app.put('/api/garage/jobs/:id', limitWrites, requireGarage, (req, res) => {
+    const job = db.prepare('SELECT * FROM bookings WHERE id = ? AND garage_id = ?').get(Number(req.params.id), req.garage.id);
+    if (!job) throw new HttpError(404, 'Job not found.');
+    const b = req.body || {};
+    const action = oneOf(b.action, ['accept', 'decline', 'done'], 'action');
+    if (action === 'accept') {
+      const time = text(b.time, { field: 'Date and time', max: 16, required: true });
+      if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/.test(time)) throw new HttpError(400, 'Choose the date and time for the job.');
+      db.prepare("UPDATE bookings SET garage_status = 'accepted', garage_time = ?, garage_note = NULL WHERE id = ?").run(time.replace('T', ' '), job.id);
+    } else if (action === 'decline') {
+      const reason = text(b.reason, { field: 'Reason', max: 200, required: true });
+      db.prepare("UPDATE bookings SET garage_status = 'declined', garage_note = ? WHERE id = ?").run(reason, job.id);
+    } else {
+      if (job.garage_status !== 'accepted') throw new HttpError(409, 'Accept the job before marking it done.');
+      db.prepare("UPDATE bookings SET garage_status = 'done' WHERE id = ?").run(job.id);
+    }
+    res.json({ job: bookingOut(db.prepare(`${bookingSelect} WHERE b.id = ?`).get(job.id)) });
+  });
+
+  const serviceRows = (garageId) => db.prepare(
+    'SELECT * FROM garage_services WHERE garage_id = ? ORDER BY part_category IS NULL, name').all(garageId);
+  const serviceFields = (b) => ({
+    name: text(b.name, { field: 'Service', max: 80, required: true }),
+    part_category: b.part_category ? getCategory(String(b.part_category))?.name ?? (() => { throw new HttpError(400, 'Choose a part from the list.'); })() : null,
+    price_rwf: integer(b.price_rwf, { field: 'Price', min: 1, max: 10_000_000 }),
+    duration_minutes: integer(b.duration_minutes, { field: 'Time it takes (minutes)', min: 5, max: 2880, required: false }),
+  });
+  app.get('/api/garage/services', requireGarage, (req, res) => res.json({ services: serviceRows(req.garage.id) }));
+  app.post('/api/garage/services', limitWrites, requireGarage, (req, res) => {
+    const f = serviceFields(req.body || {});
+    db.prepare('INSERT INTO garage_services (garage_id, name, part_category, price_rwf, duration_minutes) VALUES (?,?,?,?,?)')
+      .run(req.garage.id, f.name, f.part_category, f.price_rwf, f.duration_minutes);
+    res.status(201).json({ services: serviceRows(req.garage.id) });
+  });
+  app.put('/api/garage/services/:id', limitWrites, requireGarage, (req, res) => {
+    const svc = db.prepare('SELECT * FROM garage_services WHERE id = ? AND garage_id = ?').get(Number(req.params.id), req.garage.id);
+    if (!svc) throw new HttpError(404, 'Service not found.');
+    const f = serviceFields({ ...svc, ...(req.body || {}) });
+    db.prepare('UPDATE garage_services SET name = ?, part_category = ?, price_rwf = ?, duration_minutes = ? WHERE id = ?')
+      .run(f.name, f.part_category, f.price_rwf, f.duration_minutes, svc.id);
+    res.json({ services: serviceRows(req.garage.id) });
+  });
+  app.delete('/api/garage/services/:id', limitWrites, requireGarage, (req, res) => {
+    const info = db.prepare('DELETE FROM garage_services WHERE id = ? AND garage_id = ?').run(Number(req.params.id), req.garage.id);
+    if (!info.changes) throw new HttpError(404, 'Service not found.');
+    res.json({ services: serviceRows(req.garage.id) });
+  });
+
+  app.get('/api/garage/reviews', requireGarage, (req, res) => {
+    res.json({ rating: ratingFor('garage', req.garage.id), reviews: reviewRows('garage', req.garage.id) });
+  });
+  app.put('/api/garage/reviews/:id', limitWrites, requireGarage, (req, res) => replyToReview('garage', req.garage.id, req, res));
+
+  // ----- a customer's own bookings, and reviewing them -----
+
+  app.get('/api/me/bookings', (req, res) => {
+    if (!req.userId) throw new HttpError(401, 'Sign in to see your bookings.');
+    const rows = db.prepare(`${bookingSelect} WHERE b.user_id = ? ORDER BY b.id DESC LIMIT 50`).all(req.userId);
+    const reviewed = db.prepare('SELECT target, rating FROM reviews WHERE booking_id = ?');
+    res.json({
+      bookings: rows.map((r) => {
+        const done = Object.fromEntries(reviewed.all(r.id).map((x) => [x.target, x.rating]));
+        return {
+          ...bookingOut(r),
+          review: {
+            shop: done.shop ?? (r.shop_id && r.shop_status === 'collected' ? 'can_review' : null),
+            garage: done.garage ?? (r.garage_id && r.garage_status === 'done' ? 'can_review' : null),
+          },
+        };
+      }),
+    });
+  });
+
+  app.post('/api/me/bookings/:id/reviews', limitWrites, (req, res) => {
+    if (!req.userId) throw new HttpError(401, 'Sign in to leave a review.');
+    const row = db.prepare(`${bookingSelect} WHERE b.id = ? AND b.user_id = ?`).get(Number(req.params.id), req.userId);
+    if (!row) throw new HttpError(404, 'Booking not found.');
+    const b = req.body || {};
+    const target = oneOf(b.target, ['shop', 'garage'], 'target');
+    const finished = target === 'shop' ? row.shop_id && row.shop_status === 'collected' : row.garage_id && row.garage_status === 'done';
+    if (!finished) {
+      throw new HttpError(409, target === 'shop' ? 'You can review the shop once you have collected the part.' : 'You can review the garage once the job is done.');
+    }
+    if (db.prepare('SELECT 1 FROM reviews WHERE booking_id = ? AND target = ?').get(row.id, target)) {
+      throw new HttpError(409, 'You already reviewed this.');
+    }
+    const user = getUserById(req.userId);
+    const parts = String(user.name || 'Customer').trim().split(/\s+/);
+    const author = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1].charAt(0).toUpperCase()}.` : parts[0];
+    db.prepare('INSERT INTO reviews (booking_id, target, shop_id, garage_id, user_id, author_name, rating, comment) VALUES (?,?,?,?,?,?,?,?)').run(
+      row.id, target, target === 'shop' ? row.shop_id : null, target === 'garage' ? row.garage_id : null, req.userId, author,
+      integer(b.rating, { field: 'Stars', min: 1, max: 5 }), text(b.comment, { field: 'Comment', max: 500 }));
+    res.status(201).json({ rating: ratingFor(target, target === 'shop' ? row.shop_id : row.garage_id) });
   });
 
   // =====================  ADMIN API  =====================
@@ -787,7 +1098,10 @@ function createApp(db, config = {}) {
       fitment_rows: count('SELECT COUNT(*) AS n FROM fitment_reference'),
       shops: count('SELECT COUNT(*) AS n FROM shops'),
       garages: count('SELECT COUNT(*) AS n FROM garages'),
-      live_listings: count('SELECT COUNT(*) AS n FROM shop_listings WHERE stock_quantity > 0'),
+      live_listings: count('SELECT COUNT(*) AS n FROM shop_listings WHERE stock_quantity > 0 AND hidden = 0'),
+      pending_applications: count("SELECT COUNT(*) AS n FROM business_applications WHERE status = 'pending'"),
+      pending_part_requests: count("SELECT COUNT(*) AS n FROM listing_requests WHERE status = 'pending'"),
+      reviews: count('SELECT COUNT(*) AS n FROM reviews'),
       bookings: count('SELECT COUNT(*) AS n FROM bookings'),
       open_gaps: count('SELECT COUNT(*) AS n FROM search_gaps'),
       vehicles_by_make: tally('make'),
@@ -851,7 +1165,9 @@ function createApp(db, config = {}) {
   });
 
   admin.get('/shops', (req, res) => {
-    res.json({ shops: db.prepare('SELECT * FROM shops ORDER BY id').all() });
+    res.json({ shops: db.prepare(`SELECT s.*, (SELECT email FROM users u WHERE u.shop_id = s.id LIMIT 1) AS login_email,
+      (SELECT ROUND(AVG(rating), 1) FROM reviews r WHERE r.shop_id = s.id) AS rating
+      FROM shops s ORDER BY s.id`).all() });
   });
   admin.post('/shops', (req, res) => {
     const b = req.body || {};
@@ -956,6 +1272,168 @@ function createApp(db, config = {}) {
         JOIN vehicles v ON v.id = b.vehicle_id ORDER BY b.id DESC LIMIT 200`).all(),
     });
   });
+
+  // ----- applications to join Vinzuu Sellers & Garages -----
+
+  admin.get('/applications', (req, res) => {
+    const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : null;
+    const rows = db.prepare(`SELECT * FROM business_applications WHERE (? IS NULL OR status = ?)
+      ORDER BY status = 'pending' DESC, id DESC LIMIT 200`).all(status, status);
+    res.json({ applications: rows.map(({ password_hash, ...a }) => a) });
+  });
+  const pendingApplication = (id) => {
+    const a = db.prepare('SELECT * FROM business_applications WHERE id = ?').get(Number(id));
+    if (!a) throw new HttpError(404, 'Application not found.');
+    if (a.status !== 'pending') throw new HttpError(409, `This application was already ${a.status}.`);
+    return a;
+  };
+  // Approving creates the shop and/or garage and the owner's account, with the password they
+  // chose when applying. An existing customer account with that email becomes the business account.
+  admin.post('/applications/:id/approve', (req, res) => {
+    const a = pendingApplication(req.params.id);
+    const b = req.body || {};
+    const kind = b.kind ? oneOf(b.kind, APPLICATION_KINDS, 'business type') : a.kind;
+    const vetted = b.vetted === false ? 0 : 1;
+    const out = tx(db, () => {
+      let shopId = null;
+      let garageId = null;
+      if (kind !== 'garage') {
+        let code;
+        do { code = String(crypto.randomInt(100000, 1000000)); }
+        while (db.prepare('SELECT 1 FROM shops WHERE access_code = ?').get(code));
+        shopId = Number(db.prepare(`INSERT INTO shops
+          (name, phone, whatsapp_number, latitude, longitude, address_text, vetted, access_code, onboarded_by)
+          VALUES (?,?,?,?,?,?,?,?,?)`).run(a.business_name, a.phone, a.whatsapp_number, a.latitude, a.longitude,
+          a.address_text, vetted, code, 'application').lastInsertRowid);
+      }
+      if (kind !== 'shop') {
+        garageId = Number(db.prepare(`INSERT INTO garages (name, phone, whatsapp_number, latitude, longitude, address_text, specialties)
+          VALUES (?,?,?,?,?,?,?)`).run(a.business_name, a.phone, a.whatsapp_number, a.latitude, a.longitude,
+          a.address_text, a.specialties).lastInsertRowid);
+      }
+      const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(a.email);
+      if (existing) {
+        if (roleOf(existing) !== 'customer') throw new HttpError(409, 'This email already has a business or admin account.');
+        db.prepare("UPDATE users SET role = 'business', shop_id = ?, garage_id = ? WHERE id = ?").run(shopId, garageId, existing.id);
+      } else {
+        db.prepare(`INSERT INTO users (name, email, phone, password_hash, auth_provider, role, shop_id, garage_id)
+          VALUES (?,?,?,?,'local','business',?,?)`).run(a.owner_name, a.email, a.phone, a.password_hash, shopId, garageId);
+      }
+      db.prepare(`UPDATE business_applications SET status = 'approved', kind = ?, shop_id = ?, garage_id = ?, admin_note = ?,
+        decided_at = datetime('now') WHERE id = ?`).run(kind, shopId, garageId, text(b.admin_note, { field: 'Note', max: 300 }), a.id);
+      return { shop_id: shopId, garage_id: garageId, existing_account: !!existing };
+    });
+    res.json(out);
+  });
+  admin.post('/applications/:id/reject', (req, res) => {
+    const a = pendingApplication(req.params.id);
+    const reason = text((req.body || {}).admin_note, { field: 'Reason', max: 300, required: true });
+    db.prepare("UPDATE business_applications SET status = 'rejected', admin_note = ?, decided_at = datetime('now') WHERE id = ?").run(reason, a.id);
+    res.json({ ok: true });
+  });
+
+  // ----- parts for sale: only an admin posts them -----
+
+  admin.get('/oe-numbers', oeNumberRows);
+
+  const adminListing = (id) => db.prepare(`
+    SELECT l.*, s.name AS shop_name FROM shop_listings l JOIN shops s ON s.id = l.shop_id WHERE l.id = ?`).get(id);
+
+  admin.get('/listings', (req, res) => {
+    const shopId = req.query.shop_id ? Number(req.query.shop_id) : null;
+    res.json({
+      listings: db.prepare(`
+        SELECT l.*, s.name AS shop_name FROM shop_listings l JOIN shops s ON s.id = l.shop_id
+        WHERE (? IS NULL OR l.shop_id = ?) ORDER BY l.updated_at DESC, l.id DESC LIMIT 500`).all(shopId, shopId)
+        .map((l) => ({ ...l, hidden: !!l.hidden })),
+    });
+  });
+  admin.post('/listings', (req, res) => {
+    const b = req.body || {};
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(Number(b.shop_id));
+    if (!shop) throw new HttpError(400, 'Choose the shop that has this part.');
+    res.status(201).json({ listing: adminListing(insertListing(shop.id, partFields(b))) });
+  });
+  admin.put('/listings/:id', (req, res) => {
+    const listing = db.prepare('SELECT * FROM shop_listings WHERE id = ?').get(Number(req.params.id));
+    if (!listing) throw new HttpError(404, 'Part not found.');
+    const b = req.body || {};
+    const has = (k) => Object.prototype.hasOwnProperty.call(b, k);
+    db.prepare(`UPDATE shop_listings SET price_rwf = ?, stock_quantity = ?, condition = ?, photo_url = ?, brand = ?,
+      description = ?, warranty_months = ?, hidden = ?, updated_at = datetime('now') WHERE id = ?`).run(
+      has('price_rwf') ? integer(b.price_rwf, { field: 'Price', min: 1, max: 100_000_000 }) : listing.price_rwf,
+      has('stock_quantity') ? integer(b.stock_quantity, { field: 'Stock', min: 0, max: 10_000 }) : listing.stock_quantity,
+      has('condition') ? oneOf(b.condition, ['genuine', 'aftermarket'], 'condition') : listing.condition,
+      has('photo_url') ? photoUrl(b.photo_url) : listing.photo_url,
+      has('brand') ? text(b.brand, { field: 'Brand', max: 60 }) : listing.brand,
+      has('description') ? text(b.description, { field: 'Description', max: 600 }) : listing.description,
+      has('warranty_months') ? integer(b.warranty_months, { field: 'Warranty (months)', min: 0, max: 120, required: false }) : listing.warranty_months,
+      has('hidden') ? (b.hidden ? 1 : 0) : listing.hidden, listing.id);
+    res.json({ listing: adminListing(listing.id) });
+  });
+  admin.delete('/listings/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!db.prepare('SELECT 1 FROM shop_listings WHERE id = ?').get(id)) throw new HttpError(404, 'Part not found.');
+    // Old bookings keep their row but no longer point at the removed part.
+    tx(db, () => {
+      db.prepare('UPDATE bookings SET shop_listing_id = NULL WHERE shop_listing_id = ?').run(id);
+      db.prepare('UPDATE listing_requests SET listing_id = NULL WHERE listing_id = ?').run(id);
+      db.prepare('DELETE FROM shop_listings WHERE id = ?').run(id);
+    });
+    res.json({ ok: true });
+  });
+
+  admin.get('/listing-requests', (req, res) => {
+    const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : null;
+    res.json({
+      requests: db.prepare(`
+        SELECT r.*, s.name AS shop_name, s.vetted AS shop_vetted FROM listing_requests r JOIN shops s ON s.id = r.shop_id
+        WHERE (? IS NULL OR r.status = ?) ORDER BY r.status = 'pending' DESC, r.id DESC LIMIT 200`).all(status, status),
+    });
+  });
+  const pendingRequest = (id) => {
+    const r = db.prepare('SELECT * FROM listing_requests WHERE id = ?').get(Number(id));
+    if (!r) throw new HttpError(404, 'Request not found.');
+    if (r.status !== 'pending') throw new HttpError(409, `This request was already ${r.status}.`);
+    return r;
+  };
+  // Approving posts the part. The admin can correct any detail while approving.
+  admin.post('/listing-requests/:id/approve', (req, res) => {
+    const r = pendingRequest(req.params.id);
+    const b = req.body || {};
+    const p = partFields({ ...r, ...Object.fromEntries(
+      ['price_rwf', 'stock_quantity', 'condition', 'brand', 'description', 'warranty_months'].filter((k) => k in b).map((k) => [k, b[k]])) });
+    const id = tx(db, () => {
+      const listingId = insertListing(r.shop_id, p);
+      db.prepare(`UPDATE listing_requests SET status = 'approved', listing_id = ?, admin_note = ?, decided_at = datetime('now') WHERE id = ?`)
+        .run(listingId, text(b.admin_note, { field: 'Note', max: 300 }), r.id);
+      return listingId;
+    });
+    res.json({ listing: adminListing(id) });
+  });
+  admin.post('/listing-requests/:id/reject', (req, res) => {
+    const r = pendingRequest(req.params.id);
+    const reason = text((req.body || {}).admin_note, { field: 'Reason', max: 300, required: true });
+    db.prepare(`UPDATE listing_requests SET status = 'rejected', admin_note = ?, decided_at = datetime('now') WHERE id = ?`).run(reason, r.id);
+    res.json({ request: db.prepare('SELECT * FROM listing_requests WHERE id = ?').get(r.id) });
+  });
+
+  // ----- reviews: the admin can remove an abusive one -----
+
+  admin.get('/reviews', (req, res) => {
+    res.json({
+      reviews: db.prepare(`
+        SELECT r.*, s.name AS shop_name, g.name AS garage_name FROM reviews r
+        LEFT JOIN shops s ON s.id = r.shop_id LEFT JOIN garages g ON g.id = r.garage_id
+        ORDER BY r.id DESC LIMIT 300`).all(),
+    });
+  });
+  admin.delete('/reviews/:id', (req, res) => {
+    const info = db.prepare('DELETE FROM reviews WHERE id = ?').run(Number(req.params.id));
+    if (!info.changes) throw new HttpError(404, 'Review not found.');
+    res.json({ ok: true });
+  });
+
   app.use('/api/admin', admin);
 
   // =====================  static files + errors  =====================
@@ -967,7 +1445,10 @@ function createApp(db, config = {}) {
   app.get('/carphotos.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'lib', 'carphotos.js')));
   // Signed in, "/" (and the logo) is your own home, the garage. The public homepage's sections
   // stay reachable at /welcome.html, which the nav links point to for signed-in visitors.
-  app.get('/', (req, res, next) => (req.userId ? res.redirect(302, '/index.html') : next()));
+  // A shop owner's home is their shop dashboard, and an admin's is the admin console.
+  app.get('/', (req, res, next) => (req.userId ? res.redirect(302, homeFor(getUserById(req.userId))) : next()));
+  // The old shop console is now part of Vinzuu Sellers & Garages.
+  app.get('/shop.html', (req, res) => res.redirect(301, '/business.html'));
   app.use(express.static(path.join(__dirname, 'public'), { index: 'welcome.html' }));
 
   // eslint-disable-next-line no-unused-vars
@@ -1001,20 +1482,41 @@ function loadEnvFile(file = path.join(__dirname, '.env')) {
   }
 }
 
+/** ADMIN_EMAIL + ADMIN_PASSWORD (in .env or the environment) make sure that account exists and
+ *  is an admin, so a real deployment has an admin without any demo data. */
+function ensureAdminFromEnv(db) {
+  const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD || '';
+  if (!email || !password) return null;
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (user) db.prepare("UPDATE users SET role = 'admin', shop_id = NULL, garage_id = NULL WHERE id = ?").run(user.id);
+  else {
+    db.prepare("INSERT INTO users (name, email, password_hash, auth_provider, role) VALUES ('Admin', ?, ?, 'local', 'admin')")
+      .run(email, auth.hashPassword(password));
+  }
+  return email;
+}
+
 if (require.main === module) {
   loadEnvFile();
   if (process.argv.includes('--no-demo')) process.env.SEED_DEMO = 'false';
   const db = openDb();
   const seeded = process.env.SEED_DEMO !== 'false' && seedDemo(db);
+  const adminAccount = ensureAdminFromEnv(db);
   const adminToken = process.env.ADMIN_TOKEN;
   const port = Number(process.env.PORT) || 3000;
   const app = createApp(db, { adminToken });
   app.listen(port, () => {
     console.log(`\n${APP_NAME} running at http://localhost:${port}`);
     console.log(`  Customer app:  http://localhost:${port}/`);
-    console.log(`  Shop console:  http://localhost:${port}/shop.html`);
+    console.log(`  Sellers & Garages: http://localhost:${port}/business.html`);
     console.log(`  Admin console: http://localhost:${port}/admin.html`);
-    if (seeded) console.log('\nDemo data loaded (fake shops, prices and DEMO- part numbers). Shop codes 111111 to 555555.');
+    if (seeded) console.log('\nDemo data loaded (fake shops, prices and DEMO- part numbers).');
+    if (isDemo(db)) {
+      console.log(`Demo sign-ins: admin ${DEMO_ADMIN.email} / ${DEMO_ADMIN.password}; shops shop1@vinzuu.rw to shop5@vinzuu.rw,`);
+      console.log(`garages garage1@vinzuu.rw to garage3@vinzuu.rw, shop and garage both@vinzuu.rw, all with password ${DEMO_BUSINESS_PASSWORD}.`);
+    }
+    if (adminAccount) console.log(`Admin account: ${adminAccount}`);
     if (!adminToken) console.log('\nWARNING: using the default admin token "dev-admin-token". Set ADMIN_TOKEN before sharing this with anyone.');
   });
 }

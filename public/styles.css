@@ -904,3 +904,180 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
 .car-figure figcaption { font-size: 11.5px; color: var(--ink-2); margin-top: 6px; text-align: right; overflow-wrap: anywhere; }
 .car-figure figcaption a { color: inherit; }
 .car-figure .car-art { margin: 0 auto; }
+
+/* ---------- ratings and reviews (customer pages, dashboard, admin) ---------- */
+
+.stars { position: relative; display: inline-block; font-size: 15px; line-height: 1; letter-spacing: 1px; vertical-align: -1px; }
+.stars-bg { color: #CBD5DC; }
+.stars-fg { position: absolute; left: 0; top: 0; overflow: hidden; white-space: nowrap; color: #E0A100; }
+.rating { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; padding: 0; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+.rating:hover .rating-n { text-decoration: underline; }
+.rating-n { color: var(--ink-2); }
+.rating-none { font-size: 13px; color: var(--ink-2); }
+.rating-summary { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.gc-rating { margin: 0 0 6px; }
+.shop-rating { margin-top: 3px; }
+.review-list { list-style: none; margin: 10px 0 0; padding: 0; }
+.review { border-top: 1px solid var(--line); padding: 12px 0; }
+.review-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.review-text { margin: 6px 0 0; line-height: 1.5; }
+.review-reply { margin: 8px 0 0; padding: 8px 12px; background: #F1F5F8; border-left: 3px solid var(--ink); border-radius: 0 6px 6px 0; font-size: 14px; }
+.review-actions { margin-top: 6px; }
+.review-summary { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+.rs-score { display: grid; justify-items: center; gap: 4px; min-width: 110px; }
+.rs-score b { font: 700 46px/1 var(--font-display); }
+.rs-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.rs-bars li { display: grid; grid-template-columns: 34px 1fr 26px; gap: 8px; align-items: center; font-size: 14px; }
+.rs-bar { height: 8px; background: #E4EAEE; border-radius: 4px; overflow: hidden; }
+.rs-bar span { display: block; height: 100%; background: #E0A100; }
+.star-pick { display: flex; gap: 6px; margin: 4px 0 14px; }
+.star-pick button { width: 48px; height: 48px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; font-size: 28px; color: #CBD5DC; cursor: pointer; }
+.star-pick button.on { color: #E0A100; border-color: #E0A100; background: #FFF8E1; }
+
+/* status pills shared by the dashboard and the admin console */
+.pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; border: 1.5px solid currentColor; }
+.pill-new { color: var(--blue); background: #E8F0F8; }
+.pill-ok { color: var(--green); background: var(--green-bg); }
+.pill-done { color: var(--ink-2); background: #EEF2F4; }
+.pill-warn { color: var(--amber); background: var(--amber-bg); }
+.pill-off { color: var(--danger); background: #FBE9E7; }
+
+/* ---------- Sell on vinzuu ---------- */
+
+.sell-hero h1 { max-width: 20ch; margin-left: auto; margin-right: auto; }
+.sell-hero p { max-width: 56ch; }
+.sell-kicker { color: var(--yellow) !important; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 13px; margin-bottom: 8px !important; }
+.sell-main { max-width: 860px; }
+.sell-steps { list-style: none; padding: 0; margin: 0 0 24px; display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
+.sell-steps li { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.sell-steps b { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: var(--yellow); display: grid; place-items: center; font: 700 19px/1 var(--font-display); }
+.sell-steps strong { display: block; margin-bottom: 2px; }
+.sell-steps span { color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.sell-sides { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; margin-bottom: 18px; }
+.sell-side { background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--yellow); border-radius: 12px; padding: 16px 18px; }
+.sell-side h2 { font-size: 24px !important; margin: 0 0 8px !important; }
+.sell-side ul { margin: 0; padding-left: 18px; line-height: 1.55; }
+.sell-side li + li { margin-top: 4px; }
+.sell-signin { text-align: center; margin: 6px 0 20px !important; }
+.apply-form h2 { margin-top: 0 !important; }
+.kind-cards { display: grid; gap: 10px; grid-template-columns: repeat(3, 1fr); margin: 10px 0 12px; }
+.kind-card { display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; background: #fff; font-weight: 400; margin: 0; }
+.kind-card:has(input:checked) { border: 2.5px solid var(--ink); background: #F3F6F8; box-shadow: inset 0 -4px 0 var(--yellow); }
+.kind-card input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; }
+.kind-card strong { display: block; }
+.kind-card small { color: var(--ink-2); font-size: 13px; }
+.label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+.loc-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.loc-manual { margin-top: 8px; }
+.loc-manual summary { cursor: pointer; color: var(--blue); font-weight: 600; font-size: 14px; }
+.loc-manual .row { margin-top: 8px; }
+.check-line { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; margin: 6px 0 14px; }
+.check-line input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; }
+.apply-done { text-align: center; }
+.apply-done:focus { outline: none; }
+.auth-business { font-size: 14px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+@media (max-width: 720px) {
+  .sell-steps, .sell-sides, .kind-cards { grid-template-columns: 1fr; }
+}
+
+/* ---------- Vinzuu Sellers & Garages ---------- */
+
+.biz-header { border-bottom: 1px solid var(--line); }
+.biz-brand-sub { font-family: var(--font-body); font-weight: 600; font-size: 15px; color: var(--ink-2); letter-spacing: 0; }
+.biz-header-right { display: flex; align-items: center; gap: 14px; }
+.biz-user { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+.biz-user .nav-avatar { width: 30px; height: 30px; font-size: 15px; }
+.biz-user .nav-online { border-color: #fff; }
+.biz-login { padding-top: 8px; }
+.biz-apply { text-align: center; margin-top: 16px; }
+.biz-choose { text-align: center; }
+.side-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px; }
+.side-card { display: grid; justify-items: center; gap: 8px; padding: 26px 18px; background: #fff; border: 2px solid var(--line); border-radius: 14px; cursor: pointer; font: inherit; color: var(--ink); text-align: center; }
+.side-card:hover, .side-card:focus-visible { border-color: var(--ink); box-shadow: inset 0 -5px 0 var(--yellow); }
+.side-card strong { font: 700 28px/1 var(--font-display); }
+.side-card span:last-child { color: var(--ink-2); font-size: 15px; }
+.side-icon { width: 58px; height: 58px; border-radius: 50%; background: var(--ink); color: var(--yellow); display: grid; place-items: center; }
+.side-icon svg { width: 30px; height: 30px; }
+.biz-head { align-items: flex-end; }
+.biz-head h1 { margin: 0 0 6px; font-size: clamp(30px, 7vw, 42px); }
+.biz-side-label { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.biz-sub { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 0; font-size: 14px; }
+.biz-verified { display: inline-flex; align-items: center; gap: 5px; color: var(--green); font-weight: 700; }
+.biz-verified svg { width: 18px; height: 18px; }
+.biz-unverified { color: var(--amber); font-weight: 700; }
+.biz-head-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.seg-wrap { flex-wrap: wrap; margin-bottom: 14px; }
+.stat-new { border-color: var(--blue); box-shadow: inset 0 -4px 0 var(--blue); }
+.stat-warn { border-color: var(--amber); box-shadow: inset 0 -4px 0 var(--amber); }
+.parts-tools { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 4px; }
+.parts-tools input[type=search] { flex: 1 1 240px; }
+.thumb-btn { border: 0; padding: 0; background: none; cursor: pointer; display: grid; justify-items: center; gap: 4px; font: inherit; color: var(--ink-2); font-size: 13px; }
+.part-cell { display: grid; gap: 2px; min-width: 150px; }
+.part-desc { color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 34ch; }
+.part-cell .link-btn { justify-self: start; }
+.price-stock { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 210px; }
+.ps-field { display: grid; gap: 2px; margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.ps-field input { width: 100%; }
+.ps-actions { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.detail-photo { display: block; width: 100%; max-height: 300px; object-fit: contain; background: #EEF2F4; border-radius: 10px; margin-bottom: 12px; }
+.detail-photo-lg { max-height: 70vh; }
+.detail-list { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0 0 10px; font-size: 15px; }
+.detail-list dt { color: var(--ink-2); }
+.detail-list dd { margin: 0; overflow-wrap: anywhere; }
+.detail-desc { line-height: 1.55; white-space: pre-line; }
+.fits-list { margin: 6px 0 12px; padding-left: 18px; line-height: 1.5; }
+.locked-box { background: #F7F9FA; }
+.locked-box h3 { margin-bottom: 4px; }
+.job-list { display: grid; gap: 12px; }
+.job-card { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.job-requested { border-left-color: var(--blue); }
+.job-accepted { border-left-color: var(--green); }
+.job-declined { opacity: 0.8; }
+.job-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+.job-when { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; font-weight: 700; color: var(--green); }
+.job-when svg { width: 18px; height: 18px; }
+.job-card h3 { margin: 8px 0 8px; }
+.job-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0 0 12px; font-size: 15px; }
+.job-facts dt { color: var(--ink-2); }
+.job-facts dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .side-cards { grid-template-columns: 1fr; }
+  .review-summary { grid-template-columns: 1fr; gap: 12px; }
+  .biz-user-name { display: none; }
+  .biz-brand-sub { display: none; }
+}
+
+/* ---------- admin: applications, part requests ---------- */
+
+.admin-head-right { display: inline-flex; gap: 12px; align-items: center; }
+.todo-box p { margin: 0; }
+.todo-box p + p { margin-top: 6px; }
+.app-list { display: grid; gap: 14px; margin-bottom: 20px; }
+.app-card { display: grid; grid-template-columns: 180px 1fr; gap: 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.app-photos { display: grid; gap: 10px; align-content: start; }
+.app-photos img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: #EEF2F4; }
+.app-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.app-body h3 { margin: 8px 0 10px; }
+.app-actions { border-top: 1px solid var(--line); padding-top: 12px; }
+.decided { margin: 0 0 20px; }
+.decided summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
+.filter-field { max-width: 320px; }
+@media (max-width: 640px) { .app-card { grid-template-columns: 1fr; } .app-photos { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- customer: part details, labour prices, my bookings ---------- */
+
+.result .result-desc { grid-column: 2 / span 2; margin: 4px 0 0; font-size: 14px; line-height: 1.45; }
+.garage-option .go-rating { font-size: 14px; margin-top: 2px; }
+.garage-option .go-price { font-weight: 700; margin-top: 4px; font-size: 14px; }
+.booking-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.booking-item { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.bk-head { display: grid; gap: 2px; margin-bottom: 10px; }
+.bk-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bk-side { display: grid; gap: 3px; align-content: start; justify-items: start; background: #F7F9FA; border-radius: 10px; padding: 10px 12px; }
+.bk-who { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.bk-side .btn { margin-top: 6px; }
+.bk-rated { font-size: 13px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; margin-top: 4px; }
+@media (max-width: 560px) { .bk-sides { grid-template-columns: 1fr; } }
+.apply-form .group .row > .field { margin-top: 10px; }
+.rating-summary .rs-from { flex-basis: 100%; font-size: 14px; }

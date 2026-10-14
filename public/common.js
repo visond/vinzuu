@@ -1,4 +1,4 @@
-/* Shared helpers for all pages. Loaded before customer.js, shop.js and admin.js.
+/* Shared helpers for all pages. Loaded before customer.js, business.js, sell.js and admin.js.
    Everything the server sends back is inserted with textContent (never innerHTML),
    so shop names, notes and part numbers cannot inject markup. */
 'use strict';
@@ -169,11 +169,63 @@ function garageCard(g, i, message) {
       h('span', { class: 'gc-distance', text: `${g.distance_km} km` })),
     h('div', { class: 'gc-body' },
       h('h3', { text: g.name }),
+      g.rating ? h('p', { class: 'gc-rating' }, ratingEl(g.rating, 'garage', g.id, g.name)) : null,
       h('p', { class: 'gc-address' }, icon('pin'), g.address || 'Kigali'),
       tags.length ? h('ul', { class: 'gc-tags' }, ...tags.map((t) => h('li', { text: t }))) : null,
       h('div', { class: 'gc-actions' },
         h('a', { class: 'btn btn-primary', href: bookHref, target: '_blank', rel: 'noopener' }, icon('calendar'), 'Book now'),
         h('a', { class: 'btn', href: mapHref, target: '_blank', rel: 'noopener', 'aria-label': `Location of ${g.name} on the map` }, icon('pin'), 'Location'))));
+}
+
+/** Five stars, filled to the nearest half: "★★★★½"-style, drawn with CSS widths. */
+function starsEl(average, label) {
+  const pct = Math.max(0, Math.min(100, (Math.round((average || 0) * 2) / 2) * 20));
+  return h('span', { class: 'stars', role: 'img', 'aria-label': label || `${average} out of 5 stars` },
+    h('span', { class: 'stars-bg', 'aria-hidden': 'true', text: '★★★★★' }),
+    h('span', { class: 'stars-fg', 'aria-hidden': 'true', style: `width:${pct}%`, text: '★★★★★' }));
+}
+
+/** "★★★★½ 4.5 (12 reviews)" as a button that opens the reviews; "No reviews yet" otherwise. */
+function ratingEl(rating, target, id, name) {
+  if (!rating || !rating.count) return h('span', { class: 'rating rating-none', text: 'No reviews yet' });
+  return h('button', {
+    class: 'rating', type: 'button', title: `Read reviews of ${name}`,
+    onclick: (e) => { e.preventDefault(); e.stopPropagation(); openReviews(target, id, name); },
+  }, starsEl(rating.average), h('b', { text: String(rating.average) }),
+  h('span', { class: 'rating-n', text: `(${rating.count} ${rating.count === 1 ? 'review' : 'reviews'})` }));
+}
+
+/** A list of reviews with the business's replies. Shared by customer pages and the dashboard. */
+function reviewList(reviews, opts = {}) {
+  if (!reviews.length) return h('p', { class: 'empty muted', text: opts.empty || 'No reviews yet.' });
+  return h('ul', { class: 'review-list' }, ...reviews.map((r) => h('li', { class: 'review' },
+    h('div', { class: 'review-head' }, starsEl(r.rating), h('strong', { text: r.author_name }),
+      h('span', { class: 'small muted', text: String(r.created_at || '').slice(0, 10) })),
+    r.comment ? h('p', { class: 'review-text', text: r.comment }) : null,
+    r.reply ? h('p', { class: 'review-reply' }, h('b', { text: 'Reply: ' }), r.reply) : null,
+    opts.actions ? opts.actions(r) : null)));
+}
+
+async function openReviews(target, id, name) {
+  let dlg = document.getElementById('reviews-dialog');
+  if (!dlg) {
+    dlg = h('dialog', { id: 'reviews-dialog', 'aria-labelledby': 'reviews-title' });
+    document.body.append(dlg);
+  }
+  const close = () => { if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open'); };
+  const body = h('div', { class: 'dialog-body' }, h('h2', { id: 'reviews-title', text: `Reviews of ${name}` }), h('p', { class: 'muted', text: 'Loading…' }));
+  dlg.replaceChildren(body);
+  if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
+  try {
+    const res = await api(`/api/reviews?${target}_id=${encodeURIComponent(id)}`);
+    body.replaceChildren(h('h2', { id: 'reviews-title', text: `Reviews of ${name}` }),
+      res.rating.count ? h('p', { class: 'rating-summary' }, starsEl(res.rating.average), h('b', { text: ` ${res.rating.average} out of 5` }),
+        h('span', { class: 'muted rs-from', text: `From ${res.rating.count} ${res.rating.count === 1 ? 'customer' : 'customers'} who booked through Vinzuu` })) : null,
+      reviewList(res.reviews),
+      h('div', { class: 'dialog-actions' }, h('button', { class: 'btn btn-quiet', type: 'button', text: 'Close', onclick: close })));
+  } catch (err) {
+    body.append(h('p', { class: 'status error', text: err.message }));
+  }
 }
 
 const BADGE_ICON = {
@@ -268,6 +320,14 @@ function resizeImage(file, maxSide = 640) {
       if (inGarage[hash]) a.href = `/index.html#${inGarage[hash]}`;
     });
     document.querySelectorAll('a[href^="/#"]').forEach((a) => { a.href = `/welcome.html${a.getAttribute('href').slice(1)}`; });
+    // A shop, garage or admin account: the logo and the "Sell on vinzuu" button open its dashboard.
+    if (user.role === 'business' || user.role === 'admin') {
+      document.querySelectorAll('a.nav-logo').forEach((a) => { a.href = user.home; });
+      document.querySelectorAll('.site-nav a[href="/sell.html"]').forEach((a) => {
+        a.href = user.home;
+        a.textContent = user.role === 'admin' ? 'Admin' : 'My dashboard';
+      });
+    }
   }).catch(() => { /* offline: leave Sign in as it is */ });
 })();
 
