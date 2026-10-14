@@ -57,6 +57,7 @@
   async function openConsole(user) {
     categories = (await api('/api/catalog')).categories;
     $('admin-account').replaceChildren(accountMenu(user, 'admin'));
+    $('admin-switch').replaceChildren(portalSwitch(user, 'admin') || '');
     $('login').hidden = true;
     $('console').hidden = false;
     $('tabs').replaceChildren(...TABS.map(([key, label]) => h('button', {

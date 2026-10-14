@@ -330,6 +330,15 @@ function accountMenu(user, current, { onSignOut } = {}) {
   return wrap;
 }
 
+/** The same places as buttons, shown beside Sign out on the admin and seller dashboards, so
+ *  switching is one tap without opening the menu. Nothing for an account with nowhere to go. */
+function portalSwitch(user, current) {
+  if (!user || !user.portals || !user.portals.length) return null;
+  return h('nav', { class: 'portal-switch', 'aria-label': 'Go to' },
+    ...user.portals.map((p) => h('a', { class: `portal-link${p.key === current ? ' is-current' : ''}`, href: p.href, 'aria-current': p.key === current ? 'page' : null },
+      h('span', { class: `acct-portal-icon acct-${p.key}` }, svgEl(PORTAL_ICONS[p.key] || '')), p.label)));
+}
+
 /* The top navigation is the same on every customer page. Signed in, its "Sign in" button
    becomes "Sign out" in the same place and style; nothing else in the bar changes. */
 (() => {

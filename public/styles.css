@@ -1205,3 +1205,18 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
 .part-cell .pill { justify-self: start; }
 /* On a phone the account menu already offers the customer site, so the header link steps aside. */
 @media (max-width: 760px) { .biz-header-right:has(.acct:not([hidden])) > .nav-link { display: none; } }
+
+/* "Go to" buttons beside Sign out for admins, shops and garages. */
+.portal-switch { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.portal-link {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 12px 4px 4px;
+  border: 2px solid var(--ink); border-radius: var(--radius); background: #fff; color: var(--ink);
+  font-weight: 700; font-size: 14.5px; text-decoration: none;
+}
+.portal-link .acct-portal-icon { width: 30px; height: 30px; border-radius: 6px; }
+.portal-link .acct-portal-icon svg { width: 18px; height: 18px; }
+.portal-link:hover { background: #F1F5F8; }
+.portal-link.is-current { background: var(--ink); color: #fff; }
+.portal-link:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.admin-head-right, .biz-head-actions { flex-wrap: wrap; justify-content: flex-end; }
+#pick-switch .portal-switch { justify-content: center; }

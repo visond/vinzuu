@@ -98,6 +98,8 @@
   }
 
   function showAccount(user) {
+    $('biz-switch').replaceChildren(portalSwitch(user, 'seller') || '');
+    $('pick-switch').replaceChildren(portalSwitch(user, 'seller') || '');
     $('biz-user').hidden = false;
     $('biz-user').replaceChildren(accountMenu(user, 'seller', { onSignOut: () => {
       store.remove(SIDE_KEY, 'sessionStorage');
