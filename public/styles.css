@@ -1081,3 +1081,127 @@ button.plate-sm { background: none; padding: 0; font: inherit; cursor: pointer; 
 @media (max-width: 560px) { .bk-sides { grid-template-columns: 1fr; } }
 .apply-form .group .row > .field { margin-top: 10px; }
 .rating-summary .rs-from { flex-basis: 100%; font-size: 14px; }
+
+/* ---------- account menu (shops, garages and admins switch between places) ---------- */
+.acct { position: relative; display: inline-flex; }
+.acct-btn {
+  display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 4px 8px 4px 4px;
+  border: 1.5px solid transparent; border-radius: 999px; background: none; color: inherit; font: inherit; cursor: pointer;
+}
+.acct-btn:hover, .acct-btn[aria-expanded='true'] { border-color: currentColor; }
+.acct-btn:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.acct-btn .nav-avatar { width: 34px; height: 34px; font-size: 16px; }
+.acct-btn-text { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.acct-btn-name { font-weight: 700; font-size: 14.5px; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-btn-role { font-size: 12px; opacity: 0.8; font-weight: 600; }
+.acct-chev { font-size: 12px; opacity: 0.8; }
+.site-nav .acct-btn { color: #fff; }
+.site-nav .acct-btn .acct-btn-role { color: #86EFAC; opacity: 1; }
+.biz-user .acct-btn .nav-online, .admin-page .acct-btn .nav-online { border-color: #fff; }
+.acct-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; width: min(320px, calc(100vw - 32px));
+  background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(16, 40, 59, 0.22); padding: 8px; text-align: left;
+}
+.acct-menu[hidden] { display: none; }
+.acct-label { margin: 8px 10px 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-2); }
+.acct-who { display: flex; align-items: center; gap: 10px; padding: 4px 10px 10px; border-bottom: 1px solid var(--line); }
+.acct-who .nav-avatar { width: 38px; height: 38px; }
+.acct-who-text { display: flex; flex-direction: column; min-width: 0; }
+.acct-who-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.acct-who-text span { font-size: 13px; color: var(--ink-2); }
+.acct-portals { list-style: none; margin: 0; padding: 0 0 8px; border-bottom: 1px solid var(--line); }
+.acct-portal { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 10px; color: var(--ink); text-decoration: none; }
+.acct-portal:hover { background: #F1F5F8; }
+.acct-portal:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; }
+.acct-portal.is-current { background: #EAF0F5; }
+.acct-portal-icon { flex: none; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; }
+.acct-portal-icon svg { width: 22px; height: 22px; }
+.acct-admin { background: var(--ink); }
+.acct-seller { background: var(--yellow); color: var(--ink); }
+.acct-customer { background: var(--blue); }
+.acct-portal-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.acct-portal-text strong { font-size: 15px; }
+.acct-portal-text span { font-size: 13px; color: var(--ink-2); }
+.acct-tick { color: var(--green); font-weight: 800; font-size: 18px; }
+.acct-signout {
+  display: block; width: 100%; margin-top: 6px; padding: 10px; border: 0; border-radius: 10px; background: none;
+  color: var(--danger); font: 700 15px/1.2 var(--font-body); text-align: left; cursor: pointer;
+}
+.acct-signout:hover { background: #FBEDEC; }
+@media (max-width: 760px) {
+  .site-nav .acct { padding: 4px 0 6px; }
+  .site-nav .acct-menu { left: 0; right: auto; }
+  .biz-header .acct-btn-text { display: none; }
+}
+.admin-tag { font-weight: 600; }
+
+/* ---------- admin viewing a business dashboard ---------- */
+.view-banner {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+  margin: 12px 0 4px; padding: 12px 14px; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 600;
+}
+.view-banner .btn-secondary { background: #fff; }
+.view-banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.biz-alert { margin: 10px 0 0; border-color: var(--danger); color: var(--danger); font-weight: 600; }
+.biz-pick { padding-top: 8px; }
+.pick-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.pick-item {
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; width: 100%; padding: 12px 14px;
+  background: #fff; border: 1.5px solid var(--line); border-radius: 10px; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
+}
+.pick-item:hover { border-color: var(--ink); }
+.pick-item:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.pick-item .small { grid-column: 2; }
+
+/* ---------- admin: charts, scorecards, filters ---------- */
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.chart-card { margin: 0; padding: 14px; }
+.chart-card figcaption { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.week-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.week-chart .grid { stroke: var(--line); stroke-width: 1; }
+.week-chart .axis { stroke: var(--ink-2); stroke-width: 1; }
+.week-chart .tick { font: 11px var(--font-body); fill: var(--ink-2); }
+.week-chart .bar { fill: var(--blue); }
+.week-chart .is-now .bar { fill: #5C8FBF; }
+.week-chart .hit { fill: transparent; }
+.week-chart .bar-g:hover .hit, .week-chart .bar-g:focus .hit { fill: rgba(15, 76, 129, 0.08); }
+.week-chart .bar-g:focus { outline: none; }
+.chart-table { margin-top: 6px; font-size: 14px; }
+.chart-table summary { cursor: pointer; color: var(--blue); font-weight: 600; }
+.bar-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.bar-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label n' 'track track'; gap: 3px 8px; font-size: 14px; }
+.bl-label { grid-area: label; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bl-n { grid-area: n; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bl-track { grid-area: track; height: 8px; border-radius: 4px; background: #EAF0F5; }
+.bl-bar { display: block; height: 100%; border-radius: 4px; background: var(--blue); }
+.downloads { margin: 6px 0 18px; }
+.downloads h2 { margin-top: 0; }
+.flag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.flag-row .pill, .inline-pill { font-size: 12px; }
+.inline-pill { margin-left: 6px; }
+.nowrap { white-space: nowrap; }
+.text-warn { color: var(--amber); }
+.h2-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
+.filter-bar input[type=search] { flex: 1 1 220px; }
+.filter-bar select { flex: 1 1 170px; max-width: 260px; }
+.date-range { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-2); }
+.date-range input { width: auto; }
+.report-card.is-closed { opacity: 0.85; }
+
+/* ---------- customer: report a problem ---------- */
+.bk-report, .result-report { margin-top: 4px; font-size: 14px; }
+.bk-reported { margin-top: 4px; }
+.result .actions .result-report { align-self: center; }
+.plain-fieldset { border: 0; padding: 0; margin: 0 0 12px; }
+.plain-fieldset legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
+.report-reasons { display: grid; gap: 6px; }
+.report-reason { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; }
+.report-reason:has(input:checked) { border-color: var(--ink); background: #F3F6F8; }
+.report-reason input { width: auto; margin: 0; }
+.app-card > .app-body:only-child { grid-column: 1 / -1; }
+.report-card .btn-row { margin-top: 10px; }
+.part-cell .pill { justify-self: start; }
+/* On a phone the account menu already offers the customer site, so the header link steps aside. */
+@media (max-width: 760px) { .biz-header-right:has(.acct:not([hidden])) > .nav-link { display: none; } }

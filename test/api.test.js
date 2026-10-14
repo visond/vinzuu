@@ -1203,3 +1203,176 @@ test('signed in, "/" opens your garage; signed out it is the public homepage', a
   assert.equal(signedIn.headers.get('location'), '/index.html');
   assert.equal((await fetch(`${base}/welcome.html`, { redirect: 'manual', headers: { cookie } })).status, 200);
 });
+
+// ---------- admin dashboard: suspend, reports, scorecards, accounts, bookings, charts, log, CSV ----------
+
+test('suspending a shop hides its parts and blocks bookings until it is reactivated, and the owner sees why', async () => {
+  const oe = 'DEMO-TYT-XA40-FBP-01';
+  const before = (await get(`/api/parts/listings?oe_numbers=${oe}&radius_km=any`)).json.listings;
+  const target = before[0];
+  assert.equal((await post(`/api/admin/shops/${target.shop_id}/suspend`, {}, ADMIN)).status, 400, 'a reason is required');
+  assert.equal((await post(`/api/admin/shops/${target.shop_id}/suspend`, { reason: 'Customers report fake pads' }, ADMIN)).status, 200);
+  const during = (await get(`/api/parts/listings?oe_numbers=${oe}&radius_km=any`)).json.listings;
+  assert.ok(!during.some((l) => l.shop_id === target.shop_id), 'its parts are not shown');
+  const booked = await post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788123456', shop_listing_id: target.listing_id });
+  assert.equal(booked.status, 409);
+
+  const owner = makeClient();
+  await owner.post('/api/auth/login', { email: `shop${target.shop_id}@vinzuu.rw`, password: 'Vinzuu-demo1' });
+  const me = (await owner.get('/api/business/me')).json;
+  assert.equal(me.shop.suspended, true);
+  assert.equal(me.shop.suspended_reason, 'Customers report fake pads');
+
+  const card = (await get('/api/admin/shops', ADMIN)).json.shops.find((s) => s.id === target.shop_id);
+  assert.ok(card.flags.includes('Suspended'));
+  assert.equal((await post(`/api/admin/shops/${target.shop_id}/reactivate`, {}, ADMIN)).status, 200);
+  const after = (await get(`/api/parts/listings?oe_numbers=${oe}&radius_km=any`)).json.listings;
+  assert.ok(after.some((l) => l.shop_id === target.shop_id), 'back on sale');
+
+  assert.equal((await post('/api/admin/garages/3/suspend', { reason: 'Closed for renovation' }, ADMIN)).status, 200);
+  assert.ok(!(await get('/api/garages/nearby?radius_km=any')).json.garages.some((g) => g.id === 3));
+  assert.equal((await post('/api/admin/garages/3/reactivate', {}, ADMIN)).status, 200);
+  assert.ok((await get('/api/garages/nearby?radius_km=any')).json.garages.some((g) => g.id === 3));
+});
+
+test('the admin can edit any detail of a shop or garage, including its name and location', async () => {
+  const r = await call('PUT', '/api/admin/garages/2', { name: 'Demo Garage Two Renamed', latitude: -1.95, longitude: 30.1, opening_hours: 'Mon to Sat 8 to 18' }, ADMIN);
+  assert.equal(r.status, 200);
+  assert.equal(r.json.garage.name, 'Demo Garage Two Renamed');
+  assert.equal(r.json.garage.latitude, -1.95);
+  assert.equal((await call('PUT', '/api/admin/shops/2', { phone: '123' }, ADMIN)).status, 400);
+  const shop = await call('PUT', '/api/admin/shops/2', { opening_hours: 'Every day 7 to 20', vetted: true }, ADMIN);
+  assert.equal(shop.json.shop.opening_hours, 'Every day 7 to 20');
+  const log = (await get('/api/admin/log', ADMIN)).json.log;
+  assert.ok(log.some((l) => l.action === 'Edited a garage' && /Renamed/.test(l.detail)));
+});
+
+test('a customer can report a problem once from a booking or a part, and the admin closes it', async () => {
+  const listing = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings[0];
+  assert.equal((await post('/api/reports', { listing_id: listing.listing_id, reason: 'fake' })).status, 401, 'sign in first');
+  const customer = makeClient();
+  await customer.post('/api/auth/signup', { name: 'Report Tester', email: 'report.tester@example.com', password: 'Long-password123' });
+  const id = (await customer.post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788123456', shop_listing_id: listing.listing_id, garage_id: 1 })).json.booking.id;
+
+  assert.equal((await customer.post('/api/reports', { booking_id: id, target: 'shop', reason: 'made_up' })).status, 400);
+  assert.equal((await customer.post('/api/reports', { booking_id: id, target: 'garage', reason: 'other' })).status, 400, '"something else" needs details');
+  const made = await customer.post('/api/reports', { booking_id: id, target: 'shop', reason: 'price', details: 'Asked for more at the counter.' });
+  assert.equal(made.status, 201);
+  assert.equal((await customer.post('/api/reports', { booking_id: id, target: 'shop', reason: 'price' })).status, 409, 'once');
+  assert.equal((await customer.post('/api/reports', { listing_id: listing.listing_id, reason: 'fake' })).status, 201, 'a part straight from the results');
+  const mine = (await customer.get('/api/me/bookings')).json.bookings.find((b) => b.id === id);
+  assert.deepEqual(mine.reported, { shop: true });
+
+  const stranger = makeClient();
+  await stranger.post('/api/auth/signup', { name: 'Someone Else', email: 'report.stranger@example.com', password: 'Long-password123' });
+  assert.equal((await stranger.post('/api/reports', { booking_id: id, target: 'shop', reason: 'rude' })).status, 404);
+
+  const { reports } = (await get('/api/admin/reports?status=open', ADMIN)).json;
+  const report = reports.find((r) => r.id === made.json.report.id);
+  assert.equal(report.user_email, 'report.tester@example.com');
+  assert.equal(report.shop_id, listing.shop_id);
+  const card = (await get('/api/admin/shops', ADMIN)).json.shops.find((s) => s.id === listing.shop_id);
+  assert.ok(card.open_reports >= 1 && card.flags.some((f) => /open report/.test(f)));
+  assert.equal((await post(`/api/admin/reports/${report.id}/close`, {}, ADMIN)).status, 400, 'say what you did');
+  assert.equal((await post(`/api/admin/reports/${report.id}/close`, { admin_note: 'Called the shop, price corrected.' }, ADMIN)).status, 200);
+  assert.equal((await post(`/api/admin/reports/${report.id}/close`, { admin_note: 'again' }, ADMIN)).status, 409);
+});
+
+test('a blocked account cannot sign in and its open session stops working; unblocking restores it', async () => {
+  const user = makeClient();
+  await user.post('/api/auth/signup', { name: 'Block Me', email: 'block.me@example.com', password: 'Long-password123' });
+  assert.ok((await user.get('/api/auth/me')).json.user);
+  const row = (await get('/api/admin/users?q=block.me', ADMIN)).json.users[0];
+  assert.equal(row.role, 'customer');
+  assert.equal((await post(`/api/admin/users/${row.id}/block`, {}, ADMIN)).status, 400, 'a reason is required');
+  assert.equal((await post(`/api/admin/users/${row.id}/block`, { reason: 'Fake bookings' }, ADMIN)).status, 200);
+  assert.equal((await user.get('/api/auth/me')).json.user, null, 'signed out at once');
+  const again = await user.post('/api/auth/login', { email: 'block.me@example.com', password: 'Long-password123' });
+  assert.equal(again.status, 403);
+  assert.match(again.json.error, /Fake bookings/);
+  const adminRow = (await get('/api/admin/users?role=admin', ADMIN)).json.users[0];
+  assert.equal((await post(`/api/admin/users/${adminRow.id}/block`, { reason: 'x' }, ADMIN)).status, 409);
+  assert.equal((await post(`/api/admin/users/${row.id}/unblock`, {}, ADMIN)).status, 200);
+  assert.equal((await user.post('/api/auth/login', { email: 'block.me@example.com', password: 'Long-password123' })).status, 200);
+});
+
+test('the admin filters bookings and cancels an open one with a reason both sides see', async () => {
+  const listing = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings[0];
+  const id = (await post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788555444', shop_listing_id: listing.listing_id, garage_id: 1 })).json.booking.id;
+  const open = (await get('/api/admin/bookings?stage=open&q=788555444', ADMIN)).json.bookings;
+  assert.deepEqual(open.map((b) => b.id), [id]);
+  assert.equal((await post(`/api/admin/bookings/${id}/cancel`, {}, ADMIN)).status, 400);
+  const done = await post(`/api/admin/bookings/${id}/cancel`, { reason: 'The customer asked us to cancel.' }, ADMIN);
+  assert.equal(done.status, 200);
+  assert.equal(done.json.booking.shop_status, 'cancelled');
+  assert.equal(done.json.booking.garage_status, 'declined');
+  assert.equal((await post(`/api/admin/bookings/${id}/cancel`, { reason: 'again' }, ADMIN)).status, 409);
+  const cancelled = (await get('/api/admin/bookings?stage=cancelled&q=788555444', ADMIN)).json.bookings;
+  assert.equal(cancelled[0].admin_note, 'The customer asked us to cancel.');
+  const finished = (await get('/api/admin/bookings?stage=finished', ADMIN)).json.bookings;
+  assert.ok(finished.every((b) => b.stage === 'finished'));
+});
+
+test('activity counts come per week, and every admin change is in the log', async () => {
+  const a = (await get('/api/admin/activity?weeks=8', ADMIN)).json;
+  assert.equal(a.weeks.length, 8);
+  assert.ok(a.weeks.reduce((n, w) => n + w.bookings, 0) > 0, 'demo bookings are counted');
+  assert.ok(a.top_parts.length && a.top_shops.length);
+  const log = (await get('/api/admin/log', ADMIN)).json.log;
+  for (const action of ['Suspended a shop', 'Reactivated a shop', 'Blocked an account', 'Cancelled a booking', 'Closed a report']) {
+    assert.ok(log.some((l) => l.action === action), action);
+  }
+  assert.ok((await get('/api/admin/log?type=user', ADMIN)).json.log.every((l) => l.target_type === 'user'));
+});
+
+test('the admin downloads bookings, parts and cars as CSV files Excel can open', async () => {
+  const res = await fetch(`${base}/api/admin/export/bookings.csv`, { headers: ADMIN });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/csv/);
+  assert.match(res.headers.get('content-disposition'), /vinzuu-bookings-\d{4}-\d{2}-\d{2}\.csv/);
+  const bytes = Buffer.from(await res.arrayBuffer());
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf], 'starts with the UTF-8 byte-order mark');
+  const body = bytes.subarray(3).toString('utf8');
+  assert.ok(body.startsWith('id,created_at,stage'));
+  assert.ok(body.split('\r\n').length > 5);
+  for (const what of ['parts', 'cars', 'shops', 'garages', 'customers', 'reviews', 'reports']) {
+    assert.equal((await fetch(`${base}/api/admin/export/${what}.csv`, { headers: ADMIN })).status, 200, what);
+  }
+  assert.equal((await fetch(`${base}/api/admin/export/passwords.csv`, { headers: ADMIN })).status, 404);
+  assert.equal((await fetch(`${base}/api/admin/export/bookings.csv`)).status, 401);
+});
+
+test('each account gets the places it can switch to, and an admin opens a shop dashboard read-only', async () => {
+  const admin = makeClient();
+  const signedIn = (await admin.post('/api/auth/login', { email: 'admin@vinzuu.rw', password: 'Admin-vinzuu1' })).json.user;
+  assert.equal(signedIn.home, '/admin.html', 'the admin lands on the admin dashboard');
+  assert.deepEqual(signedIn.portals.map((p) => p.key), ['admin', 'seller', 'customer']);
+  const shop = makeClient();
+  assert.deepEqual((await shop.post('/api/auth/login', { email: 'shop1@vinzuu.rw', password: 'Vinzuu-demo1' })).json.user.portals.map((p) => p.key), ['seller', 'customer']);
+  const customer = makeClient();
+  assert.deepEqual((await customer.post('/api/auth/login', { email: 'customer@vinzuu.rw', password: 'Vinzuu-demo1' })).json.user.portals, []);
+
+  assert.equal((await admin.get('/api/business/me')).json.code, 'admin_pick');
+  const view = (await admin.get('/api/business/me?shop_id=1')).json;
+  assert.equal(view.view_as_admin, true);
+  assert.equal(view.shop.id, 1);
+  assert.equal(view.garage, null);
+
+  const asShop = async (method, path, body) => {
+    const res = await fetch(base + path, { method, headers: { 'content-type': 'application/json', 'x-view-shop': '1', cookie: await adminCookie() }, body: body ? JSON.stringify(body) : undefined });
+    return { status: res.status, json: await res.json() };
+  };
+  assert.equal((await asShop('GET', '/api/shops/1/listings')).status, 200, 'the admin can look');
+  const write = await asShop('PUT', '/api/shop/profile', { phone: '+250788000000' });
+  assert.equal(write.status, 403, 'but not change anything');
+  assert.equal(write.json.code, 'view_only');
+  assert.equal((await call('GET', '/api/shops/1/listings', null, { 'x-view-shop': '1' })).status, 401, 'the header alone opens nothing');
+  const nosy = await fetch(`${base}/api/shops/1/listings`, { headers: { 'x-view-shop': '1', cookie: await cookieFor('shop2@vinzuu.rw', 'Vinzuu-demo1') } });
+  assert.equal(nosy.status, 403, 'another shop cannot use it to look at shop 1');
+});
+
+async function cookieFor(email, password) {
+  const res = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }) });
+  return res.headers.getSetCookie()[0].split(';')[0];
+}
+const adminCookie = () => cookieFor('admin@vinzuu.rw', 'Admin-vinzuu1');

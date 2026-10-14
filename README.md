@@ -26,10 +26,15 @@ Then open http://localhost:3000
 | Customer app | `/index.html` | Car owners: find parts, book installation, see "my cars" if signed in |
 | Sell on vinzuu | `/sell.html` | Parts shops and garages apply to join (RDB TIN, certificate and front photos) |
 | Vinzuu Sellers & Garages | `/business.html` | Approved shops and garages: parts (price and stock), part requests, bookings, jobs, labour prices, reviews |
-| Admin console | `/admin.html` | You: approve applications, post parts, part numbers, shops, reviews, stats |
+| Admin console | `/admin.html` | You: applications, customer reports, parts, shop and garage scorecards (edit, suspend), accounts (block), bookings (filter, cancel), reviews, part numbers, charts, admin log, CSV downloads |
 
 **Who can post parts.** Only an admin account. A shop asks for a part from "Request a part"; an admin checks
 the photo, part number and price, then approves it. Shops change only their own price and stock.
+
+**Switching places.** Signing in takes each account to its own home: an admin to `/admin.html`, a shop or
+garage to `/business.html`, a customer to their garage. Shop, garage and admin accounts get an account menu
+(click their name) to switch: an admin to Sellers & Garages (opening any shop or garage read-only, to see what
+its owner sees) or the customer site; a shop or garage to the customer site. Customers have no such menu.
 
 **Admin account.** Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`: the server makes that account an
 admin when it starts. With demo data, `admin@vinzuu.rw` / `Admin-vinzuu1` also works. The old
@@ -98,6 +103,8 @@ The first start loads **invented** demo data: fake shops, fake prices, and part 
 | `/business.html`, `shop1@vinzuu.rw` to `shop5@`, password `Vinzuu-demo1` | Sign in as a demo shop |
 | `/business.html`, `garage1@vinzuu.rw` to `garage3@`, or `both@vinzuu.rw` | A demo garage, or an account with both sides |
 | `/admin.html`, `admin@vinzuu.rw` / `Admin-vinzuu1`, **Cars** tab | Add, correct, or delete a car directly |
+| `/admin.html`, **Reports** tab | A demo customer's report about a shop's price, to look into and close |
+| Sign in as `customer@vinzuu.rw`, password `Vinzuu-demo1`, then try the demo car | A customer with past bookings, to rate or report |
 
 The demo plates use the `RXA` series, which Rwanda has not issued, so they cannot belong to a real car. The
 demo VINs are invented too. A demo database created before the demo cars had VINs gets them filled in on the

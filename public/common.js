@@ -279,6 +279,57 @@ function resizeImage(file, maxSide = 640) {
   }));
 })();
 
+/* The account menu of a shop, garage or admin account: who is signed in, the places this
+   account can switch between (the server sends them as user.portals, so an admin sees Admin,
+   Sellers & Garages and the customer site, a shop or garage the last two), and Sign out. A
+   customer account has nowhere else to go, so it never gets this menu. */
+const PORTAL_ICONS = {
+  admin: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m9 12 2 2 4-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  seller: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9h16l-1.2-4.2A1 1 0 0 0 17.8 4H6.2a1 1 0 0 0-1 .8L4 9z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 9v10h14V9M9 19v-5h6v5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+  customer: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 16v-3.5l2-5A2 2 0 0 1 6.9 6h10.2a2 2 0 0 1 1.9 1.5l2 5V16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3.5 12.5h17" stroke="currentColor" stroke-width="2"/><circle cx="7.5" cy="17" r="1.8" fill="currentColor"/><circle cx="16.5" cy="17" r="1.8" fill="currentColor"/></svg>',
+};
+const ROLE_TEXT = { admin: 'Admin', business: 'Seller', customer: 'Customer' };
+function svgEl(markup) {
+  const t = document.createElement('template');
+  t.innerHTML = markup; // static strings from PORTAL_ICONS only
+  return t.content.firstElementChild;
+}
+
+/** current: which portal this page is ('admin', 'seller' or 'customer'). */
+function accountMenu(user, current, { onSignOut } = {}) {
+  const name = String(user.name || '').trim() || String(user.email || '').split('@')[0] || 'You';
+  const initial = name.charAt(0).toUpperCase();
+  const menuId = `acct-menu-${Math.random().toString(36).slice(2, 8)}`;
+  const signOut = async () => {
+    if (onSignOut) onSignOut();
+    store.remove('kpf.vehicle_id');
+    try { await api('/api/auth/logout', { method: 'POST' }); } finally { location.href = '/'; }
+  };
+  const menu = h('div', { class: 'acct-menu', id: menuId, hidden: true },
+    h('p', { class: 'acct-label', text: 'Signed in' }),
+    h('div', { class: 'acct-who' },
+      h('span', { class: 'nav-avatar', 'aria-hidden': 'true' }, initial),
+      h('span', { class: 'acct-who-text' }, h('strong', { text: user.email || name }), h('span', { text: ROLE_TEXT[user.role] || '' }))),
+    h('p', { class: 'acct-label', text: 'Go to' }),
+    h('ul', { class: 'acct-portals' }, ...(user.portals || []).map((p) => h('li', {},
+      h('a', { class: `acct-portal${p.key === current ? ' is-current' : ''}`, href: p.href, 'aria-current': p.key === current ? 'page' : null },
+        h('span', { class: `acct-portal-icon acct-${p.key}` }, svgEl(PORTAL_ICONS[p.key] || '')),
+        h('span', { class: 'acct-portal-text' }, h('strong', { text: p.label }), h('span', { text: p.sub })),
+        p.key === current ? h('span', { class: 'acct-tick', 'aria-label': 'You are here', text: '✓' }) : null)))),
+    h('button', { class: 'acct-signout', type: 'button', text: 'Sign out', onclick: signOut }));
+  const button = h('button', { class: 'acct-btn', type: 'button', 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-controls': menuId,
+    title: `Signed in as ${name}` },
+  h('span', { class: 'nav-avatar', 'aria-hidden': 'true' }, initial, h('span', { class: 'nav-online' })),
+  h('span', { class: 'acct-btn-text' }, h('span', { class: 'acct-btn-name', text: name.split(/\s+/)[0] }), h('span', { class: 'acct-btn-role', text: ROLE_TEXT[user.role] || '' })),
+  h('span', { class: 'acct-chev', 'aria-hidden': 'true', text: '▾' }));
+  const wrap = h('div', { class: 'acct' }, button, menu);
+  const setOpen = (open) => { menu.hidden = !open; button.setAttribute('aria-expanded', String(open)); };
+  button.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menu.hidden); });
+  document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) setOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { setOpen(false); button.focus(); } });
+  return wrap;
+}
+
 /* The top navigation is the same on every customer page. Signed in, its "Sign in" button
    becomes "Sign out" in the same place and style; nothing else in the bar changes. */
 (() => {
@@ -302,6 +353,12 @@ function resizeImage(file, maxSide = 640) {
       h('span', { class: 'nav-user-text' },
         h('span', { class: 'nav-user-name', text: first }),
         h('span', { class: 'nav-user-status', text: 'Online' }))));
+    // A shop, garage or admin account: the name opens the account menu, to switch to the other
+    // places this account can use. A customer's stays as it is.
+    if (user.portals && user.portals.length) {
+      const nameChip = signOut.previousElementSibling;
+      nameChip.replaceWith(accountMenu(user, 'customer'));
+    }
     // On a phone the links fold into the menu, so the avatar also sits next to the menu button.
     const toggle = document.getElementById('nav-toggle');
     if (toggle) {

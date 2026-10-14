@@ -16,14 +16,17 @@
   const TABS = [
     ['overview', 'Overview', renderOverview],
     ['applications', 'Applications', renderApplications],
+    ['reports', 'Reports', renderReports],
     ['parts', 'Parts', renderParts],
+    ['shops', 'Shops', renderShops],
+    ['garages', 'Garages', renderGarages],
+    ['customers', 'Customers', renderCustomers],
+    ['bookings', 'Bookings', renderBookings],
     ['reviews', 'Reviews', renderReviews],
     ['fitment', 'Part numbers', renderFitment],
     ['gaps', 'Missing parts', renderGaps],
-    ['shops', 'Shops', renderShops],
-    ['garages', 'Garages', renderGarages],
     ['cars', 'Cars', renderCars],
-    ['bookings', 'Bookings', renderBookings],
+    ['log', 'Admin log', renderLog],
   ];
 
   init();
@@ -53,7 +56,7 @@
 
   async function openConsole(user) {
     categories = (await api('/api/catalog')).categories;
-    $('admin-who').textContent = user.email;
+    $('admin-account').replaceChildren(accountMenu(user, 'admin'));
     $('login').hidden = true;
     $('console').hidden = false;
     $('tabs').replaceChildren(...TABS.map(([key, label]) => h('button', {
@@ -96,29 +99,124 @@
   // ---------------------------------------------------------------- overview
 
   async function renderOverview() {
-    const s = await call('/api/admin/stats');
+    const [s, activity] = await Promise.all([call('/api/admin/stats'), call('/api/admin/activity?weeks=12')]);
     // label is [singular, plural], so "1 booking request" and "2 booking requests" both read right.
-    const stat = (n, [one, many]) => h('div', { class: 'stat' }, h('b', { text: String(n) }), h('span', { text: n === 1 ? one : many }));
+    const stat = (n, [one, many], tone) => h('div', { class: `stat${tone && n ? ` stat-${tone}` : ''}` }, h('b', { text: String(n) }), h('span', { text: n === 1 ? one : many }));
     const tally = (title, rows) => h('div', {},
       h('h3', { text: title }),
       dataTable([{ label: 'Value', key: 'label' }, { label: 'Cars', key: 'n', num: true }], rows));
+    const todo = [
+      s.pending_applications ? [`${s.pending_applications} ${s.pending_applications === 1 ? 'business is' : 'businesses are'} waiting for approval.`, 'Check applications', 'applications'] : null,
+      s.open_reports ? [`${s.open_reports} customer ${s.open_reports === 1 ? 'report is' : 'reports are'} open.`, 'Look into reports', 'reports'] : null,
+      s.pending_part_requests ? [`${s.pending_part_requests} part ${s.pending_part_requests === 1 ? 'request is' : 'requests are'} waiting.`, 'Check part requests', 'parts'] : null,
+    ].filter(Boolean);
     return h('div', {},
-      (s.pending_applications || s.pending_part_requests) ? h('div', { class: 'note-box todo-box' },
-        s.pending_applications ? h('p', {}, `${s.pending_applications} ${s.pending_applications === 1 ? 'business is' : 'businesses are'} waiting for approval. `,
-          h('button', { class: 'link-btn', type: 'button', text: 'Check applications', onclick: () => showTab('applications') })) : null,
-        s.pending_part_requests ? h('p', {}, `${s.pending_part_requests} part ${s.pending_part_requests === 1 ? 'request is' : 'requests are'} waiting. `,
-          h('button', { class: 'link-btn', type: 'button', text: 'Check part requests', onclick: () => showTab('parts') })) : null) : null,
+      todo.length ? h('div', { class: 'note-box todo-box' }, ...todo.map(([msg, btn, tab]) => h('p', {}, `${msg} `,
+        h('button', { class: 'link-btn', type: 'button', text: btn, onclick: () => showTab(tab) })))) : null,
       h('div', { class: 'stat-grid' },
-        stat(s.pending_applications, ['application waiting', 'applications waiting']),
-        stat(s.pending_part_requests, ['part request waiting', 'part requests waiting']),
+        stat(s.pending_applications, ['application waiting', 'applications waiting'], 'new'),
+        stat(s.open_reports, ['open report', 'open reports'], 'warn'),
+        stat(s.pending_part_requests, ['part request waiting', 'part requests waiting'], 'new'),
+        stat(s.customers, ['customer', 'customers']),
+        stat(s.vehicles, ['registered car', 'registered cars']),
+        stat(s.bookings, ['booking', 'bookings']),
+        stat(s.live_listings, ['part in stock', 'parts in stock']),
+        stat(s.shops, ['shop', 'shops']), stat(s.garages, ['garage', 'garages']),
+        stat(s.suspended, ['business suspended', 'businesses suspended'], 'warn'),
         stat(s.reviews, ['review', 'reviews']),
-        stat(s.vehicles, ['registered car', 'registered cars']), stat(s.fitment_rows, ['part number row', 'part number rows']),
-        stat(s.live_listings, ['part in stock', 'parts in stock']), stat(s.shops, ['shop', 'shops']), stat(s.garages, ['garage', 'garages']),
-        stat(s.bookings, ['booking request', 'booking requests']), stat(s.open_gaps, ['missing-part search', 'missing-part searches'])),
-      meta && meta.demo ? h('p', { class: 'note-box', text: 'These numbers include demo cars and shops. Do not quote them in your thesis until you have cleared the demo data.' }) : null,
+        stat(s.fitment_rows, ['part number row', 'part number rows'])),
+      meta && meta.demo ? h('p', { class: 'note-box', text: 'These numbers include demo cars, shops and bookings. Do not quote them in your thesis until you have cleared the demo data.' }) : null,
+
+      h('h2', { text: 'The last 12 weeks' }),
+      h('div', { class: 'chart-grid' },
+        weekChart('Bookings per week', activity.weeks, 'bookings'),
+        weekChart('New cars per week', activity.weeks, 'cars'),
+        weekChart('New customers per week', activity.weeks, 'customers')),
+      h('div', { class: 'chart-grid' },
+        barList('Most booked parts', activity.top_parts, 'bookings'),
+        barList('Shops with the most bookings', activity.top_shops, 'bookings'),
+        barList('Most searched parts we do not have yet', activity.top_missing, 'searches')),
+
+      downloadsBox(),
+      h('h2', { text: 'Cars on Vinzuu' }),
       h('p', { class: 'muted', text: 'The tables below are real data about the cars your users register. When you have enough real registrations, they can support your thesis (always state how many cars they are based on).' }),
       h('div', { class: 'row' }, tally('Cars by make', s.vehicles_by_make), tally('Cars by where they were built', s.vehicles_by_origin_market)),
       tally('Cars by where they were imported from (as the owner told us)', s.vehicles_by_import_source));
+  }
+
+  // ---------------------------------------------------------------- charts (inline SVG, no library)
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const svg = (tag, attrs, ...kids) => {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+    kids.forEach((k) => k && el.append(k));
+    return el;
+  };
+  const weekLabel = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+  /** One series per chart, one bar per week. Hover (or tap) a bar for its exact number; the
+   *  numbers are also in a table under the chart. */
+  function weekChart(title, weeks, key) {
+    const W = 320; const H = 170; const left = 26; const bottom = 22; const top = 14;
+    const values = weeks.map((w) => w[key]);
+    const max = Math.max(...values);
+    const niceMax = max <= 4 ? 4 : Math.ceil(max / 4) * 4;
+    const plotH = H - bottom - top;
+    const step = (W - left) / weeks.length;
+    const barW = Math.max(6, step - 6);
+    const y = (v) => top + plotH - (v / niceMax) * plotH;
+    const chart = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'week-chart', role: 'img', 'aria-label': `${title}: ${values.join(', ')} over the last ${weeks.length} weeks` });
+    for (const g of [0, niceMax / 2, niceMax]) {
+      chart.append(svg('line', { x1: left, x2: W, y1: y(g), y2: y(g), class: g ? 'grid' : 'axis' }));
+      const t = svg('text', { x: left - 6, y: y(g) + 4, 'text-anchor': 'end', class: 'tick' }); t.textContent = String(g); chart.append(t);
+    }
+    weeks.forEach((w, i) => {
+      const v = w[key];
+      const x = left + i * step + (step - barW) / 2;
+      const hgt = (v / niceMax) * plotH;
+      const r = Math.min(4, hgt / 2, barW / 2);
+      const base = top + plotH;
+      const tip = svg('title'); tip.textContent = `Week of ${weekLabel(w.week_start)}: ${v}`;
+      // Rounded at the top (the value end), square on the baseline.
+      const d = v ? `M${x},${base} V${base - hgt + r} Q${x},${base - hgt} ${x + r},${base - hgt} H${x + barW - r} Q${x + barW},${base - hgt} ${x + barW},${base - hgt + r} V${base} Z` : '';
+      const g = svg('g', { class: `bar-g${i === weeks.length - 1 ? ' is-now' : ''}`, tabindex: '0' },
+        svg('rect', { x: left + i * step, y: top, width: step, height: plotH, class: 'hit' }), d ? svg('path', { d, class: 'bar' }) : null, tip);
+      chart.append(g);
+      if (i % 3 === (weeks.length - 1) % 3) {
+        const t = svg('text', { x: x + barW / 2, y: H - 6, 'text-anchor': 'middle', class: 'tick' }); t.textContent = weekLabel(w.week_start); chart.append(t);
+      }
+    });
+    const total = values.reduce((a, b) => a + b, 0);
+    const now = values[values.length - 1];
+    return h('figure', { class: 'chart-card panel' },
+      h('figcaption', {}, h('strong', { text: title }), h('span', { class: 'small muted', text: `${total} in 12 weeks · ${now} this week so far` })),
+      chart,
+      h('details', { class: 'chart-table' }, h('summary', { text: 'See the numbers' }),
+        dataTable([{ label: 'Week of', render: (w) => weekLabel(w.week_start) }, { label: title.replace(/ per week$/, ''), key, num: true }], weeks)));
+  }
+
+  /** Horizontal bars for a top-6 list, longest first, with the number at the end of each bar. */
+  function barList(title, rows, unit) {
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    return h('figure', { class: 'chart-card panel' },
+      h('figcaption', {}, h('strong', { text: title })),
+      rows.length ? h('ul', { class: 'bar-list' }, ...rows.map((r) => h('li', { title: `${r.label}: ${r.n} ${unit}` },
+        h('span', { class: 'bl-label', text: r.label }),
+        h('span', { class: 'bl-track' }, h('span', { class: 'bl-bar', style: `width:${Math.max(2, (r.n / max) * 100)}%` })),
+        h('span', { class: 'bl-n', text: String(r.n) })))) : h('p', { class: 'empty muted', text: 'Nothing yet.' }));
+  }
+
+  // ---------------------------------------------------------------- CSV downloads
+
+  const EXPORTS = [['bookings', 'Bookings'], ['parts', 'Parts'], ['cars', 'Cars'], ['shops', 'Shops'], ['garages', 'Garages'],
+    ['customers', 'Accounts'], ['reviews', 'Reviews'], ['reports', 'Reports']];
+  const csvLink = (what, label) => h('a', { class: 'btn btn-secondary btn-small', href: `/api/admin/export/${what}.csv`, download: '' }, `⤓ ${label || 'Download CSV'}`);
+  function downloadsBox() {
+    return h('div', { class: 'panel downloads' },
+      h('h2', { text: 'Download data' }),
+      h('p', { class: 'muted', text: 'CSV files open in Excel or Google Sheets, for example for your thesis appendix. Downloads are kept in the admin log.' }),
+      h('div', { class: 'btn-row' }, ...EXPORTS.map(([w, l]) => csvLink(w, l))));
   }
 
   // ---------------------------------------------------------------- dialogs
@@ -127,23 +225,24 @@
     let dlg = $('admin-dialog');
     if (!dlg) { dlg = h('dialog', { id: 'admin-dialog', 'aria-labelledby': 'admin-dialog-title' }); document.body.append(dlg); }
     const close = () => { if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open'); };
-    dlg.replaceChildren(h('div', { class: 'dialog-body' }, h('h2', { id: 'admin-dialog-title', text: title }), ...build(close)));
+    dlg.replaceChildren(h('div', { class: 'dialog-body' }, h('h2', { id: 'admin-dialog-title', text: title }), ...build(close).filter(Boolean)));
     if (typeof dlg.showModal === 'function') { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
   }
   const showPhoto = (src, title) => dialog(title, (close) => [
     h('img', { class: 'detail-photo detail-photo-lg', src, alt: title }),
     h('div', { class: 'dialog-actions' }, h('button', { class: 'btn btn-quiet', type: 'button', text: 'Close', onclick: close }))]);
 
-  /** Ask for a reason, then run fn(reason). Used for every "reject". */
-  function askReason(title, hint, fn) {
+  /** Ask for a reason, then run fn(reason). Used for every "reject", "suspend", "block"... */
+  function askReason(title, hint, fn, { action = 'Reject', label = 'Reason (they will see it)', danger = true, intro = null } = {}) {
     const box = h('textarea', { id: 'reason-box', rows: 3, maxLength: 300 });
     const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
     dialog(title, (close) => [
-      fieldEl('Reason (they will see it)', box, hint),
+      intro ? h('p', { class: 'muted', text: intro }) : null,
+      fieldEl(label, box, hint),
       status,
       h('div', { class: 'dialog-actions' },
-        h('button', { class: 'btn btn-danger', type: 'button', text: 'Reject', onclick: async () => {
-          if (!box.value.trim()) return setStatus(status, 'Write the reason.', 'error');
+        h('button', { class: `btn ${danger ? 'btn-danger' : 'btn-primary'}`, type: 'button', text: action, onclick: async () => {
+          if (!box.value.trim()) return setStatus(status, label.startsWith('Reason') ? 'Write the reason.' : 'Write a short note.', 'error');
           try { await fn(box.value.trim()); close(); } catch (err) { setStatus(status, err.message, 'error'); }
         } }),
         h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: close }))]);
@@ -226,6 +325,61 @@
             h('button', { class: 'btn btn-quiet btn-small', type: 'button', text: 'Reject', onclick: () => askReason(`Reject ${a.business_name}`,
               'For example: the TIN does not match the certificate. They can apply again.',
               async (reason) => { await call(`/api/admin/applications/${a.id}/reject`, { method: 'POST', body: { admin_note: reason } }); showTab('applications'); }) })),
+          status) : null));
+  }
+
+  // ---------------------------------------------------------------- reports from customers
+
+  async function renderReports() {
+    const { reports, reasons } = await call('/api/admin/reports');
+    let filter = reports.some((r) => r.status === 'open') ? 'open' : 'all';
+    const mount = h('div', { class: 'app-list' });
+    const draw = () => {
+      const rows = reports.filter((r) => filter === 'all' || r.status === filter);
+      mount.replaceChildren(...(rows.length ? rows.map((r) => reportCard(r, reasons)) : [h('p', { class: 'empty muted', text: filter === 'open' ? 'No open reports.' : 'Nothing here.' })]));
+    };
+    draw();
+    const count = (st) => reports.filter((r) => r.status === st).length;
+    return h('div', {},
+      h('h2', { text: 'Problems customers reported' }),
+      h('p', { class: 'muted', text: 'Call the customer and the business, then decide. You can hide the part, suspend the business, or cancel a booking from the Bookings tab. Close the report with a note saying what you did.' }),
+      segFilter([['open', `Open (${count('open')})`], ['closed', `Closed (${count('closed')})`], ['all', 'All']], filter, (k) => { filter = k; draw(); }),
+      mount);
+  }
+
+  function reportCard(r, reasons) {
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    const about = r.target === 'garage' ? `Garage: ${r.garage_name}` : r.target === 'listing'
+      ? `Part: ${r.part_category} ${r.oe_number || r.universal_spec || ''} at ${r.shop_name}` : `Shop: ${r.shop_name}`;
+    const act = (fn, done) => async () => {
+      try { await fn(); setStatus(status, done, 'ok'); setTimeout(() => showTab('reports'), 1200); } catch (err) { setStatus(status, err.message, 'error'); }
+    };
+    const suspendable = r.garage_id ? ['garages', r.garage_id, r.garage_name, r.garage_suspended] : ['shops', r.shop_id, r.shop_name, r.shop_suspended];
+    return h('article', { class: `app-card report-card${r.status === 'closed' ? ' is-closed' : ''}` },
+      r.photo_url ? h('div', { class: 'app-photos' }, h('button', { class: 'thumb-btn', type: 'button', onclick: () => showPhoto(r.photo_url, r.part_category) },
+        h('img', { src: r.photo_url, alt: `Photo of ${r.part_category}` }), h('span', { text: 'The part' }))) : null,
+      h('div', { class: 'app-body' },
+        h('div', { class: 'app-top' }, r.status === 'open' ? pill('Open', 'pill-warn') : pill('Closed', 'pill-done'),
+          h('span', { class: 'small muted', text: `Reported ${when(r.created_at)}${r.booking_id ? ` · booking #${r.booking_id}` : ''}` })),
+        h('h3', { text: reasons[r.reason] || r.reason }),
+        h('dl', { class: 'detail-list' },
+          h('dt', { text: 'About' }), h('dd', {}, about,
+            r.shop_suspended && r.target !== 'garage' ? h('span', { class: 'pill pill-off inline-pill', text: 'Suspended' }) : null,
+            r.garage_suspended && r.target === 'garage' ? h('span', { class: 'pill pill-off inline-pill', text: 'Suspended' }) : null,
+            r.listing_hidden ? h('span', { class: 'pill pill-off inline-pill', text: 'Part hidden' }) : null),
+          h('dt', { text: 'What happened' }), h('dd', { text: r.details || 'No details given.' }),
+          h('dt', { text: 'From' }), h('dd', {}, `${r.user_name || 'Deleted account'}${r.user_email ? ` (${r.user_email})` : ''} `,
+            r.user_phone ? h('a', { href: whatsappLink(r.user_phone, `Hello ${String(r.user_name || '').split(' ')[0]}, this is the Vinzuu team about the problem you reported.`), target: '_blank', rel: 'noopener', text: r.user_phone }) : null),
+          r.admin_note ? h('dt', { text: 'What we did' }) : null, r.admin_note ? h('dd', { text: `${r.admin_note} (${when(r.closed_at)})` }) : null),
+        r.status === 'open' ? h('div', { class: 'btn-row' },
+          h('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'Close with a note', onclick: () => askReason('Close this report',
+            'For example: called the shop, they refunded the difference.',
+            async (note) => { await call(`/api/admin/reports/${r.id}/close`, { method: 'POST', body: { admin_note: note } }); showTab('reports'); },
+            { action: 'Close report', label: 'What did you do?', danger: false }) }),
+          r.listing_id && !r.listing_hidden ? h('button', { class: 'btn btn-secondary btn-small', type: 'button', text: 'Hide the part',
+            onclick: act(() => call(`/api/admin/listings/${r.listing_id}`, { method: 'PUT', body: { hidden: true } }), 'The part is hidden from customers.') }) : null,
+          suspendable[1] && !suspendable[3] ? h('button', { class: 'btn btn-danger btn-small', type: 'button', text: `Suspend ${suspendable[0] === 'shops' ? 'the shop' : 'the garage'}`,
+            onclick: () => suspendBusiness(suspendable[0], { id: suspendable[1], name: suspendable[2] }, () => showTab('reports')) }) : null,
           status) : null));
   }
 
@@ -519,7 +673,94 @@
       ], gaps));
   }
 
-  // ---------------------------------------------------------------- shops
+  // ---------------------------------------------------------------- shops and garages (with scorecards)
+
+  /** Suspend (with a reason) or reactivate a shop or garage. table is 'shops' or 'garages'. */
+  function suspendBusiness(table, b, then) {
+    const kind = table === 'shops' ? 'shop' : 'garage';
+    askReason(`Suspend ${b.name}`, 'For example: three customers reported fake brake pads. We are checking.',
+      async (reason) => { await call(`/api/admin/${table}/${b.id}/suspend`, { method: 'POST', body: { reason } }); then(); },
+      { action: `Suspend ${kind}`, intro: kind === 'shop'
+        ? 'Its parts disappear from search and nobody can book them until you reactivate it. The owner can still sign in and sees your reason.'
+        : 'It disappears from the garage list and nobody can book it until you reactivate it. The owner can still sign in and sees your reason.' });
+  }
+  async function reactivate(table, b, then) {
+    if (!confirm(`Reactivate ${b.name}? Customers will see it again.`)) return;
+    try { await call(`/api/admin/${table}/${b.id}/reactivate`, { method: 'POST' }); then(); } catch (err) { alert(err.message); }
+  }
+  /** Opens Vinzuu Sellers & Garages as this shop or garage, read-only. */
+  function openAsOwner(kind, id) {
+    store.set('vz.biz.view', JSON.stringify({ kind, id }), 'sessionStorage');
+    store.set('vz.biz.side', kind, 'sessionStorage');
+    location.href = '/business.html';
+  }
+
+  function editBusiness(table, b) {
+    const kind = table === 'shops' ? 'shop' : 'garage';
+    const f = {
+      name: input('eb-name', { value: b.name, maxLength: 80 }), phone: input('eb-phone', { type: 'tel', value: b.phone || '' }),
+      wa: input('eb-wa', { type: 'tel', value: b.whatsapp_number || '', placeholder: 'Same as phone if blank' }),
+      address: input('eb-addr', { value: b.address_text || '', maxLength: 120 }),
+      hours: input('eb-hours', { value: b.opening_hours || '', maxLength: 120, placeholder: 'For example: Mon to Sat 8:00 to 18:00' }),
+      lat: input('eb-lat', { value: b.latitude, inputMode: 'decimal' }), lon: input('eb-lon', { value: b.longitude, inputMode: 'decimal' }),
+      vetted: kind === 'shop' ? h('input', { id: 'eb-vet', type: 'checkbox', checked: !!b.vetted }) : null,
+      spec: kind === 'garage' ? input('eb-spec', { value: b.specialties || '', maxLength: 160 }) : null,
+    };
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    dialog(`Edit ${b.name}`, (close) => [
+      h('p', { class: 'muted', text: `Only the vinzuu team can change the name and the map location. The ${kind} owner can change the rest themselves too.` }),
+      h('div', { class: 'row stack-sm' }, fieldEl('Name', f.name), fieldEl('Phone', f.phone)),
+      h('div', { class: 'row stack-sm' }, fieldEl('WhatsApp', f.wa), fieldEl('Area or address', f.address)),
+      fieldEl('Opening hours', f.hours),
+      h('div', { class: 'row stack-sm' }, fieldEl('Latitude', f.lat), fieldEl('Longitude', f.lon)),
+      f.spec ? fieldEl('What they are good at', f.spec) : null,
+      f.vetted ? h('div', { class: 'field' }, h('label', {}, f.vetted, ' Vetted: we checked they sell genuine parts')) : null,
+      status,
+      h('div', { class: 'dialog-actions' },
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Save', onclick: async () => {
+          const body = { name: f.name.value, phone: f.phone.value, whatsapp_number: f.wa.value || null, address_text: f.address.value,
+            opening_hours: f.hours.value, latitude: f.lat.value, longitude: f.lon.value };
+          if (f.vetted) body.vetted = f.vetted.checked;
+          if (f.spec) body.specialties = f.spec.value;
+          try { await call(`/api/admin/${table}/${b.id}`, { method: 'PUT', body }); close(); showTab(table); } catch (err) { setStatus(status, err.message, 'error'); }
+        } }),
+        h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: close }))]);
+  }
+
+  /** The scorecard table shared by the Shops and Garages tabs. */
+  function scorecardList(table, rows, extraColumns) {
+    const kind = table === 'shops' ? 'shop' : 'garage';
+    let filter = 'all';
+    const mount = h('div', {});
+    const attention = (b) => b.flags.length > 0;
+    const draw = () => mount.replaceChildren(dataTable([
+      { label: kind === 'shop' ? 'Shop' : 'Garage', render: (b) => h('div', { class: 'part-cell' }, h('strong', { text: b.name }),
+        h('span', { class: 'small muted', text: [b.address_text, kind === 'shop' ? (b.vetted ? 'vetted' : 'not vetted') : null].filter(Boolean).join(' · ') }),
+        b.flags.length ? h('span', { class: 'flag-row' }, ...b.flags.map((fl) => h('span', { class: `pill ${fl === 'Suspended' ? 'pill-off' : 'pill-warn'}`, text: fl }))) : null) },
+      { label: 'Sign-in', render: (b) => (b.login_email ? h('div', { class: 'part-cell' }, h('span', { text: b.login_email }),
+        h('span', { class: 'small muted', text: b.last_active ? `Last in ${when(b.last_active)}` : 'Not signed in yet' })) : h('span', { class: 'muted', text: 'No account' })) },
+      { label: 'Rating', render: (b) => (b.review_count ? h('span', { class: 'nowrap' }, starsEl(b.rating), ` ${b.rating} (${b.review_count})`) : h('span', { class: 'muted', text: 'None yet' })) },
+      { label: 'Bookings', render: (b) => h('div', { class: 'part-cell' }, h('strong', { text: String(b.bookings) }),
+        b.bookings ? h('span', { class: 'small muted', text: `${b.cancel_rate}% ${kind === 'shop' ? 'cancelled' : 'declined'}` }) : null) },
+      { label: 'Reports', render: (b) => (b.open_reports ? h('b', { class: 'text-warn', text: `${b.open_reports} open` }) : '0'), num: true },
+      ...extraColumns,
+      { label: '', render: (b) => h('div', { class: 'btn-row' },
+        h('button', { class: 'btn btn-secondary btn-small', type: 'button', text: 'Edit', onclick: () => editBusiness(table, b) }),
+        b.login_email ? h('button', { class: 'btn btn-secondary btn-small', type: 'button', text: 'Open dashboard', title: `See what ${b.name} sees (read-only)`, onclick: () => openAsOwner(kind, b.id) }) : null,
+        b.suspended
+          ? h('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'Reactivate', onclick: () => reactivate(table, b, () => showTab(table)) })
+          : h('button', { class: 'btn btn-danger btn-small', type: 'button', text: 'Suspend', onclick: () => suspendBusiness(table, b, () => showTab(table)) })) },
+    ], rows.filter((b) => filter === 'all' || (filter === 'attention' ? attention(b) : b.suspended))));
+    draw();
+    const n = (fn) => rows.filter(fn).length;
+    return h('div', {},
+      h('h2', { text: `All ${table} (${rows.length})` }),
+      h('p', { class: 'muted', text: `Flags: rating under 3.5 (from 3 or more reviews), more than 20% of bookings ${kind === 'shop' ? 'cancelled' : 'declined'} (from 5 or more), an open customer report, or no sign-in for 30 days.` }),
+      h('div', { class: 'parts-tools' },
+        segFilter([['all', 'All'], ['attention', `Needs attention (${n(attention)})`], ['suspended', `Suspended (${n((b) => b.suspended)})`]], filter, (k) => { filter = k; draw(); }),
+        csvLink(table)),
+      mount);
+  }
 
   async function renderShops() {
     const { shops } = await call('/api/admin/shops');
@@ -541,7 +782,7 @@
           vetted: f.vetted.checked, onboarded_by: f.onboarded.value,
         } });
         setStatus(status, `${shop.name} added. To give it a sign-in, ask the owner to apply on the Sell on vinzuu page.`, 'ok');
-        showTabKeepStatus();
+        setTimeout(() => showTab('shops'), 4000);
       } catch (err) { setStatus(status, err.message, 'error'); }
     } },
       h('h2', { text: 'Add a shop' }),
@@ -553,22 +794,10 @@
         h('p', { class: 'hint', text: 'Only vetted shops can earn the Verified Genuine label.' })),
       h('button', { class: 'btn btn-primary', type: 'submit', text: 'Add shop' }), status);
 
-    function showTabKeepStatus() { setTimeout(() => showTab('shops'), 4000); }
-
-    return h('div', {}, form, h('h2', { text: 'All shops' }), dataTable([
-      { label: 'Shop', key: 'name' }, { label: 'Phone', key: 'phone' }, { label: 'Area', key: 'address_text' },
-      { label: 'Signs in as', render: (s) => s.login_email || h('span', { class: 'muted', text: 'No account' }) },
-      { label: 'Rating', render: (s) => (s.rating ? h('span', {}, starsEl(s.rating), ` ${s.rating}`) : '') },
-      { label: 'Vetted', render: (s) => {
-        const box = h('input', { type: 'checkbox', checked: !!s.vetted, 'aria-label': `Vetted: ${s.name}`, onchange: async (e) => {
-          try { await call(`/api/admin/shops/${s.id}`, { method: 'PUT', body: { vetted: e.target.checked } }); } catch (err) { e.target.checked = !e.target.checked; alert(err.message); }
-        } });
-        return box;
-      } },
-    ], shops));
+    return h('div', {}, form, scorecardList('shops', shops, [
+      { label: 'On sale', key: 'parts_on_sale', num: true },
+    ]));
   }
-
-  // ---------------------------------------------------------------- garages
 
   async function renderGarages() {
     const { garages } = await call('/api/admin/garages');
@@ -595,12 +824,53 @@
       h('div', { class: 'row stack-sm' }, fieldEl('Latitude', f.lat), fieldEl('Longitude', f.lon)),
       fieldEl('What they are good at', f.specialties, 'For example: brakes, body work, Korean cars.'),
       h('button', { class: 'btn btn-primary', type: 'submit', text: 'Add garage' }), status);
-    return h('div', {}, form, h('h2', { text: 'All garages' }), dataTable([
-      { label: 'Garage', key: 'name' }, { label: 'Phone', key: 'phone' }, { label: 'Area', key: 'address_text' }, { label: 'Specialties', key: 'specialties' },
-    ], garages));
+    return h('div', {}, form, scorecardList('garages', garages, [
+      { label: 'Labour prices', key: 'services', num: true },
+    ]));
   }
 
-  // ---------------------------------------------------------------- cars and bookings (read only)
+  // ---------------------------------------------------------------- customers (every account)
+
+  async function renderCustomers() {
+    let role = 'customer';
+    const search = input('u-q', { type: 'search', placeholder: 'Search name, email or phone', 'aria-label': 'Search accounts' });
+    const mount = h('div', {});
+    const ROLE = { customer: 'Customer', business: 'Shop or garage', admin: 'Admin' };
+    let timer = null;
+    async function reload() {
+      const { users } = await call(`/api/admin/users?role=${role === 'all' ? '' : role}&q=${enc(search.value)}`);
+      mount.replaceChildren(dataTable([
+        { label: 'Name', render: (u) => h('div', { class: 'part-cell' }, h('strong', { text: u.name }), h('span', { class: 'small muted', text: u.email }),
+          u.phone ? h('span', { class: 'small muted', text: u.phone }) : null) },
+        { label: 'Type', render: (u) => h('div', { class: 'part-cell' }, h('span', { text: ROLE[u.role] || u.role }),
+          u.shop_name || u.garage_name ? h('span', { class: 'small muted', text: [u.shop_name, u.garage_name].filter(Boolean).join(' + ') }) : null) },
+        { label: 'Cars', key: 'cars', num: true }, { label: 'Bookings', key: 'bookings', num: true }, { label: 'Reports', key: 'reports', num: true },
+        { label: 'Joined', render: (u) => h('span', { class: 'nowrap', text: String(u.created_at || '').slice(0, 10) }) },
+        { label: 'Last signed in', render: (u) => (u.last_login_at ? h('span', { class: 'nowrap', text: shortWhen(u.last_login_at) }) : h('span', { class: 'muted', text: 'Not yet' })) },
+        { label: 'Status', render: (u) => (u.blocked ? h('span', { title: u.blocked_reason || '' }, pill('Blocked', 'pill-off')) : pill('Active', 'pill-ok')) },
+        { label: '', render: (u) => (u.role === 'admin' ? null : u.blocked
+          ? h('button', { class: 'btn btn-secondary btn-small', type: 'button', text: 'Unblock', onclick: async () => {
+            if (!confirm(`Unblock ${u.email}? They can sign in again.`)) return;
+            try { await call(`/api/admin/users/${u.id}/unblock`, { method: 'POST' }); reload(); } catch (err) { alert(err.message); }
+          } })
+          : h('button', { class: 'btn btn-danger btn-small', type: 'button', text: 'Block', onclick: () => askReason(`Block ${u.name}`,
+            'For example: made fake bookings with other people\'s numbers.',
+            async (reason) => { await call(`/api/admin/users/${u.id}/block`, { method: 'POST', body: { reason } }); reload(); },
+            { action: 'Block account', intro: `${u.email} is signed out at once and cannot sign in again until you unblock it. They see your reason when they try.` }) })) },
+      ], users));
+    }
+    search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(reload, 250); });
+    await reload();
+    return h('div', {},
+      h('h2', { text: 'Accounts' }),
+      h('p', { class: 'muted', text: 'Everyone with a Vinzuu account. Block an account that is abusing the site; a shop or garage owner who is blocked also loses their dashboard.' }),
+      h('div', { class: 'parts-tools' }, search,
+        segFilter([['customer', 'Customers'], ['business', 'Shops and garages'], ['admin', 'Admins'], ['all', 'All']], role, (k) => { role = k; reload(); }),
+        csvLink('customers')),
+      mount);
+  }
+
+  // ---------------------------------------------------------------- cars
 
   async function renderCars() {
     const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
@@ -650,15 +920,84 @@
       ], vehicles));
     }
     await reloadList();
-    return h('div', {}, form, h('h2', { text: 'Registered cars' }),
+    return h('div', {}, form, h('div', { class: 'h2-row' }, h('h2', { text: 'Registered cars' }), csvLink('cars')),
       h('p', { class: 'muted', text: 'Full VINs and phone numbers are visible here only. Handle them carefully.' }), listMount);
   }
 
+  const shortWhen = (ts) => {
+    const d = new Date(String(ts || '').replace(' ', 'T') + 'Z');
+    return Number.isNaN(d.getTime()) ? (ts || '') : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
+  const STAGE = { open: ['Open', 'pill-new'], finished: ['Finished', 'pill-done'], cancelled: ['Cancelled', 'pill-off'] };
+  const SHOP_SIDE = { requested: 'New', confirmed: 'Reserved', collected: 'Collected', cancelled: 'Cancelled' };
+  const GARAGE_SIDE = { requested: 'New', accepted: 'Booked', done: 'Done', declined: 'Declined' };
+
   async function renderBookings() {
-    const { bookings } = await call('/api/admin/bookings');
-    return h('div', {}, h('h2', { text: 'Booking requests' }), dataTable([
-      { label: 'When', key: 'created_at' }, { label: 'Car', render: (b) => `${b.year} ${b.make} ${b.model} (${b.plate_number})` },
-      { label: 'Customer', key: 'customer_phone' }, { label: 'Status', key: 'status' }, { label: 'Note', key: 'note' },
-    ], bookings));
+    const [{ shops }, { garages }] = await Promise.all([call('/api/admin/shops'), call('/api/admin/garages')]);
+    const q = { stage: 'open', shop_id: '', garage_id: '', from: '', to: '', q: '' };
+    const shopSel = select('bk-shop', [['', 'All shops'], ...shops.map((x) => [String(x.id), x.name])], { 'aria-label': 'Shop' });
+    const garageSel = select('bk-garage', [['', 'All garages'], ...garages.map((x) => [String(x.id), x.name])], { 'aria-label': 'Garage' });
+    const from = input('bk-from', { type: 'date', 'aria-label': 'From' });
+    const to = input('bk-to', { type: 'date', 'aria-label': 'To' });
+    const search = input('bk-q', { type: 'search', placeholder: 'Phone, plate, car or part', 'aria-label': 'Search bookings' });
+    const mount = h('div', {});
+    const count = h('p', { class: 'small muted' });
+    let timer = null;
+    async function reload() {
+      Object.assign(q, { shop_id: shopSel.value, garage_id: garageSel.value, from: from.value, to: to.value, q: search.value.trim() });
+      const { bookings } = await call(`/api/admin/bookings?${new URLSearchParams(q)}`);
+      count.textContent = `${bookings.length} ${bookings.length === 1 ? 'booking' : 'bookings'}`;
+      mount.replaceChildren(dataTable([
+        { label: 'When', render: (b) => h('span', { class: 'nowrap', text: shortWhen(b.created_at) }) },
+        { label: 'Car and customer', render: (b) => h('div', { class: 'part-cell' }, h('strong', { text: `${b.year} ${b.make} ${b.model}` }),
+          h('span', { class: 'small muted', text: b.plate_number || '' }), h('a', { class: 'small', href: `tel:${b.customer_phone}`, text: b.customer_phone })) },
+        { label: 'Part', render: (b) => (b.part_category ? h('div', { class: 'part-cell' }, h('span', { text: b.part_category }),
+          h('span', { class: 'small muted', text: [b.oe_number || b.universal_spec, b.price_rwf ? fmtRwf(b.price_rwf) : null].filter(Boolean).join(' · ') })) : 'Repair only') },
+        { label: 'Shop', render: (b) => (b.shop_name ? h('div', { class: 'part-cell' }, h('span', { text: b.shop_name }), h('span', { class: 'small muted', text: SHOP_SIDE[b.shop_status] || b.shop_status })) : '') },
+        { label: 'Garage', render: (b) => (b.garage_name ? h('div', { class: 'part-cell' }, h('span', { text: b.garage_name }),
+          h('span', { class: 'small muted', text: b.garage_status === 'accepted' && b.garage_time ? `Booked ${b.garage_time}` : GARAGE_SIDE[b.garage_status] || b.garage_status })) : '') },
+        { label: 'Status', render: (b) => h('div', { class: 'part-cell' }, pill(...STAGE[b.stage]), b.admin_note ? h('span', { class: 'small muted', text: `vinzuu: ${b.admin_note}` }) : null) },
+        { label: '', render: (b) => (b.stage === 'open' ? h('button', { class: 'btn btn-quiet btn-small', type: 'button', text: 'Cancel', onclick: () => askReason('Cancel this booking',
+          'For example: the customer called to cancel, or the shop sold the part.',
+          async (reason) => { await call(`/api/admin/bookings/${b.id}/cancel`, { method: 'POST', body: { reason } }); reload(); },
+          { action: 'Cancel booking', intro: `${b.part_category || 'Repair'} for a ${b.year} ${b.make} ${b.model}. The customer, the shop and the garage all see your reason.` }) }) : null) },
+      ], bookings));
+    }
+    const later = () => { clearTimeout(timer); timer = setTimeout(reload, 250); };
+    [shopSel, garageSel, from, to].forEach((el) => el.addEventListener('change', reload));
+    search.addEventListener('input', later);
+    await reload();
+    return h('div', {},
+      h('h2', { text: 'Bookings' }),
+      h('div', { class: 'filter-bar' },
+        segFilter([['open', 'Open'], ['finished', 'Finished'], ['cancelled', 'Cancelled'], ['', 'All']], q.stage, (k) => { q.stage = k; reload(); }),
+        search, shopSel, garageSel,
+        h('label', { class: 'date-range' }, 'From ', from), h('label', { class: 'date-range' }, 'to ', to),
+        csvLink('bookings')),
+      count, mount);
+  }
+
+  // ---------------------------------------------------------------- admin log
+
+  async function renderLog() {
+    const typeSel = select('log-type', [['', 'Everything'], ['application', 'Applications'], ['part', 'Parts'], ['part_request', 'Part requests'],
+      ['shop', 'Shops'], ['garage', 'Garages'], ['user', 'Accounts'], ['booking', 'Bookings'], ['report', 'Reports'], ['review', 'Reviews'],
+      ['part_number', 'Part numbers'], ['car', 'Cars'], ['export', 'Downloads']], { 'aria-label': 'Show' });
+    const mount = h('div', {});
+    async function reload() {
+      const { log } = await call(`/api/admin/log?type=${enc(typeSel.value)}`);
+      mount.replaceChildren(dataTable([
+        { label: 'When', render: (l) => h('span', { class: 'nowrap', text: when(l.created_at) }) },
+        { label: 'Admin', key: 'admin_email' },
+        { label: 'Did', render: (l) => h('strong', { text: l.action }) },
+        { label: 'Details', render: (l) => l.detail || '' },
+      ], log));
+    }
+    typeSel.addEventListener('change', reload);
+    await reload();
+    return h('div', {},
+      h('h2', { text: 'What admins changed' }),
+      h('p', { class: 'muted', text: 'Every approval, rejection, edit, suspension, block, cancellation and download, newest first. Nobody can edit this list.' }),
+      h('div', { class: 'field filter-field' }, typeSel), mount);
   }
 })();

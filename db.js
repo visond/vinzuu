@@ -225,6 +225,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_once ON reviews (booking_id, targe
 CREATE INDEX IF NOT EXISTS idx_reviews_shop ON reviews (shop_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_garage ON reviews (garage_id);
 
+-- A customer's complaint about a shop, a garage or one part (a fake part, the wrong part, a
+-- price the shop did not honour...). The admin looks into it and closes it with a note.
+CREATE TABLE IF NOT EXISTS reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+  target TEXT NOT NULL CHECK (target IN ('shop','garage','listing')),
+  shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+  garage_id INTEGER REFERENCES garages(id) ON DELETE CASCADE,
+  listing_id INTEGER REFERENCES shop_listings(id) ON DELETE SET NULL,
+  reason TEXT NOT NULL,
+  details TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+  admin_note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  closed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports (status);
+
+-- What each admin changed and when: approvals, rejections, hiding, suspending, deleting.
+CREATE TABLE IF NOT EXISTS admin_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  admin_email TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_type TEXT,
+  target_id INTEGER,
+  detail TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Spec 8.6
 CREATE TABLE IF NOT EXISTS garages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -297,6 +328,16 @@ function openDb(dbPath = process.env.DB_PATH || DEFAULT_DB_PATH) {
   ensureColumn(db, 'bookings', 'garage_note', 'TEXT');
   // The signed-in customer who made the booking: they see it under "My bookings" and review it.
   ensureColumn(db, 'bookings', 'user_id', 'INTEGER REFERENCES users(id)');
+  // The admin can suspend a shop or garage (it disappears from search until reactivated), block
+  // an account (it can no longer sign in), and cancel a booking. Each keeps the reason.
+  ensureColumn(db, 'shops', 'suspended', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'shops', 'suspended_reason', 'TEXT');
+  ensureColumn(db, 'garages', 'suspended', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'garages', 'suspended_reason', 'TEXT');
+  ensureColumn(db, 'users', 'blocked', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'users', 'blocked_reason', 'TEXT');
+  ensureColumn(db, 'users', 'last_login_at', 'TEXT');
+  ensureColumn(db, 'bookings', 'admin_note', 'TEXT');
   migratePlateNotUnique(db);
   ensureCategories(db);
   return db;
@@ -534,6 +575,7 @@ function seedDemo(db) {
 // like the rest of the demo data.
 const DEMO_ADMIN = { email: 'admin@vinzuu.rw', password: 'Admin-vinzuu1' };
 const DEMO_BUSINESS_PASSWORD = 'Vinzuu-demo1';
+const DEMO_CUSTOMER_EMAIL = 'customer@vinzuu.rw';
 
 // [name, part_category or null, price, minutes]: labour prices for each demo garage.
 const DEMO_SERVICES = [
@@ -615,6 +657,43 @@ function ensureDemoAccounts(db) {
       insRv.run('garage', null, garage.id, ['Diane K.', 'Patrick N.'][i], r, c, rep, `-${gi + i + 1} day`)));
     db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo_business', '1')").run();
   });
+  ensureDemoAdminData(db, bizHash);
+}
+
+/** A demo customer account, a few weeks of past bookings (so the admin's charts have something
+ *  to draw) and one open customer report. Runs once per demo database. */
+function ensureDemoAdminData(db, bizHash) {
+  if (db.prepare("SELECT 1 FROM meta WHERE key = 'demo_admin'").get()) return;
+  tx(db, () => {
+    let customer = db.prepare('SELECT id FROM users WHERE email = ?').get(DEMO_CUSTOMER_EMAIL);
+    if (!customer) {
+      customer = { id: Number(db.prepare(`INSERT INTO users (name, email, phone, password_hash, auth_provider, role, created_at)
+        VALUES ('Demo Customer', ?, '+250788000100', ?, 'local', 'customer', datetime('now', '-40 day'))`).run(DEMO_CUSTOMER_EMAIL, bizHash).lastInsertRowid) };
+    }
+    db.prepare('UPDATE bookings SET user_id = ? WHERE user_id IS NULL').run(customer.id);
+    const car = db.prepare("SELECT id FROM vehicles WHERE registered_by = 'demo seed' ORDER BY id LIMIT 1").get();
+    const listings = db.prepare(`SELECT l.id FROM shop_listings l JOIN shops s ON s.id = l.shop_id
+      WHERE s.onboarded_by = 'demo seed' ORDER BY l.id LIMIT 12`).all();
+    const garages = db.prepare("SELECT id FROM garages WHERE name LIKE 'Demo Garage %' ORDER BY id").all();
+    if (car && listings.length && garages.length) {
+      const ins = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, shop_status, garage_status, garage_time, created_at)
+        VALUES (?,?,?,?,?,?,?, datetime('now', ?))`);
+      // Past weeks: mostly finished, a few cancelled, so the charts and scorecards show something.
+      const ago = [5, 9, 12, 16, 19, 23, 26, 33, 37, 41, 48, 52];
+      ago.forEach((days, i) => {
+        const cancelled = i % 5 === 3;
+        ins.run(`+25078800${String(200 + i)}`, car.id, listings[i % listings.length].id, garages[i % garages.length].id,
+          cancelled ? 'cancelled' : 'collected', cancelled ? 'declined' : 'done',
+          cancelled ? null : db.prepare(`SELECT date('now', ?) || ' 10:00' AS t`).get(`-${days - 1} day`).t, `-${days} day`);
+      });
+    }
+    const shop = db.prepare("SELECT id FROM shops WHERE onboarded_by = 'demo seed' ORDER BY id LIMIT 1 OFFSET 1").get();
+    if (shop) {
+      db.prepare(`INSERT INTO reports (user_id, target, shop_id, reason, details, created_at)
+        VALUES (?, 'shop', ?, 'price', 'The site said 45,000 RWF but at the counter they asked for 60,000.', datetime('now', '-1 day'))`).run(customer.id, shop.id);
+    }
+    db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo_admin', '1')").run();
+  });
 }
 
 /** Demo databases created before the demo cars had VINs: give each seeded car its VIN, so the
@@ -634,4 +713,4 @@ function isDemo(db) {
   return !!row && row.value === '1';
 }
 
-module.exports = { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD };
+module.exports = { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD, DEMO_CUSTOMER_EMAIL };

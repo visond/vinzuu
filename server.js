@@ -22,6 +22,11 @@ const APP_NAME = 'Vinzuu';
 
 const ORIGINS = ['Korea', 'Japan', 'USA', 'Canada', 'Mexico', 'Germany', 'UK', 'France', 'Spain',
   'Italy', 'Turkey', 'Slovakia', 'China', 'India', 'Thailand', 'Indonesia', 'South Africa'];
+// What a customer can report about a shop, a garage or a part.
+const REPORT_REASONS = {
+  fake: 'Fake or not genuine part', wrong_part: 'Wrong part, or it did not fit', price: 'Price not honoured',
+  no_show: 'Did not answer, or did not keep the booking', rude: 'Rude or unfair treatment', other: 'Something else',
+};
 const IMPORT_SOURCES = ['Japan', 'Korea', 'UAE / Dubai', 'China', 'USA', 'Europe',
   'Local dealer in Rwanda', 'Another African country', 'Not sure'];
 
@@ -184,6 +189,8 @@ function createApp(db, config = {}) {
   app.use((req, res, next) => {
     const cookies = auth.parseCookies(req);
     req.userId = auth.verifySession(cookies[auth.COOKIE_NAME]);
+    // A blocked account is signed out everywhere at once: its cookie no longer counts.
+    if (req.userId != null && db.prepare('SELECT blocked FROM users WHERE id = ?').get(req.userId)?.blocked) req.userId = null;
     next();
   });
 
@@ -196,11 +203,26 @@ function createApp(db, config = {}) {
   const roleOf = (u) => (!u ? null : u.role === 'admin' ? 'admin'
     : (u.role === 'business' && (u.shop_id || u.garage_id)) ? 'business' : 'customer');
   const homeFor = (u) => ({ admin: '/admin.html', business: '/business.html' }[roleOf(u)] || '/index.html');
+  // The places an account can switch between from its account menu. An admin lands on the admin
+  // dashboard and can also open the sellers' dashboard (as any shop or garage) and the customer
+  // site; a shop or garage can also use the customer site; a customer has nowhere else to go.
+  const PORTALS = {
+    admin: { key: 'admin', label: 'Admin', sub: 'Run vinzuu', href: '/admin.html' },
+    seller: { key: 'seller', label: 'Sellers & Garages', sub: 'Shop and garage dashboard', href: '/business.html' },
+    customer: { key: 'customer', label: 'Customer site', sub: 'Find parts and book a garage', href: '/index.html' },
+  };
+  const portalsFor = (u) => ({ admin: [PORTALS.admin, PORTALS.seller, PORTALS.customer],
+    business: [PORTALS.seller, PORTALS.customer] }[roleOf(u)] || []);
   const sessionUser = (req) => (req.userId == null ? null : db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId));
   // The admin token still works for scripts and tests; people sign in with an admin account.
   const isAdmin = (req) => roleOf(sessionUser(req)) === 'admin' || safeEqual(req.get('x-admin-token'), cfg.adminToken);
+  // An admin can open the sellers' dashboard as any shop or garage (to see what they see when
+  // they ask for help). It is read-only: the x-view-shop / x-view-garage header picks which one.
+  const viewAsId = (req, u, header) => (roleOf(u) === 'admin' && req.get(header) ? Number(req.get(header)) : null);
   const shopFromReq = (req) => {
     const u = sessionUser(req);
+    const viewId = viewAsId(req, u, 'x-view-shop');
+    if (viewId) { req.viewAs = true; return db.prepare('SELECT * FROM shops WHERE id = ?').get(viewId); }
     if (roleOf(u) === 'business' && u.shop_id) return db.prepare('SELECT * FROM shops WHERE id = ?').get(u.shop_id);
     const code = req.get('x-shop-code');
     return code ? db.prepare('SELECT * FROM shops WHERE access_code = ?').get(String(code).trim()) : null;
@@ -210,13 +232,18 @@ function createApp(db, config = {}) {
   const requireShop = (req, res, next) => {
     const shop = shopFromReq(req);
     if (!shop) return res.status(401).json({ error: 'Sign in with your shop account.' });
+    if (req.viewAs && req.method !== 'GET') return res.status(403).json({ error: VIEW_ONLY, code: 'view_only' });
     req.shop = shop;
     next();
   };
+  const VIEW_ONLY = 'You are looking at this dashboard as the vinzuu team, so it is read-only. Only the business itself can change it.';
   const requireGarage = (req, res, next) => {
     const u = sessionUser(req);
-    const garage = roleOf(u) === 'business' && u.garage_id ? db.prepare('SELECT * FROM garages WHERE id = ?').get(u.garage_id) : null;
+    const viewId = viewAsId(req, u, 'x-view-garage');
+    const garageId = viewId || (roleOf(u) === 'business' ? u.garage_id : null);
+    const garage = garageId ? db.prepare('SELECT * FROM garages WHERE id = ?').get(garageId) : null;
     if (!garage) return res.status(401).json({ error: 'Sign in with your garage account.' });
+    if (viewId && req.method !== 'GET') return res.status(403).json({ error: VIEW_ONLY, code: 'view_only' });
     req.garage = garage;
     next();
   };
@@ -278,8 +305,17 @@ function createApp(db, config = {}) {
   const getUserById = (id) => (id == null ? null : db.prepare('SELECT * FROM users WHERE id = ?').get(id));
   const publicUser = (u) => (u && {
     id: u.id, name: u.name, email: u.email, phone: u.phone || null, provider: u.auth_provider,
-    role: roleOf(u), home: homeFor(u),
+    role: roleOf(u), home: homeFor(u), portals: portalsFor(u),
   });
+  // Signing in: a blocked account is refused with the reason, and the time is kept for the
+  // admin's "last active" column.
+  function startSession(req, res, user) {
+    if (user.blocked) {
+      throw new HttpError(403, `This account has been blocked by the vinzuu team: ${user.blocked_reason || 'no reason given'}. Contact us if you think this is a mistake.`, 'blocked');
+    }
+    db.prepare("UPDATE users SET last_login_at = datetime('now') WHERE id = ?").run(user.id);
+    auth.setSessionCookie(req, res, user.id);
+  }
 
   /** New passwords: at least 8 characters with an uppercase letter, a number and a symbol.
    *  (Only checked when an account is created, so older accounts can still sign in.) */
@@ -343,7 +379,7 @@ function createApp(db, config = {}) {
     }
     const info = db.prepare("INSERT INTO users (name, email, phone, password_hash, auth_provider) VALUES (?,?,?,?,'local')")
       .run(name, email, userPhone, auth.hashPassword(password));
-    auth.setSessionCookie(req, res, Number(info.lastInsertRowid));
+    startSession(req, res, getUserById(Number(info.lastInsertRowid)));
     res.status(201).json({ user: publicUser(getUserById(Number(info.lastInsertRowid))) });
   });
 
@@ -365,7 +401,7 @@ function createApp(db, config = {}) {
     if (!user || !user.password_hash || !auth.verifyPassword(password, user.password_hash)) {
       throw new HttpError(401, 'That email and password do not match. If you signed up with Google, use the Google button instead.');
     }
-    auth.setSessionCookie(req, res, user.id);
+    startSession(req, res, user);
     res.json({ user: publicUser(user) });
   });
 
@@ -385,7 +421,7 @@ function createApp(db, config = {}) {
     // Google sends email_verified as a boolean (older tokens used the string "true").
     const verified = payload.email_verified === true || payload.email_verified === 'true';
     const user = upsertOAuthUser('google', payload.sub, payload.email, payload.name, verified);
-    auth.setSessionCookie(req, res, user.id);
+    startSession(req, res, user);
     res.json({ user: publicUser(user) });
   }));
 
@@ -401,7 +437,7 @@ function createApp(db, config = {}) {
     const demo = isDemo(db);
     res.json({
       app_name: APP_NAME, demo, demo_vin: demo ? DEMO_VIN : null, kigali_center: alg.KIGALI_CENTER,
-      origins: ORIGINS, import_sources: IMPORT_SOURCES, default_radius_km: 15,
+      origins: ORIGINS, import_sources: IMPORT_SOURCES, default_radius_km: 15, report_reasons: REPORT_REASONS,
     });
   });
 
@@ -537,9 +573,10 @@ function createApp(db, config = {}) {
       plate, vin, decoded.wmi, make, model,
       text(b.generation, { field: 'generation', max: 30 }), year,
       text(b.engine, { field: 'engine', max: 40 }), text(b.transmission, { field: 'transmission', max: 20 }),
-      // A shop or garage looking up a customer's car does not become its owner.
+      // The dashboards only look cars up, so whoever registers a car here (a shop owner or an
+      // admin using the customer site too) is adding their own car.
       origin, driveSide, importSource, phone(b.owner_phone, 'owner_phone', false), registeredBy,
-      roleOf(sessionUser(req)) === 'customer' ? req.userId : null,
+      req.userId ?? null,
       mileage, mileage != null ? new Date().toISOString().slice(0, 10) : null);
 
     res.status(201).json({
@@ -680,7 +717,7 @@ function createApp(db, config = {}) {
   app.get('/api/garages/nearby', (req, res) => {
     const { origin } = parseOrigin(req.query);
     const radiusKm = parseRadius(req.query.radius_km);
-    const garages = db.prepare('SELECT * FROM garages').all()
+    const garages = db.prepare('SELECT * FROM garages WHERE suspended = 0').all()
       .map((g) => ({ ...g, distance_km: alg.haversineKm(origin, { lat: g.latitude, lon: g.longitude }) }))
       .filter((g) => radiusKm == null || g.distance_km <= radiusKm)
       .sort((a, b) => a.distance_km - b.distance_km)
@@ -711,6 +748,10 @@ function createApp(db, config = {}) {
     const note = text(b.note, { field: 'note', max: 300 });
 
     if (listing && listing.hidden) throw new HttpError(404, 'That listing no longer exists.');
+    if (listing && db.prepare('SELECT suspended FROM shops WHERE id = ?').get(listing.shop_id).suspended) {
+      throw new HttpError(409, 'This shop is not taking bookings on Vinzuu right now. Choose another shop.');
+    }
+    if (garage && garage.suspended) throw new HttpError(409, 'This garage is not taking bookings on Vinzuu right now. Choose another garage.');
     const info = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, note, user_id)
       VALUES (?,?,?,?,?,?)`).run(customerPhone, vehicle.id, listingId, garageId, note, req.userId ?? null);
 
@@ -769,21 +810,24 @@ function createApp(db, config = {}) {
     res.status(201).json({ application: { id: Number(info.lastInsertRowid), status: 'pending' } });
   });
 
-  /** What a business account sees about itself: its shop and/or its garage. */
-  function businessView(u) {
-    const shop = u.shop_id ? db.prepare('SELECT * FROM shops WHERE id = ?').get(u.shop_id) : null;
-    const garage = u.garage_id ? db.prepare('SELECT * FROM garages WHERE id = ?').get(u.garage_id) : null;
+  /** What a business account sees about itself: its shop and/or its garage. An admin viewing
+   *  the dashboard passes the shop or garage to show instead. */
+  function businessView(u, ids = { shopId: u.shop_id, garageId: u.garage_id }) {
+    const shop = ids.shopId ? db.prepare('SELECT * FROM shops WHERE id = ?').get(ids.shopId) : null;
+    const garage = ids.garageId ? db.prepare('SELECT * FROM garages WHERE id = ?').get(ids.garageId) : null;
     return {
       user: publicUser(u),
       shop: shop && {
         id: shop.id, name: shop.name, phone: shop.phone, whatsapp_number: shop.whatsapp_number,
         address_text: shop.address_text, opening_hours: shop.opening_hours, vetted: !!shop.vetted,
         latitude: shop.latitude, longitude: shop.longitude, rating: ratingFor('shop', shop.id),
+        suspended: !!shop.suspended, suspended_reason: shop.suspended ? shop.suspended_reason : null,
       },
       garage: garage && {
         id: garage.id, name: garage.name, phone: garage.phone, whatsapp_number: garage.whatsapp_number,
         address_text: garage.address_text, opening_hours: garage.opening_hours, specialties: garage.specialties,
         latitude: garage.latitude, longitude: garage.longitude, rating: ratingFor('garage', garage.id),
+        suspended: !!garage.suspended, suspended_reason: garage.suspended ? garage.suspended_reason : null,
       },
     };
   }
@@ -791,6 +835,15 @@ function createApp(db, config = {}) {
   app.get('/api/business/me', (req, res) => {
     const u = sessionUser(req);
     if (!u) throw new HttpError(401, 'Sign in to open Vinzuu Sellers & Garages.');
+    if (roleOf(u) === 'admin') {
+      // The admin first picks which shop or garage to look at (read-only).
+      const shopId = req.query.shop_id ? Number(req.query.shop_id) : null;
+      const garageId = req.query.garage_id ? Number(req.query.garage_id) : null;
+      if (!shopId && !garageId) throw new HttpError(409, 'Choose a shop or garage to open.', 'admin_pick');
+      const view = businessView(u, { shopId, garageId });
+      if (!view.shop && !view.garage) throw new HttpError(404, 'That shop or garage no longer exists.', 'admin_pick');
+      return res.json({ ...view, view_as_admin: true });
+    }
     if (roleOf(u) !== 'business') throw new HttpError(403, 'This account is not a shop or garage account.', 'not_business');
     res.json(businessView(u));
   });
@@ -938,7 +991,7 @@ function createApp(db, config = {}) {
 
   // Bookings, seen from either side: the car, the part, the shop and the garage, each side's progress.
   const bookingSelect = `
-    SELECT b.id, b.created_at, b.customer_phone, b.note, b.status,
+    SELECT b.id, b.created_at, b.customer_phone, b.note, b.status, b.admin_note, b.user_id,
            b.shop_status, b.garage_status, b.garage_time, b.garage_note,
            v.plate_number, v.make, v.model, v.year, v.generation, v.engine, v.vin,
            l.id AS listing_id, l.part_category, l.oe_number, l.universal_spec, l.price_rwf, l.photo_url,
@@ -1048,11 +1101,13 @@ function createApp(db, config = {}) {
     if (!req.userId) throw new HttpError(401, 'Sign in to see your bookings.');
     const rows = db.prepare(`${bookingSelect} WHERE b.user_id = ? ORDER BY b.id DESC LIMIT 50`).all(req.userId);
     const reviewed = db.prepare('SELECT target, rating FROM reviews WHERE booking_id = ?');
+    const reported = db.prepare("SELECT DISTINCT target FROM reports WHERE booking_id = ? AND user_id = ? AND status = 'open'");
     res.json({
       bookings: rows.map((r) => {
         const done = Object.fromEntries(reviewed.all(r.id).map((x) => [x.target, x.rating]));
         return {
           ...bookingOut(r),
+          reported: Object.fromEntries(reported.all(r.id, req.userId).map((x) => [x.target, true])),
           review: {
             shop: done.shop ?? (r.shop_id && r.shop_status === 'collected' ? 'can_review' : null),
             garage: done.garage ?? (r.garage_id && r.garage_status === 'done' ? 'can_review' : null),
@@ -1084,10 +1139,50 @@ function createApp(db, config = {}) {
     res.status(201).json({ rating: ratingFor(target, target === 'shop' ? row.shop_id : row.garage_id) });
   });
 
+  // ----- reporting a problem with a shop, a garage or a part -----
+
+  // A signed-in customer reports a problem from one of their bookings (the shop or the garage
+  // side), or a part straight from the search results. The admin looks into it.
+  app.post('/api/reports', limitWrites, (req, res) => {
+    if (!req.userId) throw new HttpError(401, 'Sign in to report a problem.');
+    const b = req.body || {};
+    const reason = oneOf(b.reason, Object.keys(REPORT_REASONS), 'reason');
+    const details = text(b.details, { field: 'What happened', max: 500, required: reason === 'other' });
+    let r;
+    if (b.booking_id) {
+      const row = db.prepare(`${bookingSelect} WHERE b.id = ? AND b.user_id = ?`).get(Number(b.booking_id), req.userId);
+      if (!row) throw new HttpError(404, 'Booking not found.');
+      const target = oneOf(b.target, ['shop', 'garage'], 'target');
+      if (!row[`${target}_id`]) throw new HttpError(400, `This booking has no ${target}.`);
+      r = { booking_id: row.id, target, shop_id: target === 'shop' ? row.shop_id : null,
+        garage_id: target === 'garage' ? row.garage_id : null, listing_id: target === 'shop' ? row.listing_id : null };
+    } else if (b.listing_id) {
+      const listing = db.prepare('SELECT * FROM shop_listings WHERE id = ?').get(Number(b.listing_id));
+      if (!listing) throw new HttpError(404, 'That part no longer exists.');
+      r = { booking_id: null, target: 'listing', shop_id: listing.shop_id, garage_id: null, listing_id: listing.id };
+    } else throw new HttpError(400, 'Say which booking or part this is about.');
+    const already = db.prepare(`SELECT 1 FROM reports WHERE user_id = ? AND status = 'open' AND target = ?
+      AND COALESCE(booking_id, 0) = COALESCE(?, 0) AND COALESCE(listing_id, 0) = COALESCE(?, 0)
+      AND COALESCE(shop_id, 0) = COALESCE(?, 0) AND COALESCE(garage_id, 0) = COALESCE(?, 0)`)
+      .get(req.userId, r.target, r.booking_id, r.listing_id, r.shop_id, r.garage_id);
+    if (already) throw new HttpError(409, 'You already reported this. The vinzuu team is looking into it.');
+    const info = db.prepare(`INSERT INTO reports (user_id, booking_id, target, shop_id, garage_id, listing_id, reason, details)
+      VALUES (?,?,?,?,?,?,?,?)`).run(req.userId, r.booking_id, r.target, r.shop_id, r.garage_id, r.listing_id, reason, details);
+    res.status(201).json({ report: { id: Number(info.lastInsertRowid), status: 'open' } });
+  });
+
   // =====================  ADMIN API  =====================
 
   const admin = express.Router();
   admin.use(requireAdmin);
+
+  /** Keeps a line in the admin log: who did what to which record. */
+  function logAdmin(req, action, targetType, targetId, detail) {
+    const u = sessionUser(req);
+    db.prepare('INSERT INTO admin_log (admin_id, admin_email, action, target_type, target_id, detail) VALUES (?,?,?,?,?,?)').run(
+      roleOf(u) === 'admin' ? u.id : null, roleOf(u) === 'admin' ? u.email : 'admin token', action, targetType || null,
+      targetId == null ? null : Number(targetId), detail == null ? null : String(detail).slice(0, 300));
+  }
 
   admin.get('/stats', (req, res) => {
     const count = (sql) => db.prepare(sql).get().n;
@@ -1102,6 +1197,9 @@ function createApp(db, config = {}) {
       pending_applications: count("SELECT COUNT(*) AS n FROM business_applications WHERE status = 'pending'"),
       pending_part_requests: count("SELECT COUNT(*) AS n FROM listing_requests WHERE status = 'pending'"),
       reviews: count('SELECT COUNT(*) AS n FROM reviews'),
+      open_reports: count("SELECT COUNT(*) AS n FROM reports WHERE status = 'open'"),
+      suspended: count('SELECT COUNT(*) AS n FROM shops WHERE suspended = 1') + count('SELECT COUNT(*) AS n FROM garages WHERE suspended = 1'),
+      customers: count("SELECT COUNT(*) AS n FROM users WHERE role = 'customer'"),
       bookings: count('SELECT COUNT(*) AS n FROM bookings'),
       open_gaps: count('SELECT COUNT(*) AS n FROM search_gaps'),
       vehicles_by_make: tally('make'),
@@ -1149,6 +1247,8 @@ function createApp(db, config = {}) {
     const info = db.prepare(`INSERT INTO fitment_reference
       (oe_number, part_category, make, model, generation, year_start, year_end, engine, origin_market,
        confidence_level, source, verified_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(...fitmentInput(req.body || {}));
+    const row = db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(Number(info.lastInsertRowid));
+    logAdmin(req, 'Added a part number', 'part_number', row.id, `${row.oe_number} for ${row.make} ${row.model}`);
     res.status(201).json({ row: db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(Number(info.lastInsertRowid)) });
   });
   admin.put('/fitment-reference/:id', (req, res) => {
@@ -1157,17 +1257,42 @@ function createApp(db, config = {}) {
     db.prepare(`UPDATE fitment_reference SET oe_number=?, part_category=?, make=?, model=?, generation=?,
       year_start=?, year_end=?, engine=?, origin_market=?, confidence_level=?, source=?, verified_by=? WHERE id = ?`)
       .run(...fitmentInput(req.body || {}), id);
+    logAdmin(req, 'Changed a part number', 'part_number', id, db.prepare('SELECT oe_number FROM fitment_reference WHERE id = ?').get(id).oe_number);
     res.json({ row: db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(id) });
   });
   admin.delete('/fitment-reference/:id', (req, res) => {
+    const row = db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(Number(req.params.id));
     db.prepare('DELETE FROM fitment_reference WHERE id = ?').run(Number(req.params.id));
+    if (row) logAdmin(req, 'Deleted a part number', 'part_number', row.id, `${row.oe_number} for ${row.make} ${row.model}`);
     res.json({ ok: true });
   });
 
+  // Each shop and garage with its scorecard: rating, bookings, cancellations, open reports and
+  // when its owner last signed in. flags name what needs the admin's attention.
+  const daysSince = (ts) => (ts ? (Date.now() - new Date(String(ts).replace(' ', 'T') + 'Z').getTime()) / 864e5 : null);
+  function flagsFor(x) {
+    const flags = [];
+    if (x.suspended) flags.push('Suspended');
+    if (x.open_reports) flags.push(`${x.open_reports} open ${x.open_reports === 1 ? 'report' : 'reports'}`);
+    if (x.review_count >= 3 && x.rating < 3.5) flags.push('Low rating');
+    if (x.bookings >= 5 && x.cancelled / x.bookings > 0.2) flags.push('Many cancellations');
+    if (x.last_active && daysSince(x.last_active) > 30) flags.push('Not signed in for 30 days');
+    return flags;
+  }
+  const scorecard = (x) => ({ ...x, vetted: x.vetted == null ? undefined : !!x.vetted, suspended: !!x.suspended,
+    cancel_rate: x.bookings ? Math.round((x.cancelled / x.bookings) * 100) : null, flags: flagsFor(x) });
+
   admin.get('/shops', (req, res) => {
-    res.json({ shops: db.prepare(`SELECT s.*, (SELECT email FROM users u WHERE u.shop_id = s.id LIMIT 1) AS login_email,
-      (SELECT ROUND(AVG(rating), 1) FROM reviews r WHERE r.shop_id = s.id) AS rating
-      FROM shops s ORDER BY s.id`).all() });
+    res.json({ shops: db.prepare(`SELECT s.*,
+      (SELECT email FROM users u WHERE u.shop_id = s.id LIMIT 1) AS login_email,
+      (SELECT MAX(last_login_at) FROM users u WHERE u.shop_id = s.id) AS last_active,
+      (SELECT ROUND(AVG(rating), 1) FROM reviews r WHERE r.shop_id = s.id) AS rating,
+      (SELECT COUNT(*) FROM reviews r WHERE r.shop_id = s.id) AS review_count,
+      (SELECT COUNT(*) FROM bookings b JOIN shop_listings l ON l.id = b.shop_listing_id WHERE l.shop_id = s.id) AS bookings,
+      (SELECT COUNT(*) FROM bookings b JOIN shop_listings l ON l.id = b.shop_listing_id WHERE l.shop_id = s.id AND b.shop_status = 'cancelled') AS cancelled,
+      (SELECT COUNT(*) FROM reports p WHERE p.shop_id = s.id AND p.status = 'open') AS open_reports,
+      (SELECT COUNT(*) FROM shop_listings l WHERE l.shop_id = s.id AND l.hidden = 0 AND l.stock_quantity > 0) AS parts_on_sale
+      FROM shops s ORDER BY s.id`).all().map(scorecard) });
   });
   admin.post('/shops', (req, res) => {
     const b = req.body || {};
@@ -1187,22 +1312,68 @@ function createApp(db, config = {}) {
       number(b.latitude, { field: 'latitude', min: -90, max: 90 }), number(b.longitude, { field: 'longitude', min: -180, max: 180 }),
       text(b.address_text, { field: 'address', max: 120 }), b.vetted ? 1 : 0, code,
       text(b.onboarded_by, { field: 'onboarded_by', max: 60 }));
-    res.status(201).json({ shop: db.prepare('SELECT * FROM shops WHERE id = ?').get(Number(info.lastInsertRowid)) });
-  });
-  admin.put('/shops/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(id);
-    if (!shop) throw new HttpError(404, 'Shop not found.');
-    const b = req.body || {};
-    db.prepare('UPDATE shops SET name = ?, phone = ?, vetted = ? WHERE id = ?').run(
-      b.name != null ? text(b.name, { field: 'name', max: 80, required: true }) : shop.name,
-      b.phone != null ? phone(b.phone, 'phone') : shop.phone,
-      b.vetted != null ? (b.vetted ? 1 : 0) : shop.vetted, id);
-    res.json({ shop: db.prepare('SELECT * FROM shops WHERE id = ?').get(id) });
+    const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(Number(info.lastInsertRowid));
+    logAdmin(req, 'Added a shop', 'shop', shop.id, shop.name);
+    res.status(201).json({ shop });
   });
 
+  /** The admin edits any detail of a shop or garage, including the name and map location that
+   *  the business itself cannot change. Only the fields sent are changed. */
+  function editBusiness(table, req) {
+    const id = Number(req.params.id);
+    const row = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+    if (!row) throw new HttpError(404, table === 'shops' ? 'Shop not found.' : 'Garage not found.');
+    const b = req.body || {};
+    const has = (k) => Object.prototype.hasOwnProperty.call(b, k);
+    const updates = {};
+    if (has('name')) updates.name = text(b.name, { field: 'Name', max: 80, required: true });
+    if (has('phone')) updates.phone = phone(b.phone, 'Phone');
+    if (has('whatsapp_number')) updates.whatsapp_number = phone(b.whatsapp_number, 'WhatsApp', false);
+    if (has('address_text')) updates.address_text = text(b.address_text, { field: 'Address', max: 120 });
+    if (has('opening_hours')) updates.opening_hours = text(b.opening_hours, { field: 'Opening hours', max: 120 });
+    if (has('latitude')) updates.latitude = number(b.latitude, { field: 'Latitude', min: -90, max: 90 });
+    if (has('longitude')) updates.longitude = number(b.longitude, { field: 'Longitude', min: -180, max: 180 });
+    if (table === 'shops' && has('vetted')) updates.vetted = b.vetted ? 1 : 0;
+    if (table === 'garages' && has('specialties')) updates.specialties = text(b.specialties, { field: 'What they are good at', max: 160 });
+    updateRow(table, id, updates);
+    const changed = Object.keys(updates).filter((k) => updates[k] !== row[k]);
+    if (changed.length) {
+      const what = changed.map((k) => ({ vetted: updates.vetted ? 'marked vetted' : 'marked not vetted', latitude: 'location', longitude: 'location', whatsapp_number: 'WhatsApp', address_text: 'address', opening_hours: 'opening hours' }[k] || k));
+      logAdmin(req, table === 'shops' ? 'Edited a shop' : 'Edited a garage', table.slice(0, -1), id, `${updates.name || row.name}: ${[...new Set(what)].join(', ')}`);
+    }
+    return db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+  }
+  admin.put('/shops/:id', (req, res) => res.json({ shop: editBusiness('shops', req) }));
+  admin.put('/garages/:id', (req, res) => res.json({ garage: editBusiness('garages', req) }));
+
+  // Suspending hides a shop's parts (or a garage) from customers until it is reactivated. The
+  // owner can still sign in and sees the reason on their dashboard.
+  function setSuspended(table, req, suspend) {
+    const id = Number(req.params.id);
+    const row = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+    if (!row) throw new HttpError(404, table === 'shops' ? 'Shop not found.' : 'Garage not found.');
+    const reason = suspend ? text((req.body || {}).reason, { field: 'Reason', max: 300, required: true }) : null;
+    db.prepare(`UPDATE ${table} SET suspended = ?, suspended_reason = ? WHERE id = ?`).run(suspend ? 1 : 0, reason, id);
+    const kind = table === 'shops' ? 'shop' : 'garage';
+    logAdmin(req, suspend ? `Suspended a ${kind}` : `Reactivated a ${kind}`, kind, id, suspend ? `${row.name}: ${reason}` : row.name);
+    return db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+  }
+  admin.post('/shops/:id/suspend', (req, res) => res.json({ shop: setSuspended('shops', req, true) }));
+  admin.post('/shops/:id/reactivate', (req, res) => res.json({ shop: setSuspended('shops', req, false) }));
+  admin.post('/garages/:id/suspend', (req, res) => res.json({ garage: setSuspended('garages', req, true) }));
+  admin.post('/garages/:id/reactivate', (req, res) => res.json({ garage: setSuspended('garages', req, false) }));
+
   admin.get('/garages', (req, res) => {
-    res.json({ garages: db.prepare('SELECT * FROM garages ORDER BY id').all() });
+    res.json({ garages: db.prepare(`SELECT g.*,
+      (SELECT email FROM users u WHERE u.garage_id = g.id LIMIT 1) AS login_email,
+      (SELECT MAX(last_login_at) FROM users u WHERE u.garage_id = g.id) AS last_active,
+      (SELECT ROUND(AVG(rating), 1) FROM reviews r WHERE r.garage_id = g.id) AS rating,
+      (SELECT COUNT(*) FROM reviews r WHERE r.garage_id = g.id) AS review_count,
+      (SELECT COUNT(*) FROM bookings b WHERE b.garage_id = g.id) AS bookings,
+      (SELECT COUNT(*) FROM bookings b WHERE b.garage_id = g.id AND b.garage_status = 'declined') AS cancelled,
+      (SELECT COUNT(*) FROM reports p WHERE p.garage_id = g.id AND p.status = 'open') AS open_reports,
+      (SELECT COUNT(*) FROM garage_services v WHERE v.garage_id = g.id) AS services
+      FROM garages g ORDER BY g.id`).all().map(scorecard) });
   });
   admin.post('/garages', (req, res) => {
     const b = req.body || {};
@@ -1212,7 +1383,9 @@ function createApp(db, config = {}) {
       phone(b.whatsapp_number, 'whatsapp_number', false),
       number(b.latitude, { field: 'latitude', min: -90, max: 90 }), number(b.longitude, { field: 'longitude', min: -180, max: 180 }),
       text(b.address_text, { field: 'address', max: 120 }), text(b.specialties, { field: 'specialties', max: 160 }));
-    res.status(201).json({ garage: db.prepare('SELECT * FROM garages WHERE id = ?').get(Number(info.lastInsertRowid)) });
+    const garage = db.prepare('SELECT * FROM garages WHERE id = ?').get(Number(info.lastInsertRowid));
+    logAdmin(req, 'Added a garage', 'garage', garage.id, garage.name);
+    res.status(201).json({ garage });
   });
 
   admin.get('/vehicles', (req, res) => {
@@ -1246,12 +1419,14 @@ function createApp(db, config = {}) {
       db.prepare(`UPDATE vehicles SET vin=?, wmi_code=?, make=?, model=?, generation=?, year=?, engine=?,
         transmission=?, origin_market=?, import_source=? WHERE id = ?`).run(
         vin, wmi, make, model, generation, year, engine, transmission, originMarket, importSource, existing.id);
+      logAdmin(req, 'Corrected a car', 'car', existing.id, `${plate}: ${year} ${make} ${model}`);
       return res.json({ vehicle: db.prepare('SELECT * FROM vehicles WHERE id = ?').get(existing.id), updated: true });
     }
     const info = db.prepare(`INSERT INTO vehicles
       (plate_number, vin, wmi_code, make, model, generation, year, engine, transmission, origin_market,
        drive_side, import_source, registered_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
       plate, vin, wmi, make, model, generation, year, engine, transmission, originMarket, 'LHD', importSource, 'admin');
+    logAdmin(req, 'Added a car', 'car', Number(info.lastInsertRowid), `${plate}: ${year} ${make} ${model}`);
     res.status(201).json({ vehicle: db.prepare('SELECT * FROM vehicles WHERE id = ?').get(Number(info.lastInsertRowid)), updated: false });
   });
 
@@ -1262,15 +1437,183 @@ function createApp(db, config = {}) {
     const bookingCount = db.prepare('SELECT COUNT(*) AS n FROM bookings WHERE vehicle_id = ?').get(id).n;
     if (bookingCount > 0) throw new HttpError(409, 'This car has booking history, so it cannot be deleted.');
     db.prepare('DELETE FROM vehicles WHERE id = ?').run(id);
+    logAdmin(req, 'Deleted a car', 'car', id, `${vehicle.plate_number || vehicle.vin || ''}: ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
     res.json({ ok: true });
   });
 
+  // Where a booking is: 'cancelled' (by the shop, the garage or vinzuu), 'finished' (every side
+  // it has is done) or 'open'.
+  const stageOf = (b) => {
+    if (b.status === 'cancelled' || b.shop_status === 'cancelled' || b.garage_status === 'declined') return 'cancelled';
+    const shopDone = !b.shop_id || b.shop_status === 'collected';
+    const garageDone = !b.garage_id || b.garage_status === 'done';
+    return shopDone && garageDone ? 'finished' : 'open';
+  };
+  const DATE = /^\d{4}-\d{2}-\d{2}$/;
+  function adminBookings(q) {
+    const from = DATE.test(q.from || '') ? q.from : null;
+    const to = DATE.test(q.to || '') ? q.to : null;
+    const shopId = q.shop_id ? Number(q.shop_id) : null;
+    const garageId = q.garage_id ? Number(q.garage_id) : null;
+    const rows = db.prepare(`${bookingSelect}
+      WHERE (? IS NULL OR date(b.created_at) >= ?) AND (? IS NULL OR date(b.created_at) <= ?)
+        AND (? IS NULL OR s.id = ?) AND (? IS NULL OR g.id = ?)
+      ORDER BY b.id DESC LIMIT 1000`).all(from, from, to, to, shopId, shopId, garageId, garageId)
+      .map((b) => ({ ...b, stage: stageOf(b) }));
+    const stage = ['open', 'finished', 'cancelled'].includes(q.stage) ? q.stage : null;
+    const needle = String(q.q || '').trim().toLowerCase();
+    return rows.filter((b) => (!stage || b.stage === stage)
+      && (!needle || [b.customer_phone, b.plate_number, b.make, b.model, b.part_category, b.oe_number, b.shop_name, b.garage_name]
+        .some((x) => String(x || '').toLowerCase().includes(needle))));
+  }
   admin.get('/bookings', (req, res) => {
-    res.json({
-      bookings: db.prepare(`
-        SELECT b.*, v.plate_number, v.make, v.model, v.year FROM bookings b
-        JOIN vehicles v ON v.id = b.vehicle_id ORDER BY b.id DESC LIMIT 200`).all(),
+    res.json({ bookings: adminBookings(req.query) });
+  });
+  // The admin can cancel a booking (for example after a report) with a reason that both the
+  // customer and the business see. Sides that are already finished are left as they are.
+  admin.post('/bookings/:id/cancel', (req, res) => {
+    const row = db.prepare(`${bookingSelect} WHERE b.id = ?`).get(Number(req.params.id));
+    if (!row) throw new HttpError(404, 'Booking not found.');
+    if (stageOf(row) !== 'open') throw new HttpError(409, `This booking is already ${stageOf(row)}.`);
+    const reason = text((req.body || {}).reason, { field: 'Reason', max: 300, required: true });
+    tx(db, () => {
+      db.prepare("UPDATE bookings SET status = 'cancelled', admin_note = ? WHERE id = ?").run(reason, row.id);
+      if (row.shop_id && row.shop_status !== 'collected') db.prepare("UPDATE bookings SET shop_status = 'cancelled' WHERE id = ?").run(row.id);
+      if (row.garage_id && row.garage_status !== 'done') {
+        db.prepare("UPDATE bookings SET garage_status = 'declined', garage_note = ? WHERE id = ?").run(`Cancelled by vinzuu: ${reason}`, row.id);
+      }
     });
+    logAdmin(req, 'Cancelled a booking', 'booking', row.id, `${row.part_category || 'Repair'} for ${row.year} ${row.make} ${row.model}: ${reason}`);
+    res.json({ booking: { ...db.prepare(`${bookingSelect} WHERE b.id = ?`).get(row.id), stage: 'cancelled' } });
+  });
+
+  // ----- customers and other accounts -----
+
+  admin.get('/users', (req, res) => {
+    const q = `%${String(req.query.q || '').trim()}%`;
+    const role = ['customer', 'business', 'admin'].includes(req.query.role) ? req.query.role : null;
+    const rows = db.prepare(`SELECT u.id, u.name, u.email, u.phone, u.role, u.auth_provider, u.blocked, u.blocked_reason,
+        u.created_at, u.last_login_at, s.name AS shop_name, g.name AS garage_name,
+        (SELECT COUNT(*) FROM vehicles v WHERE v.user_id = u.id) AS cars,
+        (SELECT COUNT(*) FROM bookings b WHERE b.user_id = u.id) AS bookings,
+        (SELECT COUNT(*) FROM reports r WHERE r.user_id = u.id) AS reports
+      FROM users u LEFT JOIN shops s ON s.id = u.shop_id LEFT JOIN garages g ON g.id = u.garage_id
+      WHERE (? IS NULL OR u.role = ?) AND (u.name LIKE ? OR u.email LIKE ? OR COALESCE(u.phone, '') LIKE ?)
+      ORDER BY u.id DESC LIMIT 500`).all(role, role, q, q, q);
+    res.json({ users: rows.map((u) => ({ ...u, blocked: !!u.blocked })) });
+  });
+  function setBlocked(req, block) {
+    const user = getUserById(Number(req.params.id));
+    if (!user) throw new HttpError(404, 'Account not found.');
+    if (block && roleOf(user) === 'admin') throw new HttpError(409, 'An admin account cannot be blocked here.');
+    const reason = block ? text((req.body || {}).reason, { field: 'Reason', max: 300, required: true }) : null;
+    db.prepare('UPDATE users SET blocked = ?, blocked_reason = ? WHERE id = ?').run(block ? 1 : 0, reason, user.id);
+    logAdmin(req, block ? 'Blocked an account' : 'Unblocked an account', 'user', user.id, block ? `${user.email}: ${reason}` : user.email);
+    return { ok: true };
+  }
+  admin.post('/users/:id/block', (req, res) => res.json(setBlocked(req, true)));
+  admin.post('/users/:id/unblock', (req, res) => res.json(setBlocked(req, false)));
+
+  // ----- reports from customers -----
+
+  admin.get('/reports', (req, res) => {
+    const status = ['open', 'closed'].includes(req.query.status) ? req.query.status : null;
+    const rows = db.prepare(`SELECT p.*, u.name AS user_name, u.email AS user_email, u.phone AS user_phone,
+        s.name AS shop_name, s.suspended AS shop_suspended, g.name AS garage_name, g.suspended AS garage_suspended,
+        l.part_category, l.oe_number, l.universal_spec, l.photo_url, l.hidden AS listing_hidden
+      FROM reports p LEFT JOIN users u ON u.id = p.user_id LEFT JOIN shops s ON s.id = p.shop_id
+      LEFT JOIN garages g ON g.id = p.garage_id LEFT JOIN shop_listings l ON l.id = p.listing_id
+      WHERE (? IS NULL OR p.status = ?) ORDER BY p.status = 'open' DESC, p.id DESC LIMIT 300`).all(status, status);
+    res.json({ reasons: REPORT_REASONS, reports: rows.map((r) => ({ ...r, shop_suspended: !!r.shop_suspended,
+      garage_suspended: !!r.garage_suspended, listing_hidden: r.listing_id ? !!r.listing_hidden : null })) });
+  });
+  admin.post('/reports/:id/close', (req, res) => {
+    const r = db.prepare('SELECT * FROM reports WHERE id = ?').get(Number(req.params.id));
+    if (!r) throw new HttpError(404, 'Report not found.');
+    if (r.status === 'closed') throw new HttpError(409, 'This report is already closed.');
+    const note = text((req.body || {}).admin_note, { field: 'What you did', max: 300, required: true });
+    db.prepare("UPDATE reports SET status = 'closed', admin_note = ?, closed_at = datetime('now') WHERE id = ?").run(note, r.id);
+    logAdmin(req, 'Closed a report', 'report', r.id, `${REPORT_REASONS[r.reason] || r.reason}: ${note}`);
+    res.json({ ok: true });
+  });
+
+  // ----- activity over time, for the overview charts -----
+
+  admin.get('/activity', (req, res) => {
+    const weeks = Math.min(26, Math.max(4, Number(req.query.weeks) || 12));
+    // Weeks start on Monday (UTC). The last bucket is the current, unfinished week.
+    const now = new Date();
+    const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - ((now.getUTCDay() + 6) % 7)));
+    const starts = Array.from({ length: weeks }, (_, i) => new Date(monday.getTime() - (weeks - 1 - i) * 7 * 864e5).toISOString().slice(0, 10));
+    const since = starts[0];
+    const bucket = (sql) => {
+      const counts = new Array(weeks).fill(0);
+      for (const { d } of db.prepare(sql).all(since)) {
+        const i = starts.findLastIndex((w) => d >= w);
+        if (i >= 0) counts[i] += 1;
+      }
+      return counts;
+    };
+    const bookings = bucket('SELECT date(created_at) AS d FROM bookings WHERE date(created_at) >= ?');
+    const cars = bucket('SELECT date(created_at) AS d FROM vehicles WHERE date(created_at) >= ?');
+    const customers = bucket("SELECT date(created_at) AS d FROM users WHERE role = 'customer' AND date(created_at) >= ?");
+    res.json({
+      weeks: starts.map((week_start, i) => ({ week_start, bookings: bookings[i], cars: cars[i], customers: customers[i] })),
+      top_parts: db.prepare(`SELECT l.part_category AS label, COUNT(*) AS n FROM bookings b JOIN shop_listings l ON l.id = b.shop_listing_id
+        WHERE date(b.created_at) >= ? GROUP BY 1 ORDER BY n DESC, label LIMIT 6`).all(since),
+      top_shops: db.prepare(`SELECT s.name AS label, COUNT(*) AS n FROM bookings b JOIN shop_listings l ON l.id = b.shop_listing_id
+        JOIN shops s ON s.id = l.shop_id WHERE date(b.created_at) >= ? GROUP BY s.id ORDER BY n DESC, label LIMIT 6`).all(since),
+      top_missing: db.prepare(`SELECT part_category || ' for ' || make || ' ' || model AS label, SUM(times_searched) AS n FROM search_gaps
+        GROUP BY part_category, make, model ORDER BY n DESC, label LIMIT 6`).all(),
+    });
+  });
+
+  // ----- the admin log -----
+
+  admin.get('/log', (req, res) => {
+    const type = String(req.query.type || '') || null;
+    res.json({ log: db.prepare('SELECT * FROM admin_log WHERE (? IS NULL OR target_type = ?) ORDER BY id DESC LIMIT 500').all(type, type) });
+  });
+
+  // ----- CSV downloads (they open in Excel) -----
+
+  const csvCell = (v) => {
+    if (v == null) return '';
+    const str = String(v);
+    // A leading = + - @ would run as a formula in Excel, so it is quoted with a ' in front.
+    const safe = /^[=+\-@]/.test(str) && !/^-?\d+(\.\d+)?$/.test(str) ? `'${str}` : str;
+    return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  };
+  const EXPORTS = {
+    bookings: () => adminBookings({}).map((b) => ({
+      id: b.id, created_at: b.created_at, stage: b.stage, customer_phone: b.customer_phone,
+      car: `${b.year} ${b.make} ${b.model}${b.generation ? ` ${b.generation}` : ''}`, plate: b.plate_number, part: b.part_category,
+      part_number: b.oe_number || b.universal_spec, price_rwf: b.price_rwf, shop: b.shop_name, shop_status: b.shop_id ? b.shop_status : null,
+      garage: b.garage_name, garage_status: b.garage_id ? b.garage_status : null, garage_time: b.garage_time, note: b.note, vinzuu_note: b.admin_note,
+    })),
+    parts: () => db.prepare(`SELECT l.id, s.name AS shop, l.part_category AS part, l.oe_number AS part_number, l.universal_spec AS size,
+      l.brand, l.condition, l.price_rwf, l.stock_quantity, l.warranty_months, l.hidden, l.description, l.updated_at
+      FROM shop_listings l JOIN shops s ON s.id = l.shop_id ORDER BY s.name, l.part_category`).all(),
+    cars: () => db.prepare(`SELECT id, plate_number, vin, make, model, generation, year, engine, transmission, origin_market,
+      import_source, registered_by, created_at FROM vehicles ORDER BY id`).all(),
+    shops: () => db.prepare('SELECT id, name, phone, whatsapp_number, address_text, latitude, longitude, vetted, suspended, suspended_reason, created_at FROM shops ORDER BY id').all(),
+    garages: () => db.prepare('SELECT id, name, phone, whatsapp_number, address_text, latitude, longitude, specialties, suspended, suspended_reason FROM garages ORDER BY id').all(),
+    customers: () => db.prepare(`SELECT id, name, email, phone, role, blocked, created_at, last_login_at FROM users ORDER BY id`).all(),
+    reviews: () => db.prepare(`SELECT r.id, r.created_at, r.target, COALESCE(s.name, g.name) AS business, r.rating, r.author_name, r.comment, r.reply
+      FROM reviews r LEFT JOIN shops s ON s.id = r.shop_id LEFT JOIN garages g ON g.id = r.garage_id ORDER BY r.id`).all(),
+    reports: () => db.prepare(`SELECT p.id, p.created_at, p.status, p.target, COALESCE(s.name, g.name) AS business, p.reason, p.details,
+      p.admin_note, p.closed_at FROM reports p LEFT JOIN shops s ON s.id = p.shop_id LEFT JOIN garages g ON g.id = p.garage_id ORDER BY p.id`).all(),
+  };
+  admin.get('/export/:what', (req, res) => {
+    const what = String(req.params.what).replace(/\.csv$/, '');
+    if (!EXPORTS[what]) throw new HttpError(404, `Nothing to download called ${what}.`);
+    const rows = EXPORTS[what]();
+    const cols = rows.length ? Object.keys(rows[0]) : ['no_rows'];
+    const csv = [cols.join(','), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(','))].join('\r\n');
+    logAdmin(req, 'Downloaded a CSV', 'export', null, `${what} (${rows.length} rows)`);
+    res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="vinzuu-${what}-${new Date().toISOString().slice(0, 10)}.csv"` });
+    // The byte-order mark makes Excel read the file as UTF-8 (names with accents stay right).
+    res.send('﻿' + csv + '\r\n');
   });
 
   // ----- applications to join Vinzuu Sellers & Garages -----
@@ -1321,6 +1664,7 @@ function createApp(db, config = {}) {
       }
       db.prepare(`UPDATE business_applications SET status = 'approved', kind = ?, shop_id = ?, garage_id = ?, admin_note = ?,
         decided_at = datetime('now') WHERE id = ?`).run(kind, shopId, garageId, text(b.admin_note, { field: 'Note', max: 300 }), a.id);
+      logAdmin(req, 'Approved an application', 'application', a.id, `${a.business_name} as ${{ shop: 'a shop', garage: 'a garage', both: 'a shop and a garage' }[kind]}`);
       return { shop_id: shopId, garage_id: garageId, existing_account: !!existing };
     });
     res.json(out);
@@ -1329,6 +1673,7 @@ function createApp(db, config = {}) {
     const a = pendingApplication(req.params.id);
     const reason = text((req.body || {}).admin_note, { field: 'Reason', max: 300, required: true });
     db.prepare("UPDATE business_applications SET status = 'rejected', admin_note = ?, decided_at = datetime('now') WHERE id = ?").run(reason, a.id);
+    logAdmin(req, 'Rejected an application', 'application', a.id, `${a.business_name}: ${reason}`);
     res.json({ ok: true });
   });
 
@@ -1352,7 +1697,9 @@ function createApp(db, config = {}) {
     const b = req.body || {};
     const shop = db.prepare('SELECT * FROM shops WHERE id = ?').get(Number(b.shop_id));
     if (!shop) throw new HttpError(400, 'Choose the shop that has this part.');
-    res.status(201).json({ listing: adminListing(insertListing(shop.id, partFields(b))) });
+    const listing = adminListing(insertListing(shop.id, partFields(b)));
+    logAdmin(req, 'Posted a part', 'part', listing.id, `${listing.part_category} ${listing.oe_number || listing.universal_spec || ''} at ${shop.name}`);
+    res.status(201).json({ listing });
   });
   admin.put('/listings/:id', (req, res) => {
     const listing = db.prepare('SELECT * FROM shop_listings WHERE id = ?').get(Number(req.params.id));
@@ -1369,17 +1716,24 @@ function createApp(db, config = {}) {
       has('description') ? text(b.description, { field: 'Description', max: 600 }) : listing.description,
       has('warranty_months') ? integer(b.warranty_months, { field: 'Warranty (months)', min: 0, max: 120, required: false }) : listing.warranty_months,
       has('hidden') ? (b.hidden ? 1 : 0) : listing.hidden, listing.id);
-    res.json({ listing: adminListing(listing.id) });
+    const after = adminListing(listing.id);
+    const name = `${after.part_category} ${after.oe_number || after.universal_spec || ''} at ${after.shop_name}`;
+    if (has('hidden') && !!b.hidden !== !!listing.hidden) logAdmin(req, b.hidden ? 'Hid a part' : 'Showed a part again', 'part', listing.id, name);
+    if (Object.keys(b).some((k) => k !== 'hidden')) logAdmin(req, 'Edited a part', 'part', listing.id, name);
+    res.json({ listing: after });
   });
   admin.delete('/listings/:id', (req, res) => {
     const id = Number(req.params.id);
-    if (!db.prepare('SELECT 1 FROM shop_listings WHERE id = ?').get(id)) throw new HttpError(404, 'Part not found.');
+    const gone = adminListing(id);
+    if (!gone) throw new HttpError(404, 'Part not found.');
     // Old bookings keep their row but no longer point at the removed part.
     tx(db, () => {
       db.prepare('UPDATE bookings SET shop_listing_id = NULL WHERE shop_listing_id = ?').run(id);
       db.prepare('UPDATE listing_requests SET listing_id = NULL WHERE listing_id = ?').run(id);
+      db.prepare('UPDATE reports SET listing_id = NULL WHERE listing_id = ?').run(id);
       db.prepare('DELETE FROM shop_listings WHERE id = ?').run(id);
     });
+    logAdmin(req, 'Deleted a part', 'part', id, `${gone.part_category} ${gone.oe_number || gone.universal_spec || ''} at ${gone.shop_name}`);
     res.json({ ok: true });
   });
 
@@ -1409,12 +1763,15 @@ function createApp(db, config = {}) {
         .run(listingId, text(b.admin_note, { field: 'Note', max: 300 }), r.id);
       return listingId;
     });
-    res.json({ listing: adminListing(id) });
+    const posted = adminListing(id);
+    logAdmin(req, 'Approved a part request', 'part', id, `${posted.part_category} ${posted.oe_number || posted.universal_spec || ''} at ${posted.shop_name}`);
+    res.json({ listing: posted });
   });
   admin.post('/listing-requests/:id/reject', (req, res) => {
     const r = pendingRequest(req.params.id);
     const reason = text((req.body || {}).admin_note, { field: 'Reason', max: 300, required: true });
     db.prepare(`UPDATE listing_requests SET status = 'rejected', admin_note = ?, decided_at = datetime('now') WHERE id = ?`).run(reason, r.id);
+    logAdmin(req, 'Rejected a part request', 'part_request', r.id, `${r.part_category} ${r.oe_number || r.universal_spec || ''}: ${reason}`);
     res.json({ request: db.prepare('SELECT * FROM listing_requests WHERE id = ?').get(r.id) });
   });
 
@@ -1429,8 +1786,10 @@ function createApp(db, config = {}) {
     });
   });
   admin.delete('/reviews/:id', (req, res) => {
-    const info = db.prepare('DELETE FROM reviews WHERE id = ?').run(Number(req.params.id));
-    if (!info.changes) throw new HttpError(404, 'Review not found.');
+    const review = db.prepare('SELECT * FROM reviews WHERE id = ?').get(Number(req.params.id));
+    if (!review) throw new HttpError(404, 'Review not found.');
+    db.prepare('DELETE FROM reviews WHERE id = ?').run(review.id);
+    logAdmin(req, 'Removed a review', 'review', review.id, `${review.rating} stars by ${review.author_name}: ${review.comment || 'no comment'}`);
     res.json({ ok: true });
   });
 

@@ -71,7 +71,19 @@
       <p class="biz-apply"><button class="btn btn-quiet" type="button" data-sign-out>Sign out</button></p>
     </section>
 
+    <section id="pick" class="wrap biz-pick" hidden aria-labelledby="pick-title">
+      <h1 id="pick-title">Open a shop or garage</h1>
+      <p class="muted">See any dashboard exactly as its owner sees it, for example when they ask for help. You can look but not change anything.</p>
+      <div class="field"><label for="pick-q">Search by name, area or sign-in email</label><input id="pick-q" type="search" autocomplete="off"></div>
+      <ul id="pick-list" class="pick-list"></ul>
+    </section>
+
     <section id="console" hidden>
+      <div id="view-banner" class="view-banner" hidden>
+        <span id="view-banner-text"></span>
+        <span class="view-banner-actions"><button id="view-another" class="btn btn-secondary btn-small" type="button">Open another</button>
+        <a class="btn btn-secondary btn-small" href="/admin.html">Back to admin</a></span>
+      </div>
       <div class="console-head biz-head">
         <div>
           <p class="biz-side-label" id="side-label"></p>
@@ -86,6 +98,7 @@
           <button class="btn btn-secondary btn-small" type="button" data-sign-out>Sign out</button>
         </div>
       </div>
+      <p id="biz-alert" class="note-box biz-alert" role="alert" hidden></p>
       <div class="tabs" role="tablist" id="tabs"></div>
       <div id="panel" role="tabpanel"></div>
     </section>

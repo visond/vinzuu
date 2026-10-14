@@ -486,14 +486,17 @@
       h('span', { class: 'bk-who', text: who }), h('strong', { text: name }),
       h('span', { class: 'small muted', text: statusText }),
       typeof review === 'number' ? h('span', { class: 'bk-rated' }, starsEl(review), ' You rated this')
-        : review === 'can_review' ? h('button', { class: 'btn btn-primary btn-small', type: 'button', text: `Rate the ${target}`, onclick: () => openReviewForm(b, target, name) }) : null);
+        : review === 'can_review' ? h('button', { class: 'btn btn-primary btn-small', type: 'button', text: `Rate the ${target}`, onclick: () => openReviewForm(b, target, name) }) : null,
+      b.reported && b.reported[target] ? h('span', { class: 'small muted bk-reported', text: 'You reported a problem. The vinzuu team is looking into it.' })
+        : h('button', { class: 'link-btn small bk-report', type: 'button', text: 'Report a problem', onclick: () => openReportForm({ booking_id: b.id, target }, name) }));
     return h('li', { class: 'booking-item' },
       h('div', { class: 'bk-head' }, h('strong', { text: b.part_category ? `${b.part_category}${b.oe_number ? ` (${b.oe_number})` : ''}` : 'Repair' }),
         h('span', { class: 'small muted', text: `${b.year} ${b.make} ${b.model} · booked ${String(b.created_at).slice(0, 10)}` })),
       h('div', { class: 'bk-sides' },
-        b.shop_name ? side('Part from', b.shop_name, BOOKING_SHOP[b.shop_status] || b.shop_status, b.review.shop, 'shop') : null,
+        b.shop_name ? side('Part from', b.shop_name, b.admin_note && b.shop_status === 'cancelled' ? `Cancelled by vinzuu: ${b.admin_note}`
+          : BOOKING_SHOP[b.shop_status] || b.shop_status, b.review.shop, 'shop') : null,
         b.garage_name ? side('Fitted by', b.garage_name,
-          b.garage_status === 'accepted' ? `Booked for ${slot}` : b.garage_status === 'declined' ? `Declined: ${b.garage_note || ''}` : (BOOKING_GARAGE[b.garage_status] || b.garage_status),
+          b.garage_status === 'accepted' ? `Booked for ${slot}` : b.garage_status === 'declined' ? (/^Cancelled by vinzuu/.test(b.garage_note || '') ? b.garage_note : `Declined: ${b.garage_note || ''}`) : (BOOKING_GARAGE[b.garage_status] || b.garage_status),
           b.review.garage, 'garage') : null));
   }
 
@@ -519,6 +522,38 @@
             await api(`/api/me/bookings/${b.id}/reviews`, { method: 'POST', body: { target, rating: stars, comment: comment.value || null } });
             closeDialog(dlg);
             loadMyBookings();
+          } catch (err) { setStatus(status, err.message, 'error'); }
+        } }),
+        h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: () => closeDialog(dlg) }))));
+    showDialog(dlg);
+  }
+
+  /** Tell the vinzuu team about a problem with a shop, a garage or a part. what is
+   *  { booking_id, target } from "My bookings", or { listing_id } from the search results. */
+  function openReportForm(what, name) {
+    const dlg = $('booking-dialog');
+    const reasons = Object.entries(state.meta.report_reasons || {});
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    const details = h('textarea', { id: 'rp-details', maxLength: 500, rows: 4, placeholder: 'What happened? For example: the price at the counter was higher than on Vinzuu.' });
+    const list = h('div', { class: 'report-reasons', role: 'radiogroup', 'aria-label': 'What went wrong?' }, ...reasons.map(([key, label], i) => h('label', { class: 'report-reason' },
+      h('input', { type: 'radio', name: 'rp-reason', value: key, checked: i === 0 }), h('span', { text: label }))));
+    dlg.replaceChildren(h('div', { class: 'dialog-body' },
+      h('h2', { id: 'booking-title', text: `Report a problem with ${name}` }),
+      h('p', { class: 'muted', text: 'Only the vinzuu team sees this. We check every report and can hide a part or suspend a shop or garage.' }),
+      h('fieldset', { class: 'plain-fieldset' }, h('legend', { text: 'What went wrong?' }), list),
+      h('div', { class: 'field' }, h('label', { for: 'rp-details', text: 'Tell us more' }), details),
+      status,
+      h('div', { class: 'dialog-actions' },
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Send report', onclick: async () => {
+          const reason = (list.querySelector('input:checked') || {}).value;
+          if (reason === 'other' && !details.value.trim()) return setStatus(status, 'Tell us what happened.', 'error');
+          try {
+            await api('/api/reports', { method: 'POST', body: { ...what, reason, details: details.value || null } });
+            dlg.querySelector('.dialog-body').replaceChildren(
+              h('h2', { id: 'booking-title', text: 'Thank you' }),
+              h('p', { text: 'The vinzuu team will look into it and may call you on your phone number.' }),
+              h('div', { class: 'dialog-actions' }, h('button', { class: 'btn btn-primary', type: 'button', text: 'Close', onclick: () => closeDialog(dlg) })));
+            if (what.booking_id) loadMyBookings();
           } catch (err) { setStatus(status, err.message, 'error'); }
         } }),
         h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: () => closeDialog(dlg) }))));
@@ -1168,7 +1203,8 @@
       h('div', { class: 'actions' },
         wa ? h('a', { class: 'btn btn-secondary btn-small', href: wa, target: '_blank', rel: 'noopener', text: 'WhatsApp the shop' }) : null,
         h('a', { class: 'btn btn-secondary btn-small', href: `tel:${l.shop_phone}`, text: 'Call' }),
-        h('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'Book installation', onclick: () => openBooking(l) })));
+        h('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'Book installation', onclick: () => openBooking(l) }),
+        state.user ? h('button', { class: 'link-btn small result-report', type: 'button', text: 'Report this part', onclick: () => openReportForm({ listing_id: l.listing_id }, `${l.part_category} at ${l.shop_name}`) }) : null));
   }
 
   function useMyLocation() {

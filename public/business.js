@@ -8,6 +8,14 @@
 
   const $ = (id) => document.getElementById(id);
   const SIDE_KEY = 'vz.biz.side';
+  // An admin opens the dashboard as one shop or garage at a time, read-only: { kind, id }.
+  const VIEW_KEY = 'vz.biz.view';
+  let view = null;
+  try { view = JSON.parse(store.get(VIEW_KEY, 'sessionStorage') || 'null'); } catch (e) { view = null; }
+  // Every call says which shop or garage the admin is looking at; the server only honours it
+  // for an admin, and only for reading.
+  const api = (path, opts = {}) => window.api(path, view
+    ? { ...opts, headers: { ...(opts.headers || {}), [view.kind === 'shop' ? 'x-view-shop' : 'x-view-garage']: String(view.id) } } : opts);
 
   let me = null;          // { user, shop, garage }
   let side = null;        // 'shop' | 'garage'
@@ -38,17 +46,28 @@
     document.querySelectorAll('[data-sign-out]').forEach((b) => b.addEventListener('click', signOut));
     $('login-form').addEventListener('submit', onLogin);
     document.querySelectorAll('[data-side]').forEach((b) => b.addEventListener('click', () => openSide(b.dataset.side)));
+    $('view-another').addEventListener('click', () => {
+      view = null;
+      store.remove(VIEW_KEY, 'sessionStorage');
+      location.hash = '';
+      showAdminPicker();
+    });
     api('/api/meta').then((m) => { meta = m; $('demo-banner').hidden = !m.demo; }).catch(() => {});
     await load();
   }
 
   async function load() {
     try {
-      me = await api('/api/business/me');
+      me = await api(`/api/business/me${view ? `?${view.kind}_id=${enc(view.id)}` : ''}`);
     } catch (err) {
+      if (err.code === 'admin_pick') {
+        view = null;
+        store.remove(VIEW_KEY, 'sessionStorage');
+        await showAdminPicker();
+        return;
+      }
       if (err.code === 'not_business') {
         const user = (await api('/api/auth/me').catch(() => ({}))).user;
-        if (user && user.role === 'admin') { location.href = '/admin.html'; return; }
         show('not-business');
         $('not-business-text').textContent = `${user ? user.email : 'This account'} is a customer account, so it has no shop or garage. To sell parts or fit them, apply to join. It only takes a few minutes.`;
         return;
@@ -57,10 +76,11 @@
       return;
     }
     catalog = await api('/api/catalog');
-    $('biz-user').hidden = false;
-    $('biz-user').replaceChildren(
-      h('span', { class: 'nav-avatar', 'aria-hidden': 'true' }, (me.user.name || '?').charAt(0).toUpperCase(), h('span', { class: 'nav-online' })),
-      h('span', { class: 'biz-user-name', text: me.user.email }));
+    showAccount(me.user);
+    $('view-banner').hidden = !me.view_as_admin;
+    if (me.view_as_admin) {
+      $('view-banner-text').textContent = `You are looking at ${(me.shop || me.garage).name} the way its owner sees it. It is read-only.`;
+    }
     const remembered = store.get(SIDE_KEY, 'sessionStorage');
     if (me.shop && me.garage) {
       if (remembered === 'shop' || remembered === 'garage') openSide(remembered);
@@ -74,7 +94,42 @@
   }
 
   function show(id) {
-    for (const s of ['login', 'not-business', 'choose', 'console']) $(s).hidden = s !== id;
+    for (const s of ['login', 'not-business', 'choose', 'pick', 'console']) $(s).hidden = s !== id;
+  }
+
+  function showAccount(user) {
+    $('biz-user').hidden = false;
+    $('biz-user').replaceChildren(accountMenu(user, 'seller', { onSignOut: () => {
+      store.remove(SIDE_KEY, 'sessionStorage');
+      store.remove(VIEW_KEY, 'sessionStorage');
+    } }));
+  }
+
+  /** An admin chooses which shop or garage to open (read-only), to see what its owner sees. */
+  async function showAdminPicker() {
+    const user = (await api('/api/auth/me')).user;
+    showAccount(user);
+    show('pick');
+    const [{ shops }, { garages }] = await Promise.all([api('/api/admin/shops'), api('/api/admin/garages')]);
+    const all = [...shops.map((s) => ({ ...s, kind: 'shop' })), ...garages.map((g) => ({ ...g, kind: 'garage' }))];
+    const search = $('pick-q');
+    const draw = () => {
+      const q = search.value.trim().toLowerCase();
+      const rows = all.filter((b) => !q || [b.name, b.address_text, b.login_email].some((x) => String(x || '').toLowerCase().includes(q)));
+      $('pick-list').replaceChildren(...(rows.length ? rows.map((b) => h('li', {},
+        h('button', { class: 'pick-item', type: 'button', onclick: () => {
+          view = { kind: b.kind, id: b.id };
+          store.set(VIEW_KEY, JSON.stringify(view), 'sessionStorage');
+          store.set(SIDE_KEY, b.kind, 'sessionStorage');
+          load();
+        } },
+        h('span', { class: `pill ${b.kind === 'shop' ? 'pill-new' : 'pill-done'}`, text: b.kind === 'shop' ? 'Shop' : 'Garage' }),
+        h('strong', { text: b.name }),
+        h('span', { class: 'small muted', text: [b.address_text, b.login_email || 'No sign-in yet', b.suspended ? 'Suspended' : null].filter(Boolean).join(' · ') })))) :
+        [h('li', { class: 'empty muted', text: 'Nothing matches.' })]));
+    };
+    search.oninput = draw;
+    draw();
   }
 
   async function onLogin(event) {
@@ -91,6 +146,7 @@
 
   async function signOut() {
     store.remove(SIDE_KEY, 'sessionStorage');
+    store.remove(VIEW_KEY, 'sessionStorage');
     try { await api('/api/auth/logout', { method: 'POST' }); } finally { location.href = '/business.html'; }
   }
 
@@ -122,6 +178,10 @@
       : h('span', { class: 'muted', text: 'No reviews yet' }));
     $('biz-sub').replaceChildren(...sub);
     $('side-switch').hidden = !(me.shop && me.garage);
+    // A suspended shop or garage is hidden from customers; its owner sees why.
+    $('biz-alert').hidden = !biz.suspended;
+    $('biz-alert').textContent = biz.suspended
+      ? `The vinzuu team has suspended your ${side} on Vinzuu, so customers cannot see it right now. Reason: ${biz.suspended_reason || 'not given'}. Contact the vinzuu team to fix it.` : '';
     $('side-switch').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.side === side)));
   }
 
