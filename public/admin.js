@@ -455,17 +455,20 @@
     };
     // Like a parts catalogue: the car narrows the part numbers, so the list stays short.
     const car = carSelects(makes, 'pp', { onChange: () => loadNumbers() });
-    const addNumber = h('button', { class: 'link-btn small', type: 'button', text: 'Number not listed? Add it under Part numbers', onclick: () => {
-      prefill = { part_category: f.cat.value, make: car.make.value, model: car.model.value, generation: car.generation.value };
-      const g = car.generationInfo();
-      if (g) { prefill.year_start = g.year_start; prefill.year_end = g.year_end; }
-      showTab('fitment');
-    } });
+    // A number that isn't in the table yet can be typed here: posting saves it for the chosen car
+    // first (LOW confidence until checked), so a new part never has to wait for the Part numbers tab.
+    const NEW = '__new';
+    const newOe = input('pp-newoe', { placeholder: 'Type it exactly as printed', maxLength: 60 });
+    const newWrap = h('div', { class: 'row stack-sm' },
+      fieldEl('New part number', newOe, 'As printed on the part, its box or the old part.'),
+      fieldEl('Engine', car.engine, 'Leave it at "Any" if it fits every engine of that car.'));
+    newWrap.hidden = true;
+    f.oe.addEventListener('change', () => { newWrap.hidden = f.oe.value !== NEW; });
     const oeWrap = h('div', {},
       h('div', { class: 'field' }, h('label', { for: 'pp-make', text: 'Which car is it for?' }),
         h('div', { class: 'car-selects' }, ...car.fields),
         h('p', { class: 'hint', text: 'Choose the car to see only its part numbers. Leave the model at "Any" to see every car of that make.' })),
-      fieldEl('Part number', f.oe), addNumber);
+      fieldEl('Part number', f.oe), newWrap);
     const specWrap = fieldEl('Size or specification', f.spec);
     oeWrap.hidden = true; specWrap.hidden = true;
     async function loadNumbers() {
@@ -474,8 +477,28 @@
       f.oe.replaceChildren(h('option', { value: '', text: 'Loading…' }));
       const { rows } = await call(`/api/admin/oe-numbers?part_category=${enc(cat.name)}&${car.query()}`);
       const choices = oeChoices(rows);
-      f.oe.replaceChildren(h('option', { value: '', text: choices.length ? `Choose the part number (${choices.length})` : 'No part numbers for this car yet: add one under Part numbers' }),
-        ...choices.map((c) => h('option', { value: c.oe, text: c.text })));
+      f.oe.replaceChildren(
+        ...(choices.length ? [h('option', { value: '', text: `Choose the part number (${choices.length})` })] : []),
+        ...choices.map((c) => h('option', { value: c.oe, text: c.text })),
+        h('option', { value: NEW, text: choices.length ? 'Not listed: type a new part number' : 'No part numbers for this car yet: type a new one' }));
+      newWrap.hidden = f.oe.value !== NEW;
+    }
+
+    /** Saves a typed number for the chosen car and returns it. Years come from the generation, or
+     *  from every generation of the model when none is chosen. */
+    async function saveNewNumber(cat) {
+      const oe = newOe.value.trim().toUpperCase();
+      if (!oe) throw new Error('Type the new part number.');
+      const model = (makes.find((m) => m.make === car.make.value) || { models: [] }).models.find((m) => m.model === car.model.value);
+      if (!model) throw new Error('Choose the make and model the part fits, so customers with that car find it.');
+      const gens = car.generation.value ? model.generations.filter((g) => g.generation === car.generation.value) : model.generations;
+      await call('/api/admin/fitment-reference', { method: 'POST', body: {
+        part_category: cat.name, oe_number: oe, make: car.make.value, model: car.model.value,
+        generation: car.generation.value || null, engine: car.engine.value || null,
+        year_start: Math.min(...gens.map((g) => g.year_start)), year_end: Math.max(...gens.map((g) => g.year_end)),
+        origin_market: null, confidence_level: 'LOW', source: 'Added by the admin when posting a part',
+      } });
+      return oe;
     }
     f.cat.addEventListener('change', () => {
       const cat = categories.find((c) => c.name === f.cat.value);
@@ -493,12 +516,15 @@
       const cat = categories.find((c) => c.name === f.cat.value);
       if (!f.shop.value) return setStatus(status, 'Choose the shop.', 'error');
       if (!cat) return setStatus(status, 'Choose the part.', 'error');
+      if (cat.type === 'model_specific' && !f.oe.value) return setStatus(status, 'Choose the part number, or type a new one.', 'error');
       if (!photo) return setStatus(status, 'Add a photo of the part.', 'error');
       setStatus(status, 'Posting…');
       try {
+        let oe = cat.type === 'model_specific' ? f.oe.value : null;
+        if (oe === NEW) oe = await saveNewNumber(cat);
         await call('/api/admin/listings', { method: 'POST', body: {
           shop_id: Number(f.shop.value), part_category: cat.name,
-          oe_number: cat.type === 'model_specific' ? f.oe.value : null, universal_spec: cat.type === 'universal' ? f.spec.value : null,
+          oe_number: oe, universal_spec: cat.type === 'universal' ? f.spec.value : null,
           brand: f.brand.value || null, condition: f.cond.value, warranty_months: f.war.value === '' ? null : Number(f.war.value),
           price_rwf: Number(f.price.value), stock_quantity: Number(f.stock.value || 0), description: f.desc.value || null, photo_url: photo,
         } });

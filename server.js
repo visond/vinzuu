@@ -1254,9 +1254,15 @@ function createApp(db, config = {}) {
     res.json({ gaps: db.prepare('SELECT * FROM search_gaps ORDER BY times_searched DESC, last_seen DESC LIMIT 200').all() });
   });
   admin.post('/fitment-reference', (req, res) => {
+    const values = fitmentInput(req.body || {});
+    // The same number for the same car already there (for example a post that failed and was
+    // sent again): hand back that row instead of adding a copy.
+    const same = db.prepare(`SELECT * FROM fitment_reference WHERE oe_number = ? AND part_category = ? AND make = ? AND model = ?
+      AND generation IS ? AND year_start = ? AND year_end = ? AND engine IS ? AND origin_market IS ? LIMIT 1`).get(...values.slice(0, 9));
+    if (same) return res.json({ row: same, existing: true });
     const info = db.prepare(`INSERT INTO fitment_reference
       (oe_number, part_category, make, model, generation, year_start, year_end, engine, origin_market,
-       confidence_level, source, verified_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(...fitmentInput(req.body || {}));
+       confidence_level, source, verified_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(...values);
     const row = db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(Number(info.lastInsertRowid));
     logAdmin(req, 'Added a part number', 'part_number', row.id, `${row.oe_number} for ${row.make} ${row.model}`);
     res.status(201).json({ row: db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(Number(info.lastInsertRowid)) });
