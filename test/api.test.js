@@ -1376,3 +1376,73 @@ async function cookieFor(email, password) {
   return res.headers.getSetCookie()[0].split(';')[0];
 }
 const adminCookie = () => cookieFor('admin@vinzuu.rw', 'Admin-vinzuu1');
+
+// ---------- full part list and part numbers ----------
+
+test('the part list is grouped like a parts catalogue and keeps every older part name', async () => {
+  const { json } = await get('/api/catalog');
+  const names = json.categories.map((c) => c.name);
+  for (const old of ['Front Brake Pad', 'Rear Brake Pad', 'Oil Filter', 'Air Filter', 'Front Bumper', 'Headlight Assembly', 'Battery', 'Wiper Blade', 'Engine Oil']) {
+    assert.ok(names.includes(old), old);
+  }
+  assert.ok(json.categories.length > 100);
+  assert.equal(new Set(names).size, names.length, 'no duplicate names');
+  assert.ok(json.categories.every((c) => c.group), 'every part has a group');
+  assert.equal(json.categories[0].group, 'Service parts');
+  assert.equal(json.categories.find((c) => c.name === 'Tyre').type, 'universal');
+  assert.equal(json.categories.find((c) => c.name === 'Cabin Air Filter').type, 'model_specific');
+});
+
+test('part numbers for a form are narrowed to the chosen car', async () => {
+  const all = await get('/api/admin/oe-numbers?part_category=Oil%20Filter', ADMIN);
+  const rav4 = await get('/api/admin/oe-numbers?part_category=Oil%20Filter&make=Toyota&model=RAV4&generation=XA40', ADMIN);
+  assert.equal(rav4.status, 200);
+  assert.ok(rav4.json.rows.length > 0);
+  assert.ok(rav4.json.rows.every((r) => r.make === 'Toyota' && r.model === 'RAV4' && (r.generation === 'XA40' || r.generation === null)));
+  assert.ok(all.json.rows.length > rav4.json.rows.length);
+});
+
+test('part numbers import from a CSV: good rows added, repeats skipped, bad rows reported by line', async () => {
+  const csv = [
+    'oe_number;part;make;model;generation;year_from;year_to;engine;built_in;confidence;source',
+    'CSV-TEST-1;Cabin Air Filter;Hyundai;Tucson;TL;2015;2020;;;medium;"Hyundai catalogue; page 4"',
+    'CSV-TEST-2;Not a part;Hyundai;Tucson;TL;2015;2020;;;LOW;test',
+    'CSV-TEST-3;Spark Plug;Hyundai;Tucson;TL;2020;2015;;;LOW;test',
+    'CSV-TEST-4;Tyre;Hyundai;Tucson;TL;2015;2020;;;LOW;test',
+  ].join('\r\n');
+  const dry = await post('/api/admin/fitment-reference/import', { csv, dry_run: true }, ADMIN);
+  assert.equal(dry.status, 200);
+  assert.equal(dry.json.added, 1);
+  assert.deepEqual(dry.json.errors.map((e) => e.line), [3, 4, 5]);
+  assert.equal((await get('/api/admin/fitment-reference?q=CSV-TEST-1', ADMIN)).json.rows.length, 0, 'a check saves nothing');
+
+  const first = await post('/api/admin/fitment-reference/import', { csv }, ADMIN);
+  assert.equal(first.json.added, 1);
+  const again = await post('/api/admin/fitment-reference/import', { csv }, ADMIN);
+  assert.equal(again.json.added, 0);
+  assert.equal(again.json.skipped, 1);
+  const [row] = (await get('/api/admin/fitment-reference?q=CSV-TEST-1', ADMIN)).json.rows;
+  assert.equal(row.confidence_level, 'MEDIUM');
+  assert.equal(row.source, 'Hyundai catalogue; page 4');
+  assert.equal(row.engine, null);
+  assert.equal((await post('/api/admin/fitment-reference/import', { csv: '' }, ADMIN)).status, 400);
+});
+
+test('real part numbers in lib/oe load once into a clean database, alongside the demo data', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { ensureRealPartNumbers } = require('../db');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vz-oe-'));
+  fs.writeFileSync(path.join(dir, 'toyota.csv'), 'oe_number,part,make,model,generation,year_from,year_to,engine,built_in,confidence,source\n'
+    + 'REAL-1,Oil Filter,Toyota,RAV4,XA40,2013,2018,2.0L Petrol,,MEDIUM,https://example.com/a\n'
+    + 'REAL-2,Battery,Toyota,RAV4,XA40,2013,2018,,,MEDIUM,https://example.com/b\n'
+    + 'REAL-3,Spark Plug,Toyota,RAV4,XA40,2013,2018,,,HIGH,https://example.com/c\n');
+  const db = openDb(':memory:');
+  assert.equal(ensureRealPartNumbers(db, dir), 2, 'the universal Battery row is skipped');
+  assert.equal(db.prepare("SELECT confidence_level FROM fitment_reference WHERE oe_number = 'REAL-3'").get().confidence_level, 'LOW',
+    'HIGH without a "verified by" is lowered');
+  assert.equal(ensureRealPartNumbers(db, dir), 0, 'an unchanged file is not loaded again');
+  assert.ok(seedDemo(db), 'demo data still seeds next to real part numbers');
+  db.close();
+});

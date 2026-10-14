@@ -373,8 +373,7 @@
     const status = statusEl();
     let photo = null;
     const f = {
-      cat: h('select', { id: 'rq-cat' }, h('option', { value: '', text: 'Choose a part' }),
-        ...catalog.categories.map((c) => h('option', { value: c.name, text: c.name }))),
+      cat: h('select', { id: 'rq-cat' }, ...categoryOptions(catalog.categories, 'Choose a part')),
       oe: h('select', { id: 'rq-oe' }),
       spec: h('input', { id: 'rq-spec', type: 'text', maxLength: 80, placeholder: 'For example 12V 60Ah, or 24 inch' }),
       brand: h('input', { id: 'rq-brand', type: 'text', maxLength: 60, placeholder: 'For example Toyota, Bosch, Denso' }),
@@ -387,20 +386,31 @@
       preview: h('img', { class: 'photo-preview', alt: 'Photo preview', hidden: true }),
       note: h('textarea', { id: 'rq-note', maxLength: 300, rows: 2, placeholder: 'Anything the vinzuu team should know (optional)' }),
     };
-    const oeWrap = field('Part number and the cars it fits', f.oe, 'Choose the number printed on the box or on the old part. If it is missing, write it in the note.');
+    // The car narrows the part numbers, so the list stays short.
+    const car = carSelects(catalog.makes, 'rq', { onChange: () => loadNumbers() });
+    const oeWrap = h('div', {},
+      h('div', { class: 'field' }, h('label', { for: 'rq-make', text: 'Which car is it for?' }),
+        h('div', { class: 'car-selects' }, ...car.fields),
+        h('p', { class: 'hint', text: 'Choose the car to see only its part numbers.' })),
+      field('Part number', f.oe, 'Choose the number printed on the box or on the old part. If it is missing, write it in the note.'));
     const specWrap = field('Size or specification', f.spec);
     oeWrap.hidden = true; specWrap.hidden = true;
-    f.cat.addEventListener('change', async () => {
+    async function loadNumbers() {
       const cat = catalog.categories.find((c) => c.name === f.cat.value);
-      oeWrap.hidden = !cat || cat.type !== 'model_specific';
-      specWrap.hidden = !cat || cat.type !== 'universal';
       if (!cat || cat.type !== 'model_specific') return;
       f.oe.replaceChildren(h('option', { value: '', text: 'Loading…' }));
       try {
-        const data = await api(`/api/shop/oe-numbers?part_category=${enc(cat.name)}`);
-        f.oe.replaceChildren(h('option', { value: '', text: data.rows.length ? 'Choose the part number' : 'No part numbers yet for this part' }),
-          ...data.rows.map((r) => h('option', { value: r.oe_number, text: `${r.oe_number}: ${fitsLine(r)}` })));
+        const data = await api(`/api/shop/oe-numbers?part_category=${enc(cat.name)}&${car.query()}`);
+        const choices = oeChoices(data.rows);
+        f.oe.replaceChildren(h('option', { value: '', text: choices.length ? `Choose the part number (${choices.length})` : 'No part numbers for this car yet: write it in the note' }),
+          ...choices.map((c) => h('option', { value: c.oe, text: c.text })));
       } catch (err) { setStatus(status, err.message, 'error'); }
+    }
+    f.cat.addEventListener('change', () => {
+      const cat = catalog.categories.find((c) => c.name === f.cat.value);
+      oeWrap.hidden = !cat || cat.type !== 'model_specific';
+      specWrap.hidden = !cat || cat.type !== 'universal';
+      loadNumbers();
     });
     f.photo.addEventListener('change', async (e) => {
       photo = null; f.preview.hidden = true;
@@ -731,8 +741,7 @@
   async function garageServices() {
     const { services } = await api('/api/garage/services');
     const status = statusEl();
-    const catOptions = (selected) => [h('option', { value: '', text: 'General work (no part)', selected: !selected }),
-      ...catalog.categories.map((c) => h('option', { value: c.name, text: `Fitting: ${c.name}`, selected: c.name === selected }))];
+    const catOptions = (selected) => categoryOptions(catalog.categories, 'General work (no part)', { selected, label: (c) => `Fitting: ${c.name}` });
     const f = {
       name: h('input', { id: 'sv-name', type: 'text', maxLength: 80, placeholder: 'For example: Fit front brake pads' }),
       cat: h('select', { id: 'sv-cat' }, ...catOptions(null)),

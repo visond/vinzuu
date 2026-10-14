@@ -7,6 +7,7 @@
   const $ = (id) => document.getElementById(id);
   let meta = null;
   let categories = [];
+  let makes = [];          // the model lineup, for the car pickers
   let prefill = null;      // set when jumping from the "missing parts" report to the add form
   let editing = null;      // fitment row being edited
 
@@ -55,7 +56,7 @@
   }
 
   async function openConsole(user) {
-    categories = (await api('/api/catalog')).categories;
+    ({ categories, makes } = await api('/api/catalog'));
     $('admin-account').replaceChildren(accountMenu(user, 'admin'));
     $('admin-switch').replaceChildren(portalSwitch(user, 'admin') || '');
     $('login').hidden = true;
@@ -442,7 +443,7 @@
     let photo = null;
     const f = {
       shop: select('pp-shop', [['', 'Choose the shop'], ...shops.map((s) => [String(s.id), `${s.name}${s.vetted ? '' : ' (not vetted)'}`])]),
-      cat: select('pp-cat', [['', 'Choose a part'], ...categories.map((c) => [c.name, c.name])]),
+      cat: h('select', { id: 'pp-cat' }, ...categoryOptions(categories, 'Choose a part')),
       oe: h('select', { id: 'pp-oe' }), spec: input('pp-spec', { placeholder: 'For example 12V 60Ah' }),
       brand: input('pp-brand', { placeholder: 'For example Bosch' }),
       cond: select('pp-cond', [['genuine', 'Genuine part'], ['aftermarket', 'Aftermarket part']]),
@@ -452,17 +453,35 @@
       photo: h('input', { id: 'pp-photo', type: 'file', accept: 'image/*' }),
       preview: h('img', { class: 'photo-preview', alt: 'Photo preview', hidden: true }),
     };
-    const oeWrap = fieldEl('Part number and the cars it fits', f.oe);
+    // Like a parts catalogue: the car narrows the part numbers, so the list stays short.
+    const car = carSelects(makes, 'pp', { onChange: () => loadNumbers() });
+    const addNumber = h('button', { class: 'link-btn small', type: 'button', text: 'Number not listed? Add it under Part numbers', onclick: () => {
+      prefill = { part_category: f.cat.value, make: car.make.value, model: car.model.value, generation: car.generation.value };
+      const g = car.generationInfo();
+      if (g) { prefill.year_start = g.year_start; prefill.year_end = g.year_end; }
+      showTab('fitment');
+    } });
+    const oeWrap = h('div', {},
+      h('div', { class: 'field' }, h('label', { for: 'pp-make', text: 'Which car is it for?' }),
+        h('div', { class: 'car-selects' }, ...car.fields),
+        h('p', { class: 'hint', text: 'Choose the car to see only its part numbers. Leave the model at "Any" to see every car of that make.' })),
+      fieldEl('Part number', f.oe), addNumber);
     const specWrap = fieldEl('Size or specification', f.spec);
     oeWrap.hidden = true; specWrap.hidden = true;
-    f.cat.addEventListener('change', async () => {
+    async function loadNumbers() {
+      const cat = categories.find((c) => c.name === f.cat.value);
+      if (!cat || cat.type !== 'model_specific') return;
+      f.oe.replaceChildren(h('option', { value: '', text: 'Loading…' }));
+      const { rows } = await call(`/api/admin/oe-numbers?part_category=${enc(cat.name)}&${car.query()}`);
+      const choices = oeChoices(rows);
+      f.oe.replaceChildren(h('option', { value: '', text: choices.length ? `Choose the part number (${choices.length})` : 'No part numbers for this car yet: add one under Part numbers' }),
+        ...choices.map((c) => h('option', { value: c.oe, text: c.text })));
+    }
+    f.cat.addEventListener('change', () => {
       const cat = categories.find((c) => c.name === f.cat.value);
       oeWrap.hidden = !cat || cat.type !== 'model_specific';
       specWrap.hidden = !cat || cat.type !== 'universal';
-      if (!cat || cat.type !== 'model_specific') return;
-      const { rows } = await call(`/api/admin/oe-numbers?part_category=${enc(cat.name)}`);
-      f.oe.replaceChildren(h('option', { value: '', text: rows.length ? 'Choose the part number' : 'No part numbers yet: add one under Part numbers' }),
-        ...rows.map((r) => h('option', { value: r.oe_number, text: `${r.oe_number}: ${r.make} ${r.model}${r.generation ? ` ${r.generation}` : ''}, ${r.year_start} to ${r.year_end}${r.engine ? `, ${r.engine}` : ''}` })));
+      loadNumbers();
     });
     f.photo.addEventListener('change', async (e) => {
       photo = null; f.preview.hidden = true;
@@ -578,11 +597,16 @@
     const search = input('f-search', { type: 'search', placeholder: 'Search part number, make, model or part', 'aria-label': 'Search' });
 
     const modelSpecific = categories.filter((c) => c.type === 'model_specific');
+    // The car comes from the model lineup, so names match what customers register exactly.
+    const car = carSelects(makes, 'f', { withEngine: true, anyText: 'Every', onChange: () => {
+      const g = car.generationInfo();
+      if (g) { f.yearStart.value = g.year_start; f.yearEnd.value = g.year_end; }
+    } });
     const f = {
-      category: select('f-cat', modelSpecific.map((c) => [c.name, c.name])),
-      oe: input('f-oe'), make: input('f-make'), model: input('f-model'), generation: input('f-gen'),
+      category: h('select', { id: 'f-cat' }, ...categoryOptions(modelSpecific, null)),
+      oe: input('f-oe', { placeholder: 'For example 90915-YZZE1' }), make: car.make, model: car.model, generation: car.generation,
       yearStart: input('f-ys', { type: 'number', min: 1980 }), yearEnd: input('f-ye', { type: 'number', min: 1980 }),
-      engine: input('f-eng'),
+      engine: car.engine,
       origin: select('f-origin', [['', 'Any (this part fits every origin)'], ...meta.origins.map((o) => [o, `${o}-built only`])]),
       confidence: select('f-conf', [['LOW', 'LOW: one unconfirmed source'], ['MEDIUM', 'MEDIUM: confirmed by more than one shop'], ['HIGH', 'HIGH: official catalogue or physical check']]),
       source: input('f-src'), verifiedBy: input('f-ver'),
@@ -590,9 +614,10 @@
 
     function load(row) {
       f.category.value = row.part_category || modelSpecific[0].name;
-      f.oe.value = row.oe_number || ''; f.make.value = row.make || ''; f.model.value = row.model || '';
-      f.generation.value = row.generation || ''; f.yearStart.value = row.year_start || ''; f.yearEnd.value = row.year_end || '';
-      f.engine.value = row.engine || ''; f.origin.value = row.origin_market || '';
+      f.oe.value = row.oe_number || '';
+      car.set({ make: row.make, model: row.model, generation: row.generation, engine: row.engine });
+      f.yearStart.value = row.year_start || ''; f.yearEnd.value = row.year_end || '';
+      f.origin.value = row.origin_market || '';
       f.confidence.value = row.confidence_level || 'LOW'; f.source.value = row.source || ''; f.verifiedBy.value = row.verified_by || '';
     }
     editing = null;
@@ -619,7 +644,7 @@
       formTitle,
       h('div', { class: 'row stack-sm' }, fieldEl('Part', f.category), fieldEl('Part number (OE number)', f.oe)),
       h('div', { class: 'row stack-sm' }, fieldEl('Make', f.make), fieldEl('Model', f.model)),
-      h('div', { class: 'row stack-sm' }, fieldEl('Generation (optional)', f.generation, 'Leave blank if it fits every generation in the years given.'), fieldEl('Engine (optional)', f.engine, 'Leave blank if it fits every engine.')),
+      h('div', { class: 'row stack-sm' }, fieldEl('Generation', f.generation, 'Choosing one fills in its years. Leave it at "Every" if the part fits every generation in the years given.'), fieldEl('Engine', f.engine, 'Leave it at "Every" if it fits every engine.')),
       h('div', { class: 'row stack-sm' }, fieldEl('Year from', f.yearStart), fieldEl('Year to', f.yearEnd)),
       fieldEl('Built in', f.origin, 'Choose a country only if the part differs by where the car was built.'),
       fieldEl('How sure are we?', f.confidence),
@@ -637,7 +662,10 @@
         { label: 'Years', render: (r) => `${r.year_start} to ${r.year_end}` },
         { label: 'Engine', render: (r) => r.engine || 'any' }, { label: 'Built in', render: (r) => r.origin_market || 'any' },
         { label: 'Confidence', render: (r) => tag(r.confidence_level) },
-        { label: 'Source', key: 'source' }, { label: 'Verified by', render: (r) => r.verified_by || '' },
+        { label: 'Source', render: (r) => (/^https?:\/\//.test(r.source)
+          ? h('a', { href: r.source, target: '_blank', rel: 'noopener', text: new URL(r.source).hostname.replace(/^www\./, '') })
+          : r.source) },
+        { label: 'Verified by', render: (r) => r.verified_by || '' },
         { label: '', render: (r) => h('span', {},
           h('button', { class: 'btn btn-secondary btn-small', type: 'button', text: 'Edit', onclick: () => {
             editing = r.id; formTitle.textContent = `Edit part number #${r.id}`; load(r); form.scrollIntoView({ block: 'start' });
@@ -651,8 +679,43 @@
     }
     search.addEventListener('input', () => reloadList());
     await reloadList();
-    wrap.append(form, h('h2', { text: 'All part numbers' }), h('div', { class: 'field' }, search), listMount);
+    wrap.append(form, importPanel(reloadList), h('h2', { text: 'All part numbers' }),
+      h('div', { class: 'filter-bar' }, h('div', { class: 'field' }, search), csvLink('part-numbers', 'Download all')), listMount);
     return wrap;
+  }
+
+  /** Many part numbers at once, from a spreadsheet saved as CSV (for example a catalogue export). */
+  function importPanel(after) {
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    const file = h('input', { id: 'imp-file', type: 'file', accept: '.csv,text/csv' });
+    const problems = h('ul', { class: 'import-errors small' });
+    const COLS = 'oe_number, part, make, model, generation, year_from, year_to, engine, built_in, confidence, source, verified_by';
+    const sample = `${COLS.replace(/ /g, '')}\n90915-YZZE1,Oil Filter,Toyota,RAV4,XA40,2013,2018,2.0L Petrol,,MEDIUM,Toyota parts catalogue,\n`;
+    async function send(dryRun) {
+      problems.replaceChildren();
+      if (!file.files[0]) return setStatus(status, 'Choose the CSV file first.', 'error');
+      if (file.files[0].size > 900 * 1024) return setStatus(status, 'That file is too big. Split it into files under 900 KB.', 'error');
+      setStatus(status, dryRun ? 'Checking…' : 'Importing…');
+      try {
+        const r = await call('/api/admin/fitment-reference/import', { method: 'POST', body: { csv: await file.files[0].text(), dry_run: dryRun } });
+        const bad = r.error_count ? ` ${r.error_count} ${r.error_count === 1 ? 'row has a problem' : 'rows have problems'} (listed below).` : '';
+        setStatus(status, dryRun
+          ? `Checked ${r.rows} rows: ${r.added} would be added, ${r.skipped} are already there.${bad}`
+          : `Added ${r.added} part numbers. ${r.skipped} were already there.${bad}`, r.error_count ? 'error' : 'ok');
+        problems.replaceChildren(...r.errors.map((e) => h('li', { text: `Line ${e.line}: ${e.message}` })));
+        if (!dryRun && r.added) after();
+      } catch (err) { setStatus(status, err.message, 'error'); }
+    }
+    return h('details', { class: 'panel import-panel' },
+      h('summary', {}, h('strong', { text: 'Import part numbers from a spreadsheet' })),
+      h('p', { class: 'muted', text: 'Save the spreadsheet as CSV with these columns in the first row. Blank generation, engine or built_in means it fits every one. Part names must match the Part list exactly.' }),
+      h('p', {}, h('code', { text: COLS })),
+      h('p', {}, h('a', { href: `data:text/csv;charset=utf-8,${encodeURIComponent(sample)}`, download: 'part-numbers-template.csv', text: 'Download an empty template' })),
+      h('div', { class: 'field' }, h('label', { for: 'imp-file', text: 'CSV file' }), file),
+      h('div', { class: 'btn-row' },
+        h('button', { class: 'btn btn-secondary', type: 'button', text: 'Check the file', onclick: () => send(true) }),
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Import', onclick: () => send(false) })),
+      status, problems);
   }
 
   // ---------------------------------------------------------------- missing parts

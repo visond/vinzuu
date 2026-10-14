@@ -409,3 +409,91 @@ function portalSwitch(user, current) {
     if (typeof dlg.close === 'function') dlg.close(); else dlg.removeAttribute('open');
   });
 })();
+
+/** <option>s for a part-type <select>, grouped like a parts catalogue (Service parts, Brakes…).
+ *  `only` narrows it, for example to the parts that have part numbers. */
+function categoryOptions(categories, firstText, { only, selected, label = (c) => c.name } = {}) {
+  const list = only ? categories.filter(only) : categories;
+  const groups = new Map();
+  for (const c of list) {
+    const g = c.group || 'Other parts';
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(c);
+  }
+  return [
+    firstText != null ? h('option', { value: '', text: firstText, selected: !selected }) : null,
+    ...[...groups].map(([g, cats]) => h('optgroup', { label: g },
+      ...cats.map((c) => h('option', { value: c.name, text: label(c), selected: c.name === selected })))),
+  ].filter(Boolean);
+}
+
+/**
+ * Make, model, generation and engine <select>s filled from the catalogue's model lineup
+ * (/api/catalog makes), each narrowing the next, the way parts catalogues start from the car.
+ * Every level but the make can be left at "Any". `onChange` runs after any of them changes.
+ */
+function carSelects(makes, prefix, { onChange, anyText = 'Any', withEngine = false } = {}) {
+  const sel = (id, label) => h('select', { id: `${prefix}-${id}`, 'aria-label': label });
+  const f = { make: sel('make', 'Make'), model: sel('model', 'Model'), generation: sel('gen', 'Generation'), engine: sel('eng', 'Engine') };
+  const opt = (value, text) => h('option', { value, text });
+  const make = () => makes.find((m) => m.make === f.make.value);
+  const model = () => (make() ? make().models.find((m) => m.model === f.model.value) : null);
+  const gen = () => (model() ? model().generations.find((g) => g.generation === f.generation.value) : null);
+  const years = (g) => `${g.year_start} to ${g.ongoing ? 'now' : g.year_end}`;
+  function fillModels() {
+    const m = make();
+    f.model.replaceChildren(opt('', m ? `${anyText} ${m.make} model` : 'Choose the make first'),
+      ...(m ? m.models.map((x) => opt(x.model, x.model)) : []));
+    f.model.disabled = !m;
+  }
+  function fillGens() {
+    const m = model();
+    f.generation.replaceChildren(opt('', m ? `${anyText} generation` : 'Choose the model first'),
+      ...(m ? m.generations.map((g) => opt(g.generation, `${g.generation} (${years(g)})`)) : []));
+    f.generation.disabled = !m;
+  }
+  function fillEngines() {
+    const g = gen();
+    f.engine.replaceChildren(opt('', g ? `${anyText} engine` : 'Choose the generation first'),
+      ...(g ? g.engines.map((e) => opt(e.label, e.codes.length ? `${e.label} (${e.codes.join(', ')})` : e.label)) : []));
+    f.engine.disabled = !g;
+  }
+  f.make.replaceChildren(opt('', 'Choose the make'), ...makes.map((m) => opt(m.make, m.make)));
+  fillModels(); fillGens(); fillEngines();
+  const changed = () => { if (onChange) onChange(); };
+  f.make.addEventListener('change', () => { fillModels(); fillGens(); fillEngines(); changed(); });
+  f.model.addEventListener('change', () => { fillGens(); fillEngines(); changed(); });
+  f.generation.addEventListener('change', () => { fillEngines(); changed(); });
+  f.engine.addEventListener('change', changed);
+  return {
+    ...f,
+    fields: withEngine ? [f.make, f.model, f.generation, f.engine] : [f.make, f.model, f.generation],
+    generationInfo: gen,
+    /** Sets all four; values the lineup doesn't know are added so nothing typed earlier is lost. */
+    set({ make: mk = '', model: md = '', generation: g = '', engine: e = '' } = {}) {
+      const ensure = (s, v) => { if (v && ![...s.options].some((o) => o.value === v)) s.append(opt(v, v)); s.disabled = false; s.value = v || ''; };
+      ensure(f.make, mk); fillModels(); ensure(f.model, md); fillGens(); ensure(f.generation, g); fillEngines(); ensure(f.engine, e);
+    },
+    query() {
+      const q = new URLSearchParams();
+      if (f.make.value) q.set('make', f.make.value);
+      if (f.model.value) q.set('model', f.model.value);
+      if (f.generation.value) q.set('generation', f.generation.value);
+      return q.toString();
+    },
+  };
+}
+
+/** Part-number rows (one per car) folded into one choice per number, listing every car it fits. */
+function oeChoices(rows) {
+  const byOe = new Map();
+  for (const r of rows) {
+    if (!byOe.has(r.oe_number)) byOe.set(r.oe_number, []);
+    byOe.get(r.oe_number).push(r);
+  }
+  const car = (r) => `${r.make} ${r.model}${r.generation ? ` ${r.generation}` : ''} ${r.year_start} to ${r.year_end}${r.engine ? `, ${r.engine}` : ''}${r.origin_market ? `, ${r.origin_market}-built` : ''}`;
+  return [...byOe].map(([oe, fits]) => ({
+    oe, fits,
+    text: `${oe}: ${car(fits[0])}${fits.length > 1 ? ` and ${fits.length - 1} more` : ''}`,
+  }));
+}

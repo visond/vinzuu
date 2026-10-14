@@ -2,6 +2,8 @@
 const fs = require('fs');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
+const { PART_CATALOG } = require('./lib/partcatalog');
+const { csvToFitment } = require('./lib/fitmentcsv');
 
 const DEFAULT_DB_PATH = path.join(__dirname, 'data', 'parts.db');
 
@@ -338,8 +340,11 @@ function openDb(dbPath = process.env.DB_PATH || DEFAULT_DB_PATH) {
   ensureColumn(db, 'users', 'blocked_reason', 'TEXT');
   ensureColumn(db, 'users', 'last_login_at', 'TEXT');
   ensureColumn(db, 'bookings', 'admin_note', 'TEXT');
+  ensureColumn(db, 'part_categories', 'grp', 'TEXT');
+  ensureColumn(db, 'part_categories', 'sort_order', 'INTEGER');
   migratePlateNotUnique(db);
   ensureCategories(db);
+  ensureRealPartNumbers(db);
   return db;
 }
 
@@ -397,11 +402,58 @@ function ensureColumn(db, table, column, type) {
   }
 }
 
-/** Part categories are real reference data (not demo data), so they exist even in a clean database. */
+/** Part categories are real reference data (not demo data), so they exist even in a clean database.
+ *  The list lives in lib/partcatalog.js. New ones are added to an existing database on start-up,
+ *  and every one's group, order and keywords are refreshed; nothing is ever removed. */
 function ensureCategories(db) {
-  if (db.prepare('SELECT COUNT(*) AS n FROM part_categories').get().n > 0) return;
-  const ins = db.prepare('INSERT INTO part_categories (name, type, keywords) VALUES (?, ?, ?)');
-  tx(db, () => { for (const c of CATEGORIES) ins.run(...c); });
+  const ins = db.prepare('INSERT OR IGNORE INTO part_categories (name, type, keywords) VALUES (?, ?, ?)');
+  const upd = db.prepare('UPDATE part_categories SET keywords = ?, grp = ?, sort_order = ? WHERE name = ?');
+  tx(db, () => {
+    for (const c of PART_CATALOG) {
+      ins.run(c.name, c.type, c.keywords);
+      upd.run(c.keywords, c.grp, c.sort, c.name);
+    }
+  });
+}
+
+/** Inserts a part-number row unless the same number is already there for the same car.
+ *  Returns true when it was added. */
+function addFitmentIfNew(db, r) {
+  const same = db.prepare(`SELECT 1 FROM fitment_reference WHERE oe_number = ? AND part_category = ? AND make = ? AND model = ?
+    AND generation IS ? AND year_start = ? AND year_end = ? AND engine IS ? AND origin_market IS ? LIMIT 1`)
+    .get(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]);
+  if (same) return false;
+  db.prepare(`INSERT INTO fitment_reference (oe_number, part_category, make, model, generation, year_start, year_end,
+    engine, origin_market, confidence_level, source, verified_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(...r);
+  return true;
+}
+
+/**
+ * Real part numbers (not demo data), researched from public parts catalogues and kept in
+ * lib/oe/<make>.csv with the page each one was read from. Each version of a file is loaded once,
+ * on start-up, and only rows not already in the table are added, so the admin's edits stay.
+ */
+function ensureRealPartNumbers(db, dir = path.join(__dirname, 'lib', 'oe')) {
+  if (!fs.existsSync(dir)) return 0;
+  const done = new Set(db.prepare("SELECT value FROM meta WHERE key LIKE 'oe_file:%'").all().map((r) => r.value));
+  const cats = new Map(db.prepare('SELECT name, type FROM part_categories').all().map((c) => [c.name, c.type]));
+  let added = 0;
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.csv')).sort()) {
+    const textCsv = fs.readFileSync(path.join(dir, file), 'utf8');
+    const stamp = `${file}:${textCsv.length}:${hash(textCsv)}`;
+    if (done.has(stamp)) continue; // this exact file was loaded before
+    tx(db, () => {
+      for (const { body: b } of csvToFitment(textCsv)) {
+        const ys = Number(b.year_start); const ye = Number(b.year_end);
+        if (!b.oe_number || !b.make || !b.model || !b.source || cats.get(b.part_category) !== 'model_specific'
+          || !Number.isInteger(ys) || !Number.isInteger(ye) || ye < ys) continue;
+        const conf = ['MEDIUM', 'LOW'].includes(b.confidence_level) || (b.confidence_level === 'HIGH' && b.verified_by) ? b.confidence_level : 'LOW';
+        if (addFitmentIfNew(db, [b.oe_number, b.part_category, b.make, b.model, b.generation, ys, ye, b.engine, b.origin_market, conf, b.source, b.verified_by])) added++;
+      }
+      db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(`oe_file:${file}`, stamp);
+    });
+  }
+  return added;
 }
 
 /** Run fn inside a transaction; roll back on any error. */
@@ -416,20 +468,6 @@ function tx(db, fn) {
     throw err;
   }
 }
-
-// Real reference data: the part categories customers can pick from. Add new ones here.
-// "keywords" are the everyday words people use, so "brake noise" finds Front Brake Pad.
-const CATEGORIES = [
-  ['Front Brake Pad', 'model_specific', 'brake,brakes,braking,squeal,squealing,noise,grinding,stopping,pedal'],
-  ['Rear Brake Pad', 'model_specific', 'brake,brakes,rear brake,noise'],
-  ['Oil Filter', 'model_specific', 'oil,filter,service,maintenance'],
-  ['Air Filter', 'model_specific', 'air,filter,service,dust,power'],
-  ['Front Bumper', 'model_specific', 'bumper,accident,crash,body,damage'],
-  ['Headlight Assembly', 'model_specific', 'headlight,light,lamp,night,dim'],
-  ['Battery', 'universal', 'battery,start,starting,dead,flat,electrical'],
-  ['Wiper Blade', 'universal', 'wiper,wipers,rain,windscreen,windshield,streaks'],
-  ['Engine Oil', 'universal', 'engine oil,oil,service,lubricant,oil change'],
-];
 
 // ---------------------------------------------------------------------------
 // DEMO DATA. Everything below is invented so you can click through the app.
@@ -514,7 +552,8 @@ function placeholderPhoto(text) {
 }
 
 function seedDemo(db) {
-  const already = db.prepare('SELECT COUNT(*) AS n FROM fitment_reference').get().n;
+  // Counts only demo rows: the real part numbers in lib/oe/ are loaded into every database.
+  const already = db.prepare('SELECT COUNT(*) AS n FROM fitment_reference WHERE source = ?').get(DEMO_SOURCE).n;
   if (already > 0) { backfillDemoVins(db); ensureDemoAccounts(db); return false; }
 
   tx(db, () => {
@@ -713,4 +752,4 @@ function isDemo(db) {
   return !!row && row.value === '1';
 }
 
-module.exports = { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD, DEMO_CUSTOMER_EMAIL };
+module.exports = { openDb, tx, addFitmentIfNew, ensureRealPartNumbers, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD, DEMO_CUSTOMER_EMAIL };

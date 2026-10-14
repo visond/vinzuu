@@ -10,11 +10,12 @@ const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
-const { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD } = require('./db');
+const { openDb, tx, addFitmentIfNew, seedDemo, isDemo, DEMO_VIN, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD } = require('./db');
 const alg = require('./lib/algorithms');
 const auth = require('./lib/auth');
 const { findCompatible, logGap, resolveListings, buildCatalog } = require('./lib/matching');
 const { withLineup } = require('./lib/lineup');
+const { csvToFitment } = require('./lib/fitmentcsv');
 const vindecode = require('./lib/vindecode');
 const carphotos = require('./lib/carphotos');
 
@@ -443,7 +444,7 @@ function createApp(db, config = {}) {
 
   app.get('/api/catalog', (req, res) => {
     res.json({
-      categories: db.prepare('SELECT name, type, keywords FROM part_categories ORDER BY id').all(),
+      categories: db.prepare('SELECT name, type, keywords, grp AS "group" FROM part_categories ORDER BY sort_order, id').all(),
       makes: withLineup(buildCatalog(db)),
     });
   });
@@ -677,7 +678,7 @@ function createApp(db, config = {}) {
   //        'universal' (standard sizes, no part number), or 'none'.
   app.get('/api/parts/for-vehicle', (req, res) => {
     const vehicle = needVehicleById(req.query.vehicle_id);
-    const categories = db.prepare('SELECT name, type FROM part_categories ORDER BY id').all().map((c) => {
+    const categories = db.prepare('SELECT name, type FROM part_categories ORDER BY sort_order, id').all().map((c) => {
       let fit = 'none';
       let listings = [];
       if (c.type === 'universal') {
@@ -896,9 +897,17 @@ function createApp(db, config = {}) {
   const oeNumberRows = (req, res) => {
     const category = getCategory(String(req.query.part_category || ''));
     if (!category) throw new HttpError(400, 'Choose a part category.');
+    // Narrowed to one car when the form has one (make, then model, then generation), so the list
+    // stays short however many part numbers the table holds.
+    const make = req.query.make ? String(req.query.make) : null;
+    const model = make && req.query.model ? String(req.query.model) : null;
+    const generation = model && req.query.generation ? String(req.query.generation) : null;
     const rows = db.prepare(`
       SELECT oe_number, make, model, generation, year_start, year_end, engine, origin_market, confidence_level
-      FROM fitment_reference WHERE part_category = ? ORDER BY make, model, year_start, oe_number`).all(category.name);
+      FROM fitment_reference WHERE part_category = ?
+        AND (? IS NULL OR make = ?) AND (? IS NULL OR model = ?) AND (? IS NULL OR generation IS NULL OR generation = ?)
+      ORDER BY make, model, year_start, oe_number LIMIT 500`)
+      .all(category.name, make, make, model, model, generation, generation);
     res.json({ part_category: category.name, type: category.type, rows });
   };
   app.get('/api/shop/oe-numbers', requireShop, oeNumberRows);
@@ -1210,8 +1219,9 @@ function createApp(db, config = {}) {
 
   const fitmentInput = (b) => {
     const category = getCategory(String(b.part_category || ''));
-    if (!category || category.type !== 'model_specific') {
-      throw new HttpError(400, 'part_category must be a model-specific category. Universal parts do not need part numbers.');
+    if (!category) throw new HttpError(400, `"${b.part_category || ''}" is not a part in the list. Use the exact name, for example "Front Brake Pad".`);
+    if (category.type !== 'model_specific') {
+      throw new HttpError(400, `${category.name} is sold by size, not by part number, so it does not need one.`);
     }
     const yearStart = integer(b.year_start, { field: 'year_start', min: 1980, max: 2100 });
     const yearEnd = integer(b.year_end, { field: 'year_end', min: 1980, max: 2100 });
@@ -1250,6 +1260,34 @@ function createApp(db, config = {}) {
     const row = db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(Number(info.lastInsertRowid));
     logAdmin(req, 'Added a part number', 'part_number', row.id, `${row.oe_number} for ${row.make} ${row.model}`);
     res.status(201).json({ row: db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(Number(info.lastInsertRowid)) });
+  });
+  // A spreadsheet of part numbers (columns in lib/fitmentcsv.js). Every row is checked like the
+  // form checks one; good rows are added, numbers already there for that car are skipped, and
+  // each bad row comes back with its line number. dry_run checks without saving.
+  admin.post('/fitment-reference/import', (req, res) => {
+    const { csv, dry_run: dryRun } = req.body || {};
+    if (typeof csv !== 'string' || !csv.trim()) throw new HttpError(400, 'Choose a CSV file with a header row.');
+    const rows = csvToFitment(csv);
+    if (!rows.length) throw new HttpError(400, 'The file has a header but no rows.');
+    if (rows.length > 5000) throw new HttpError(413, 'Import at most 5,000 rows at a time. Split the file.');
+    const errors = [];
+    let added = 0;
+    let skipped = 0;
+    db.exec('BEGIN');
+    try {
+      for (const { line, body } of rows) {
+        let values;
+        try { values = fitmentInput(body); } catch (err) {
+          if (!(err instanceof HttpError)) throw err;
+          errors.push({ line, message: err.message });
+          continue;
+        }
+        if (addFitmentIfNew(db, values)) added++; else skipped++;
+      }
+      db.exec(dryRun ? 'ROLLBACK' : 'COMMIT');
+    } catch (err) { db.exec('ROLLBACK'); throw err; }
+    if (!dryRun && added) logAdmin(req, 'Imported part numbers', 'part_number', null, `${added} added from a spreadsheet`);
+    res.json({ rows: rows.length, added, skipped, errors: errors.slice(0, 200), error_count: errors.length, dry_run: !!dryRun });
   });
   admin.put('/fitment-reference/:id', (req, res) => {
     const id = Number(req.params.id);
@@ -1594,6 +1632,9 @@ function createApp(db, config = {}) {
     parts: () => db.prepare(`SELECT l.id, s.name AS shop, l.part_category AS part, l.oe_number AS part_number, l.universal_spec AS size,
       l.brand, l.condition, l.price_rwf, l.stock_quantity, l.warranty_months, l.hidden, l.description, l.updated_at
       FROM shop_listings l JOIN shops s ON s.id = l.shop_id ORDER BY s.name, l.part_category`).all(),
+    'part-numbers': () => db.prepare(`SELECT oe_number, part_category AS part, make, model, generation, year_start AS year_from,
+      year_end AS year_to, engine, origin_market AS built_in, confidence_level AS confidence, source, verified_by
+      FROM fitment_reference ORDER BY make, model, part_category, year_start`).all(),
     cars: () => db.prepare(`SELECT id, plate_number, vin, make, model, generation, year, engine, transmission, origin_market,
       import_source, registered_by, created_at FROM vehicles ORDER BY id`).all(),
     shops: () => db.prepare('SELECT id, name, phone, whatsapp_number, address_text, latitude, longitude, vetted, suspended, suspended_reason, created_at FROM shops ORDER BY id').all(),

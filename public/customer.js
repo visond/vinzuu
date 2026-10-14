@@ -957,8 +957,11 @@
     });
     if (terms.length) cats = cats.filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
     const loading = !state.fits;
-    const fitting = cats.filter((x) => loading || x.fit.fit !== 'none');
-    const unmatched = loading ? [] : cats.filter((x) => x.fit.fit === 'none');
+    // Standard-size parts (oil, bulbs, tyres) fit every car, so they only make the list when a
+    // shop has them; otherwise they would bury the parts matched to this car.
+    const listed = (x) => x.fit.fit !== 'none' && (x.fit.fit !== 'universal' || x.fit.shops > 0);
+    const fitting = cats.filter((x) => loading || listed(x));
+    const unmatched = loading ? [] : cats.filter((x) => !listed(x));
     // In stock first, then the closest matches.
     if (!loading) fitting.sort((a, b) => (b.fit.shops > 0) - (a.fit.shops > 0) || (a.fit.fit === 'relaxed') - (b.fit.fit === 'relaxed'));
 
@@ -982,9 +985,18 @@
     box.replaceChildren(unmatched.length ? h('details', { class: 'unlisted' },
       h('summary', { text: `Can't find your part? ${unmatched.length} more ${unmatched.length === 1 ? 'isn\'t' : 'aren\'t'} matched to your ${v.model} yet` }),
       h('p', { class: 'small muted', text: 'Ask for one and we\'ll note it, so shops know what to stock for your car.' }),
-      h('div', { class: 'unlisted-list' }, ...unmatched.map(({ c }) => h('button', {
-        class: 'chip-btn', type: 'button', 'aria-pressed': String(state.category === c.name), text: c.name, onclick: () => pickCategory(c),
-      })))) : '');
+      ...groupBy(unmatched, ({ c }) => c.group || 'Other parts').map(([g, list]) => [
+        h('p', { class: 'unlisted-group', text: g }),
+        h('div', { class: 'unlisted-list' }, ...list.map(({ c }) => h('button', {
+          class: 'chip-btn', type: 'button', 'aria-pressed': String(state.category === c.name), text: c.name, onclick: () => pickCategory(c),
+        })))])) : '');
+  }
+
+  /** [[key, items], …] in first-seen order. */
+  function groupBy(items, keyOf) {
+    const m = new Map();
+    for (const x of items) { const k = keyOf(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }
+    return [...m];
   }
 
   function partCard(c, fit) {
