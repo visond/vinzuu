@@ -168,8 +168,12 @@ These are deliberate, and each one fixes a gap in the spec:
 
 - **The WMI table is a starter list.** `lib/algorithms.js` lists the codes for Toyota, Hyundai and Kia written from
   public directories. Verify it against ISO 3780 or manufacturer data and extend it as you meet new codes.
-- **Demo part numbers are invented.** Real fitment data has to come from manufacturer catalogues or physical checks.
-  The admin console and the missing-parts report exist to help you build it.
+- **Demo part numbers are invented** (they start with `DEMO-`). Next to them, `lib/oe/<make>.csv` holds about 640 real
+  part numbers for Toyota, Hyundai and Kia service parts (filters, spark plugs, brake pads and discs, and a few more),
+  each with the catalogue page it was read from. Most come from US-market dealer catalogues, so they are marked LOW
+  or MEDIUM confidence until someone checks them against the part in Kigali. Diesel engines are barely covered.
+  The admin adds more one by one under **Part numbers**, or many at once with **Import part numbers from a
+  spreadsheet** (same columns as those files). The missing-parts report shows where to look next.
 - **Shop login is a simple access code and admin login is one token** (not an account like customers get). Fine
   for a pilot with a handful of shops and one operator, not for the public internet.
 - **No "forgot password" flow yet.** If a customer forgets their password, the only fix right now is an admin
@@ -191,7 +195,10 @@ These are deliberate, and each one fixes a gap in the spec:
 
 ```
 server.js            the API and web server
-db.js                schema, part categories, demo data
+db.js                schema, demo data, loading the real part numbers
+lib/partcatalog.js   every part type (134), grouped like a parts catalogue
+lib/oe/*.csv         real part numbers with their sources
+lib/fitmentcsv.js    reads part-number spreadsheets (CSV)
 lib/algorithms.js    pure functions: plate, VIN, WMI, distance, badges
 lib/matching.js      database algorithms: part lookup, shop listings, catalog
 lib/auth.js          passwords, session cookies, Google sign-in verification

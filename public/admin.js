@@ -662,9 +662,7 @@
         { label: 'Years', render: (r) => `${r.year_start} to ${r.year_end}` },
         { label: 'Engine', render: (r) => r.engine || 'any' }, { label: 'Built in', render: (r) => r.origin_market || 'any' },
         { label: 'Confidence', render: (r) => tag(r.confidence_level) },
-        { label: 'Source', render: (r) => (/^https?:\/\//.test(r.source)
-          ? h('a', { href: r.source, target: '_blank', rel: 'noopener', text: new URL(r.source).hostname.replace(/^www\./, '') })
-          : r.source) },
+        { label: 'Source', render: (r) => sourceLinks(r.source) },
         { label: 'Verified by', render: (r) => r.verified_by || '' },
         { label: '', render: (r) => h('span', {},
           h('button', { class: 'btn btn-secondary btn-small', type: 'button', text: 'Edit', onclick: () => {
@@ -682,6 +680,17 @@
     wrap.append(form, importPanel(reloadList), h('h2', { text: 'All part numbers' }),
       h('div', { class: 'filter-bar' }, h('div', { class: 'field' }, search), csvLink('part-numbers', 'Download all')), listMount);
     return wrap;
+  }
+
+  /** A source is free text or one or more web pages (separated by " ; "): pages show as short links. */
+  function sourceLinks(source) {
+    const parts = String(source || '').split(/\s+;\s+/);
+    if (!parts.every((p) => /^https?:\/\/\S+$/.test(p))) return source;
+    return h('span', {}, ...parts.flatMap((p, i) => {
+      let host = p;
+      try { host = new URL(p).hostname.replace(/^www\./, ''); } catch (err) { /* show it as written */ }
+      return [i ? ', ' : null, h('a', { href: p, target: '_blank', rel: 'noopener', text: host })];
+    }));
   }
 
   /** Many part numbers at once, from a spreadsheet saved as CSV (for example a catalogue export). */

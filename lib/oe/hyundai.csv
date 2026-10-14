@@ -1,0 +1,204 @@
+oe_number,part,make,model,generation,year_from,year_to,engine,built_in,confidence,source
+28113-H9100,Air Filter,Hyundai,Accent,HC,2018,2022,1.6L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-air_filter.html
+97133-F2000,Cabin Air Filter,Hyundai,Accent,HC,2018,2022,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-accent-cabin_air_filter.html ; https://partsouq.com/en/search/all?q=97133F2000
+58101-H9A60,Front Brake Pad,Hyundai,Accent,HC,2018,2022,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-brake_pad_set.html
+26350-2M000,Oil Filter,Hyundai,Accent,HC,2018,2022,1.6L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-accent-oil_filter.html ; https://partsouq.com/en/search/all?q=263502M000
+58302-H9A10,Rear Brake Pad,Hyundai,Accent,HC,2018,2022,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-brake_pad_set.html
+28113-22600,Air Filter,Hyundai,Accent,LC,2000,2005,1.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-air_filter.html
+28113-22600,Air Filter,Hyundai,Accent,LC,2000,2005,1.6L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-air_filter.html
+58101-25A20,Front Brake Pad,Hyundai,Accent,LC,2000,2005,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Accent,LC,2000,2005,1.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-oil_filter.html
+26300-35505,Oil Filter,Hyundai,Accent,LC,2000,2005,1.6L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-oil_filter.html
+28113-1G000,Air Filter,Hyundai,Accent,MC,2006,2011,1.6L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-air_filter.html
+97133-2H000,Cabin Air Filter,Hyundai,Accent,MC,2006,2011,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-cabin_air_filter.html
+58101-1GA00,Front Brake Pad,Hyundai,Accent,MC,2006,2011,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Accent,MC,2006,2011,1.6L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-accent-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+58302-1GA00,Rear Brake Pad,Hyundai,Accent,MC,2006,2011,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-brake_pad_set.html
+18814-11051,Spark Plug,Hyundai,Accent,MC,2006,2011,1.6L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-spark_plug.html
+28113-1R100,Air Filter,Hyundai,Accent,RB,2011,2017,1.6L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-air_filter.html
+97133-2E210,Cabin Air Filter,Hyundai,Accent,RB,2011,2017,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-accent-cabin_air_filter.html ; https://partsouq.com/en/search/all?q=971332E210
+58101-1RA10,Front Brake Pad,Hyundai,Accent,RB,2011,2017,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Accent,RB,2011,2017,1.6L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-accent-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+58302-1RA30,Rear Brake Pad,Hyundai,Accent,RB,2011,2017,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-brake_pad_set.html
+18846-10060,Spark Plug,Hyundai,Accent,RB,2011,2017,1.6L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-accent-spark_plug.html
+26300-35505,Oil Filter,Hyundai,Creta,GS,2014,2020,1.6L Petrol,,LOW,https://www.team-bhp.com/news/explained-3-types-hyundai-cretas-engine-oil-filter
+26320-2A501,Oil Filter,Hyundai,Creta,GS,2014,2020,1.4L Diesel,,LOW,https://www.team-bhp.com/news/explained-3-types-hyundai-cretas-engine-oil-filter
+26320-2A501,Oil Filter,Hyundai,Creta,GS,2014,2020,1.6L Diesel,,LOW,https://www.team-bhp.com/news/explained-3-types-hyundai-cretas-engine-oil-filter
+97133-F2000,Cabin Air Filter,Hyundai,Creta,SU2,2020,2026,,,LOW,https://partsouq.com/en/search/all?q=97133F2000
+26320-2A501,Oil Filter,Hyundai,Creta,SU2,2020,2026,1.5L Diesel,,LOW,https://www.team-bhp.com/news/explained-3-types-hyundai-cretas-engine-oil-filter
+26350-2M000,Oil Filter,Hyundai,Creta,SU2,2020,2026,1.5L Petrol,,MEDIUM,https://www.team-bhp.com/news/explained-3-types-hyundai-cretas-engine-oil-filter ; https://partsouq.com/en/search/all?q=263502M000
+26350-2M000,Oil Filter,Hyundai,Creta,SU2,2020,2026,1.4L Turbo Petrol,,MEDIUM,https://www.team-bhp.com/news/explained-3-types-hyundai-cretas-engine-oil-filter ; https://partsouq.com/en/search/all?q=263502M000
+26350-2M000,Oil Filter,Hyundai,Creta,SU2,2020,2026,1.5L Turbo Petrol,,MEDIUM,https://www.team-bhp.com/news/explained-3-types-hyundai-cretas-engine-oil-filter ; https://partsouq.com/en/search/all?q=263502M000
+28113-F2000,Air Filter,Hyundai,Elantra,AD,2016,2020,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html ; https://partsouq.com/en/search/all?q=28113F2000
+28113-F2000,Air Filter,Hyundai,Elantra,AD,2016,2020,1.4L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html ; https://partsouq.com/en/search/all?q=28113F2000
+28113-F2000,Air Filter,Hyundai,Elantra,AD,2016,2020,1.6L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html ; https://partsouq.com/en/search/all?q=28113F2000
+97133-F2000,Cabin Air Filter,Hyundai,Elantra,AD,2016,2020,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-cabin_air_filter.html ; https://partsouq.com/en/search/all?q=97133F2000
+58101-F2A00,Front Brake Pad,Hyundai,Elantra,AD,2016,2020,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html ; https://partsouq.com/en/search/all?q=58101F2A00
+26300-35505,Oil Filter,Hyundai,Elantra,AD,2015,2020,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Elantra,AD,2015,2020,1.4L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Elantra,AD,2015,2020,1.6L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+58302-F2A30,Rear Brake Pad,Hyundai,Elantra,AD,2016,2020,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+55310-F2710,Rear Shock Absorber,Hyundai,Elantra,AD,2016,2020,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-shock_absorber.html
+25500-2E085,Thermostat,Hyundai,Elantra,AD,2016,2020,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-thermostat.html
+28113-AA670,Air Filter,Hyundai,Elantra,CN7,2021,2025,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html
+28113-AA670,Air Filter,Hyundai,Elantra,CN7,2021,2025,1.6L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html
+97133-L1000,Cabin Air Filter,Hyundai,Elantra,CN7,2021,2025,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-cabin_air_filter.html
+51712-AA000,Front Brake Disc,Hyundai,Elantra,CN7,2021,2025,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_disc.html
+58101-AAA00,Front Brake Pad,Hyundai,Elantra,CN7,2021,2023,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+58302-AAA30,Rear Brake Pad,Hyundai,Elantra,CN7,2021,2025,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+18871-11075,Spark Plug,Hyundai,Elantra,CN7,2021,2025,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-spark_plug.html
+28113-2H000,Air Filter,Hyundai,Elantra,HD,2006,2010,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html
+97133-2H000,Cabin Air Filter,Hyundai,Elantra,HD,2006,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-cabin_air_filter.html
+51712-2H000,Front Brake Disc,Hyundai,Elantra,HD,2006,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_disc.html
+58101-2HA10,Front Brake Pad,Hyundai,Elantra,HD,2006,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Elantra,HD,2006,2010,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+25330-3K000,Radiator Cap,Hyundai,Elantra,HD,2006,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-radiator_cap.html
+58302-2HA00,Rear Brake Pad,Hyundai,Elantra,HD,2006,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+25500-23010,Thermostat,Hyundai,Elantra,HD,2006,2010,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-thermostat.html
+28113-3X000,Air Filter,Hyundai,Elantra,MD,2011,2015,1.8L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html
+28113-3X000,Air Filter,Hyundai,Elantra,MD,2011,2015,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html
+97133-2H001,Cabin Air Filter,Hyundai,Elantra,MD,2010,2015,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-cabin_air_filter.html
+51712-3X000,Front Brake Disc,Hyundai,Elantra,MD,2011,2015,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_disc.html
+58101-3XA20,Front Brake Pad,Hyundai,Elantra,MD,2011,2015,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Elantra,MD,2010,2015,1.8L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Elantra,MD,2010,2015,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+58302-3XA30,Rear Brake Pad,Hyundai,Elantra,MD,2011,2015,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+55300-3X200,Rear Shock Absorber,Hyundai,Elantra,MD,2011,2013,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-shock_absorber.html
+18846-11070,Spark Plug,Hyundai,Elantra,MD,2011,2015,1.8L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-spark_plug.html ; https://partsouq.com/en/search/all?q=1884611070
+18846-11070,Spark Plug,Hyundai,Elantra,MD,2011,2015,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-spark_plug.html ; https://partsouq.com/en/search/all?q=1884611070
+25500-2E000,Thermostat,Hyundai,Elantra,MD,2011,2015,1.8L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-thermostat.html
+25500-2E000,Thermostat,Hyundai,Elantra,MD,2011,2015,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-thermostat.html
+28113-2D000,Air Filter,Hyundai,Elantra,XD,2000,2006,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-air_filter.html
+97133-2D000,Cabin Air Filter,Hyundai,Elantra,XD,2000,2006,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-cabin_air_filter.html
+51712-2D310,Front Brake Disc,Hyundai,Elantra,XD,2000,2006,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_disc.html
+58101-29B10,Front Brake Pad,Hyundai,Elantra,XD,2000,2006,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Elantra,XD,2000,2006,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+25330-3K000,Radiator Cap,Hyundai,Elantra,XD,2000,2006,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-radiator_cap.html
+25500-23010,Thermostat,Hyundai,Elantra,XD,2000,2006,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-elantra-thermostat.html
+28113-1C000,Air Filter,Hyundai,Getz,TB,2002,2011,1.1L Petrol,,LOW,https://partsouq.com/en/search/all?q=281131C000
+28113-1C000,Air Filter,Hyundai,Getz,TB,2002,2011,1.3L Petrol,,LOW,https://partsouq.com/en/search/all?q=281131C000
+28113-1C000,Air Filter,Hyundai,Getz,TB,2002,2011,1.4L Petrol,,LOW,https://partsouq.com/en/search/all?q=281131C000
+28113-1C000,Air Filter,Hyundai,Getz,TB,2002,2011,1.6L Petrol,,LOW,https://partsouq.com/en/search/all?q=281131C000
+28113-1C500,Air Filter,Hyundai,Getz,TB,2002,2011,1.5L Diesel,,LOW,https://partsouq.com/en/search/all?q=281131C000
+58101-1CA00,Front Brake Pad,Hyundai,Getz,TB,2002,2011,,,LOW,https://partsouq.com/en/search/all?q=581011CA00
+28113-4H000,Air Filter,Hyundai,H-1,TQ,2007,2021,,,LOW,https://partsouq.com/en/search/all?q=281134H000
+58101-4HA00,Front Brake Pad,Hyundai,H-1,TQ,2007,2021,,,LOW,https://partsouq.com/en/search/all?q=581014HA00
+58101-0XA00,Front Brake Pad,Hyundai,i10,PA,2007,2013,,,LOW,https://partsouq.com/en/search/all?q=581010XA00
+28113-F2000,Air Filter,Hyundai,Kona,OS,2018,2023,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-kona-air_filter.html ; https://partsouq.com/en/search/all?q=28113F2000
+28113-F2000,Air Filter,Hyundai,Kona,OS,2018,2023,1.6L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-kona-air_filter.html ; https://partsouq.com/en/search/all?q=28113F2000
+97133-D3200,Cabin Air Filter,Hyundai,Kona,OS,2018,2021,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-kona-cabin_air_filter.html ; https://partsouq.com/en/search/all?q=97133D3200
+97133-J9000,Cabin Air Filter,Hyundai,Kona,OS,2018,2023,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-kona-cabin_air_filter.html
+58101-J9A05,Front Brake Pad,Hyundai,Kona,OS,2018,2023,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-kona-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Kona,OS,2018,2021,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-kona-oil_filter.html
+26300-35505,Oil Filter,Hyundai,Kona,OS,2018,2021,1.6L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-kona-oil_filter.html
+58302-J9A00,Rear Brake Pad,Hyundai,Kona,OS,2018,2023,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-kona-brake_pad_set.html
+18849-08080,Spark Plug,Hyundai,Kona,OS,2018,2021,1.6L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-kona-spark_plug.html
+18867-09095,Spark Plug,Hyundai,Kona,OS,2018,2021,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-kona-spark_plug.html
+28113-2B000,Air Filter,Hyundai,Santa Fe,CM,2006,2009,2.7L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-air_filter.html
+28113-2B000,Air Filter,Hyundai,Santa Fe,CM,2006,2009,3.3L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-air_filter.html
+28113-2P100,Air Filter,Hyundai,Santa Fe,CM,2009,2012,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-air_filter.html
+97133-2G000,Cabin Air Filter,Hyundai,Santa Fe,CM,2007,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-cabin_air_filter.html
+97133-2G000,Cabin Air Filter,Hyundai,Santa Fe,CM,2011,2012,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-cabin_air_filter.html
+51712-2B000,Front Brake Disc,Hyundai,Santa Fe,CM,2006,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_disc.html
+51712-1U000,Front Brake Disc,Hyundai,Santa Fe,CM,2009,2012,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_disc.html
+58101-0WA00,Front Brake Pad,Hyundai,Santa Fe,CM,2006,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_pad_set.html
+58101-0WA10,Front Brake Pad,Hyundai,Santa Fe,CM,2009,2012,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_pad_set.html
+26320-3CAA0,Oil Filter,Hyundai,Santa Fe,CM,2009,2012,3.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+26300-35505,Oil Filter,Hyundai,Santa Fe,CM,2009,2012,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+58302-2BA40,Rear Brake Pad,Hyundai,Santa Fe,CM,2006,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_pad_set.html
+58302-0WA00,Rear Brake Pad,Hyundai,Santa Fe,CM,2009,2012,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_pad_set.html
+28113-2W100,Air Filter,Hyundai,Santa Fe,DM,2013,2015,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-air_filter.html
+28113-2W100,Air Filter,Hyundai,Santa Fe,DM,2013,2015,2.0L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-air_filter.html
+28113-2W100,Air Filter,Hyundai,Santa Fe,DM,2013,2018,3.3L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-air_filter.html
+28113-A9100,Air Filter,Hyundai,Santa Fe,DM,2016,2018,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-air_filter.html ; https://partsouq.com/en/search/all?q=28113A9100
+28113-A9100,Air Filter,Hyundai,Santa Fe,DM,2016,2018,2.0L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-air_filter.html ; https://partsouq.com/en/search/all?q=28113A9100
+97133-3SAA0,Cabin Air Filter,Hyundai,Santa Fe,DM,2013,2018,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-cabin_air_filter.html
+51712-2W000,Front Brake Disc,Hyundai,Santa Fe,DM,2013,2018,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_disc.html
+58101-4ZA00,Front Brake Pad,Hyundai,Santa Fe,DM,2013,2015,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-brake_pad_set.html
+58101-4ZA70,Front Brake Pad,Hyundai,Santa Fe,DM,2016,2018,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-brake_pad_set.html
+26320-3CAA0,Oil Filter,Hyundai,Santa Fe,DM,2012,2018,3.3L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+58302-4ZA70,Rear Brake Pad,Hyundai,Santa Fe,DM,2016,2018,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe_sport-brake_pad_set.html
+18846-11070,Spark Plug,Hyundai,Santa Fe,DM,2012,2018,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-spark_plug.html
+51712-3B000,Front Brake Disc,Hyundai,Santa Fe,SM,2000,2006,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_disc.html
+26300-35505,Oil Filter,Hyundai,Santa Fe,SM,2000,2006,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+26300-35505,Oil Filter,Hyundai,Santa Fe,SM,2000,2006,2.7L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+28113-A9100,Air Filter,Hyundai,Santa Fe,TM,2019,2020,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-air_filter.html ; https://partsouq.com/en/search/all?q=28113A9100
+28113-A9100,Air Filter,Hyundai,Santa Fe,TM,2019,2020,2.0L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-air_filter.html ; https://partsouq.com/en/search/all?q=28113A9100
+51712-S2000,Front Brake Disc,Hyundai,Santa Fe,TM,2019,2020,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_disc.html
+58101-S1A00,Front Brake Pad,Hyundai,Santa Fe,TM,2019,2020,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Santa Fe,TM,2019,2020,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+26300-35505,Oil Filter,Hyundai,Santa Fe,TM,2019,2020,2.0L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+26350-2S001,Oil Filter,Hyundai,Santa Fe,TM,2021,2023,2.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-oil_filter.html
+58302-S1A30,Rear Brake Pad,Hyundai,Santa Fe,TM,2019,2020,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-brake_pad_set.html
+18849-11070,Spark Plug,Hyundai,Santa Fe,TM,2019,2020,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-spark_plug.html
+18857-09085,Spark Plug,Hyundai,Santa Fe,TM,2019,2020,2.0L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-spark_plug.html
+18871-11070,Spark Plug,Hyundai,Santa Fe,TM,2021,2023,2.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-santa_fe-spark_plug.html
+51712-L0000,Front Brake Disc,Hyundai,Sonata,DN8,2020,2022,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_disc.html
+58101-L1A01,Front Brake Pad,Hyundai,Sonata,DN8,2020,2022,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_pad_set.html
+58302-L1A00,Rear Brake Pad,Hyundai,Sonata,DN8,2020,2026,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_pad_set.html
+18871-11070,Spark Plug,Hyundai,Sonata,DN8,2020,2026,2.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-spark_plug.html
+28113-C1100,Air Filter,Hyundai,Sonata,LF,2015,2019,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-air_filter.html ; https://partsouq.com/en/search/all?q=28113C1100
+28113-C1500,Air Filter,Hyundai,Sonata,LF,2015,2019,1.6L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-air_filter.html
+28113-C1500,Air Filter,Hyundai,Sonata,LF,2015,2019,2.0L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-air_filter.html
+97133-C2000,Cabin Air Filter,Hyundai,Sonata,LF,2015,2019,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-cabin_air_filter.html ; https://partsouq.com/en/search/all?q=97133C2000
+26300-35505,Oil Filter,Hyundai,Sonata,LF,2014,2019,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Sonata,LF,2014,2019,1.6L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Sonata,LF,2014,2019,2.0L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+18849-11070,Spark Plug,Hyundai,Sonata,LF,2015,2019,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-spark_plug.html
+97133-2G000,Cabin Air Filter,Hyundai,Sonata,NF,2007,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-cabin_air_filter.html
+51712-3K110,Front Brake Disc,Hyundai,Sonata,NF,2005,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_disc.html
+58101-3KA61,Front Brake Pad,Hyundai,Sonata,NF,2005,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Sonata,NF,2005,2010,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26320-3C100,Oil Filter,Hyundai,Sonata,NF,2005,2010,3.3L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-oil_filter.html
+58302-3KA51,Rear Brake Pad,Hyundai,Sonata,NF,2005,2010,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_pad_set.html
+28113-2P100,Air Filter,Hyundai,Sonata,YF,2010,2014,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-air_filter.html
+28113-2P100,Air Filter,Hyundai,Sonata,YF,2010,2014,2.0L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-air_filter.html
+97133-3SAA0,Cabin Air Filter,Hyundai,Sonata,YF,2010,2014,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-cabin_air_filter.html
+51712-3Q000,Front Brake Disc,Hyundai,Sonata,YF,2010,2014,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_disc.html
+26300-35505,Oil Filter,Hyundai,Sonata,YF,2010,2014,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Sonata,YF,2010,2014,2.0L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+58302-3QA10,Rear Brake Pad,Hyundai,Sonata,YF,2010,2014,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-brake_pad_set.html
+18847-11160,Spark Plug,Hyundai,Sonata,YF,2010,2014,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-spark_plug.html
+18849-09085,Spark Plug,Hyundai,Sonata,YF,2010,2014,2.0L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-sonata-spark_plug.html
+28113-08000,Air Filter,Hyundai,Tucson,JM,2004,2009,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html ; https://partsouq.com/en/search/all?q=2811308000
+28113-08000,Air Filter,Hyundai,Tucson,JM,2004,2009,2.7L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html ; https://partsouq.com/en/search/all?q=2811308000
+97133-2E260,Cabin Air Filter,Hyundai,Tucson,JM,2006,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-cabin_air_filter.html
+51712-2E300,Front Brake Disc,Hyundai,Tucson,JM,2004,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_disc.html
+58101-2EA21,Front Brake Pad,Hyundai,Tucson,JM,2004,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html
+26300-35505,Oil Filter,Hyundai,Tucson,JM,2004,2009,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Tucson,JM,2004,2009,2.7L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+25330-3K000,Radiator Cap,Hyundai,Tucson,JM,2004,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-radiator_cap.html
+58302-2EA00,Rear Brake Pad,Hyundai,Tucson,JM,2004,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html
+51720-38110,Wheel Bearing,Hyundai,Tucson,JM,2004,2009,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-wheel_bearing.html
+28113-2S000,Air Filter,Hyundai,Tucson,LM,2009,2015,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html ; https://partsouq.com/en/search/all?q=281132S000
+28113-2S000,Air Filter,Hyundai,Tucson,LM,2009,2015,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html ; https://partsouq.com/en/search/all?q=281132S000
+97133-2E210,Cabin Air Filter,Hyundai,Tucson,LM,2009,2015,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-cabin_air_filter.html ; https://partsouq.com/en/search/all?q=971332E210
+51712-3K110,Front Brake Disc,Hyundai,Tucson,LM,2009,2015,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_disc.html
+58101-2SA51,Front Brake Pad,Hyundai,Tucson,LM,2009,2015,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html ; https://partsouq.com/en/search/all?q=581012SA51
+26300-35505,Oil Filter,Hyundai,Tucson,LM,2009,2015,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Tucson,LM,2009,2015,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+58302-2SA00,Rear Brake Pad,Hyundai,Tucson,LM,2009,2013,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html
+18845-11160,Spark Plug,Hyundai,Tucson,LM,2009,2013,2.0L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-spark_plug.html
+18845-11160,Spark Plug,Hyundai,Tucson,LM,2009,2013,2.4L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-spark_plug.html
+18846-11070,Spark Plug,Hyundai,Tucson,LM,2014,2015,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-spark_plug.html ; https://partsouq.com/en/search/all?q=1884611070
+18846-11070,Spark Plug,Hyundai,Tucson,LM,2014,2015,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-spark_plug.html ; https://partsouq.com/en/search/all?q=1884611070
+51720-2J001,Wheel Bearing,Hyundai,Tucson,LM,2009,2015,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-wheel_bearing.html
+28113-L1000,Air Filter,Hyundai,Tucson,NX4,2022,2026,2.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html
+97133-L1000,Cabin Air Filter,Hyundai,Tucson,NX4,2022,2026,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-cabin_air_filter.html
+58101-N9A11,Front Brake Pad,Hyundai,Tucson,NX4,2022,2026,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html
+26350-2S001,Oil Filter,Hyundai,Tucson,NX4,2022,2026,2.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html
+58302-N9A15,Rear Brake Pad,Hyundai,Tucson,NX4,2022,2026,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html
+18871-11070,Spark Plug,Hyundai,Tucson,NX4,2022,2026,2.5L Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-spark_plug.html
+28113-D3300,Air Filter,Hyundai,Tucson,TL,2016,2020,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html ; https://partsouq.com/en/search/all?q=28113D3300
+28113-D3300,Air Filter,Hyundai,Tucson,TL,2016,2020,1.6L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html ; https://partsouq.com/en/search/all?q=28113D3300
+28113-D3300,Air Filter,Hyundai,Tucson,TL,2016,2020,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-air_filter.html ; https://partsouq.com/en/search/all?q=28113D3300
+97133-D3200,Cabin Air Filter,Hyundai,Tucson,TL,2016,2020,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-cabin_air_filter.html ; https://partsouq.com/en/search/all?q=97133D3200
+51712-C1000,Front Brake Disc,Hyundai,Tucson,TL,2016,2020,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_disc.html
+58101-D3A11,Front Brake Pad,Hyundai,Tucson,TL,2016,2020,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html ; https://partsouq.com/en/search/all?q=58101D3A11
+26300-35505,Oil Filter,Hyundai,Tucson,TL,2015,2020,2.0L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Tucson,TL,2015,2020,1.6L Turbo Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+26300-35505,Oil Filter,Hyundai,Tucson,TL,2015,2020,2.4L Petrol,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-oil_filter.html ; https://partsouq.com/en/search/all?q=2630035505
+25330-D3000,Radiator Cap,Hyundai,Tucson,TL,2016,2020,,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-radiator_cap.html
+58302-D3A00,Rear Brake Pad,Hyundai,Tucson,TL,2016,2020,,,MEDIUM,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-brake_pad_set.html ; https://partsouq.com/en/search/all?q=58302D3A00
+18849-08080,Spark Plug,Hyundai,Tucson,TL,2016,2018,1.6L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-spark_plug.html
+25500-2B000,Thermostat,Hyundai,Tucson,TL,2016,2018,1.6L Turbo Petrol,,LOW,https://www.hyundaipartsdeal.com/oem-hyundai-tucson-thermostat.html
