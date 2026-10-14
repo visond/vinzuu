@@ -10,6 +10,18 @@ const alg = require('../lib/algorithms');
 let server;
 let base;
 
+// Each test database is in memory, or, with TEST_LIBSQL=1, a temporary file opened through the
+// libsql client that Vinzuu uses online with Turso, so both database paths get the same tests.
+// TEST_DB_URLS (comma-separated, one empty database server per test database, e.g. local sqld
+// servers at http://127.0.0.1:8081,...) runs them against a real server, the way Turso is reached.
+let dbCounter = 0;
+function testDbTarget() {
+  if (process.env.TEST_DB_URLS) return process.env.TEST_DB_URLS.split(',')[dbCounter++];
+  if (!process.env.TEST_LIBSQL) return ':memory:';
+  const dir = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'vz-db-'));
+  return `file:${require('node:path').join(dir, `t${++dbCounter}.db`)}`;
+}
+
 // Stands in for the online VIN decoder (NHTSA vPIC): it knows one US-built Kia Sorento, the way
 // vPIC answers for a North American VIN, and nothing else. Counts calls to prove the cache works.
 const VPIC_SORENTO = {
@@ -71,8 +83,8 @@ async function fakeVinLookup(vin) {
 const ADMIN = { 'x-admin-token': 'test-admin' };
 
 before(async () => {
-  const db = openDb(':memory:');
-  seedDemo(db);
+  const db = await openDb(testDbTarget());
+  await seedDemo(db);
   const app = createApp(db, { adminToken: 'test-admin', writeLimit: { windowMs: 60_000, max: 10_000 }, vinLookup: fakeVinLookup, wikiJson: fakeWiki });
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
@@ -1065,7 +1077,7 @@ test('Google sign-in creates an account, links a verified email to a password ac
     verified: { sub: 'g-2', email: 'both@example.com', email_verified: true, name: 'Both Ways' },
     unverified: { sub: 'g-3', email: 'victim@example.com', email_verified: false, name: 'Someone Else' },
   };
-  const app = createApp(open(':memory:'), {
+  const app = createApp(await open(testDbTarget()), {
     writeLimit: { windowMs: 60_000, max: 10_000 },
     googleClientId: 'test-client.apps.googleusercontent.com',
     verifyGoogleIdToken: async (idToken) => { if (!tokens[idToken]) throw new Error('That sign-in could not be verified.'); return tokens[idToken]; },
@@ -1145,12 +1157,12 @@ test('every demo car has a VIN, and the example VIN shown on the site finds the 
   }
 });
 
-test('a demo database seeded before demo cars had VINs gets them on the next start', () => {
-  const db = openDb(':memory:');
-  seedDemo(db);
-  db.exec("UPDATE vehicles SET vin = NULL WHERE registered_by = 'demo seed'");
-  assert.equal(seedDemo(db), false); // already seeded: only the VINs are filled in
-  const rows = db.prepare("SELECT plate_number, vin FROM vehicles WHERE registered_by = 'demo seed' ORDER BY plate_number").all();
+test('a demo database seeded before demo cars had VINs gets them on the next start', async () => {
+  const db = await openDb(testDbTarget());
+  await seedDemo(db);
+  await db.exec("UPDATE vehicles SET vin = NULL WHERE registered_by = 'demo seed'");
+  assert.equal(await seedDemo(db), false); // already seeded: only the VINs are filled in
+  const rows = await db.prepare("SELECT plate_number, vin FROM vehicles WHERE registered_by = 'demo seed' ORDER BY plate_number").all();
   assert.deepEqual(rows.map((r) => r.vin), ['JTMBK31V996054321', 'KNDPM3AC8J7100002', '5XYPG4A38JG100003', 'KMHJ3813DHU100004']);
 });
 
@@ -1429,7 +1441,7 @@ test('part numbers import from a CSV: good rows added, repeats skipped, bad rows
   assert.equal((await post('/api/admin/fitment-reference/import', { csv: '' }, ADMIN)).status, 400);
 });
 
-test('real part numbers in lib/oe load once into a clean database, alongside the demo data', () => {
+test('real part numbers in lib/oe load once into a clean database, alongside the demo data', async () => {
   const fs = require('node:fs');
   const os = require('node:os');
   const path = require('node:path');
@@ -1439,11 +1451,11 @@ test('real part numbers in lib/oe load once into a clean database, alongside the
     + 'REAL-1,Oil Filter,Toyota,RAV4,XA40,2013,2018,2.0L Petrol,,MEDIUM,https://example.com/a\n'
     + 'REAL-2,Battery,Toyota,RAV4,XA40,2013,2018,,,MEDIUM,https://example.com/b\n'
     + 'REAL-3,Spark Plug,Toyota,RAV4,XA40,2013,2018,,,HIGH,https://example.com/c\n');
-  const db = openDb(':memory:');
-  assert.equal(ensureRealPartNumbers(db, dir), 2, 'the universal Battery row is skipped');
-  assert.equal(db.prepare("SELECT confidence_level FROM fitment_reference WHERE oe_number = 'REAL-3'").get().confidence_level, 'LOW',
+  const db = await openDb(testDbTarget());
+  assert.equal(await ensureRealPartNumbers(db, dir), 2, 'the universal Battery row is skipped');
+  assert.equal((await db.prepare("SELECT confidence_level FROM fitment_reference WHERE oe_number = 'REAL-3'").get()).confidence_level, 'LOW',
     'HIGH without a "verified by" is lowered');
-  assert.equal(ensureRealPartNumbers(db, dir), 0, 'an unchanged file is not loaded again');
-  assert.ok(seedDemo(db), 'demo data still seeds next to real part numbers');
-  db.close();
+  assert.equal(await ensureRealPartNumbers(db, dir), 0, 'an unchanged file is not loaded again');
+  assert.ok(await seedDemo(db), 'demo data still seeds next to real part numbers');
+  await db.close();
 });

@@ -43,6 +43,36 @@ admin when it starts. With demo data, `admin@vinzuu.rw` / `Admin-vinzuu1` also w
 **Session secret.** Also set `SESSION_SECRET` in `.env` to a long random string before you share the
 server with anyone. It signs the "you are signed in" cookie; the default is fine for your own laptop only.
 
+## Put it online (Vercel + Turso, both free)
+
+Vercel runs the server; Turso keeps the database. Vercel has no disk that lasts, so online the data lives in
+Turso, a hosted database that speaks the same SQL as the local file. On your laptop nothing changes: without
+`TURSO_DATABASE_URL`, Vinzuu uses `data/parts.db` as before.
+
+1. **Turso.** Sign up at https://turso.tech, create a database (pick a location near the one you choose for
+   Vercel below, for example Europe), then copy its **URL** (`libsql://...turso.io`) and create a **token**.
+2. **Vercel.** Sign up at https://vercel.com with your GitHub account, choose **Add New > Project**, and import
+   this repository. `vercel.json` already tells Vercel how to run it; leave the build settings as they are.
+3. **Settings.** Before deploying (or under **Settings > Environment Variables**, then redeploy), add:
+
+   | Name | Value |
+   |---|---|
+   | `TURSO_DATABASE_URL` | the `libsql://...` URL from step 1 |
+   | `TURSO_AUTH_TOKEN` | the token from step 1 |
+   | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | your admin account |
+   | `SESSION_SECRET` | a long random string |
+   | `ADMIN_TOKEN` | another long random string |
+   | `SEED_DEMO` | `false` for real data only (leave it out to load the demo shops and part numbers) |
+   | `GOOGLE_CLIENT_ID` | optional, for Google sign-in |
+
+4. **Region.** Under **Settings > Functions**, set the function region close to your Turso database (each
+   page asks the database a few questions, so the two should be near each other).
+5. **Google sign-in.** Add your Vercel address (`https://<your-project>.vercel.app`) to the Authorized
+   JavaScript origins of your Google client ID (see Google sign-in below).
+
+The first visit after a quiet spell takes a moment longer: Vercel starts the server and Vinzuu checks the
+database tables. Every push to the repository's main branch deploys again on its own.
+
 ## Customer accounts
 
 The welcome page (`/`) lets a customer create an account or sign in with email and password. Once signed
@@ -118,6 +148,9 @@ next start.
 npm test
 ```
 
+`TEST_LIBSQL=1 npm test` runs the same tests through the libsql client that Vinzuu uses with Turso (on a
+temporary file), so both database paths stay checked.
+
 37 tests cover the algorithms, the trust rules, privacy, access control, accounts, and the admin
 add/correct/delete-a-car endpoints. Several were checked by deliberately breaking the rule in the code and
 confirming the test failed.
@@ -181,7 +214,7 @@ These are deliberate, and each one fixes a gap in the spec:
 - **Photos are stored inside the database.** Move them to file storage (Cloudinary, S3) before you have many shops.
 - **WhatsApp works through pre-filled links.** The customer taps to send, so nothing is sent automatically. The
   WhatsApp Business API is the upgrade path.
-- **SQLite on one server.** Fine for a pilot. The schema moves to PostgreSQL with small changes.
+- **SQLite (locally) or Turso (online).** Fine for a pilot. The schema moves to PostgreSQL with small changes.
 - **No visual map yet.** Shops and garages are ranked by distance in a list, with no map view. The data is
   already there (every shop and garage has latitude/longitude, and distance is already computed server-side),
   so this is a frontend addition, not a redesign. Recommended path: Leaflet + OpenStreetMap, which is free
@@ -196,6 +229,8 @@ These are deliberate, and each one fixes a gap in the spec:
 ```
 server.js            the API and web server
 db.js                schema, demo data, loading the real part numbers
+lib/dbclient.js      one database interface: a local SQLite file, or Turso online
+vercel.json          how Vercel runs the server
 lib/partcatalog.js   every part type (134), grouped like a parts catalogue
 lib/oe/*.csv         real part numbers with their sources
 lib/fitmentcsv.js    reads part-number spreadsheets (CSV)
