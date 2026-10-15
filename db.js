@@ -340,6 +340,7 @@ async function prepareDb(db) {
   await ensureColumn(db, 'shop_listings', 'hidden', 'INTEGER NOT NULL DEFAULT 0');
   await ensureColumn(db, 'shops', 'opening_hours', 'TEXT');
   await ensureColumn(db, 'garages', 'opening_hours', 'TEXT');
+  await ensureColumn(db, 'garages', 'photo_url', 'TEXT');
   // A booking is one request seen from two sides: the shop reserves the part, the garage
   // schedules the fitting. Each side keeps its own progress.
   await ensureColumn(db, 'bookings', 'shop_status', "TEXT NOT NULL DEFAULT 'requested'");
