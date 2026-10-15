@@ -96,6 +96,19 @@ function photoUrl(value) {
   return s;
 }
 
+/** A garage needs a photo of itself, so customers recognise it when they arrive. */
+function garagePhoto(value) {
+  if (value == null || value === '') throw new HttpError(400, 'Add a photo of the garage.');
+  return photoUrl(value);
+}
+
+/** Where the browser loads a garage's photo from; null shows one of our stock garage photos. */
+function garagePhotoLink(g) {
+  if (!g.photo_url) return null;
+  if (!g.photo_url.startsWith('data:')) return g.photo_url;
+  return `/api/garages/${g.id}/photo?v=${crypto.createHash('sha1').update(g.photo_url).digest('hex').slice(0, 10)}`;
+}
+
 function normalizeEmail(raw) {
   const email = text(raw, { field: 'email', max: 120, required: true }).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Enter a valid email address.');
@@ -744,6 +757,15 @@ function createApp(db, config = {}) {
     res.json({ count: listings.length, listings, radius_km: radiusKm, sort: sortBy, location_used: used });
   });
 
+  // A garage's own photo. Uploaded photos are stored in the database, so the list links here
+  // instead of carrying every picture inline.
+  app.get('/api/garages/:id/photo', asyncRoute(async (req, res) => {
+    const row = await db.prepare('SELECT photo_url FROM garages WHERE id = ?').get(Number(req.params.id));
+    const m = row && /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(row.photo_url || '');
+    if (!m) throw new HttpError(404, 'This garage has no photo.');
+    res.type(m[1]).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(m[2], 'base64'));
+  }));
+
   app.get('/api/garages/nearby', async (req, res) => {
     const { origin } = parseOrigin(req.query);
     const radiusKm = parseRadius(req.query.radius_km);
@@ -759,6 +781,7 @@ function createApp(db, config = {}) {
       address: g.address_text,
       specialties: g.specialties,
       opening_hours: g.opening_hours,
+      photo: garagePhotoLink(g),
       latitude: g.latitude,
       longitude: g.longitude,
       distance_km: Math.round(g.distance_km * 10) / 10,
@@ -1422,10 +1445,11 @@ function createApp(db, config = {}) {
     if (has('longitude')) updates.longitude = number(b.longitude, { field: 'Longitude', min: -180, max: 180 });
     if (table === 'shops' && has('vetted')) updates.vetted = b.vetted ? 1 : 0;
     if (table === 'garages' && has('specialties')) updates.specialties = text(b.specialties, { field: 'What they are good at', max: 160 });
+    if (table === 'garages' && has('photo_url')) updates.photo_url = garagePhoto(b.photo_url);
     await updateRow(table, id, updates);
     const changed = Object.keys(updates).filter((k) => updates[k] !== row[k]);
     if (changed.length) {
-      const what = changed.map((k) => ({ vetted: updates.vetted ? 'marked vetted' : 'marked not vetted', latitude: 'location', longitude: 'location', whatsapp_number: 'WhatsApp', address_text: 'address', opening_hours: 'opening hours' }[k] || k));
+      const what = changed.map((k) => ({ vetted: updates.vetted ? 'marked vetted' : 'marked not vetted', latitude: 'location', longitude: 'location', whatsapp_number: 'WhatsApp', address_text: 'address', opening_hours: 'opening hours', photo_url: 'photo' }[k] || k));
       await logAdmin(req, table === 'shops' ? 'Edited a shop' : 'Edited a garage', table.slice(0, -1), id, `${updates.name || row.name}: ${[...new Set(what)].join(', ')}`);
     }
     return await db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
@@ -1464,12 +1488,13 @@ function createApp(db, config = {}) {
   });
   admin.post('/garages', async (req, res) => {
     const b = req.body || {};
-    const info = await db.prepare(`INSERT INTO garages (name, phone, whatsapp_number, latitude, longitude, address_text, specialties)
-      VALUES (?,?,?,?,?,?,?)`).run(
+    const info = await db.prepare(`INSERT INTO garages (name, phone, whatsapp_number, latitude, longitude, address_text, specialties, photo_url)
+      VALUES (?,?,?,?,?,?,?,?)`).run(
       text(b.name, { field: 'name', max: 80, required: true }), phone(b.phone, 'phone'),
       phone(b.whatsapp_number, 'whatsapp_number', false),
       number(b.latitude, { field: 'latitude', min: -90, max: 90 }), number(b.longitude, { field: 'longitude', min: -180, max: 180 }),
-      text(b.address_text, { field: 'address', max: 120 }), text(b.specialties, { field: 'specialties', max: 160 }));
+      text(b.address_text, { field: 'address', max: 120 }), text(b.specialties, { field: 'specialties', max: 160 }),
+      garagePhoto(b.photo_url));
     const garage = await db.prepare('SELECT * FROM garages WHERE id = ?').get(Number(info.lastInsertRowid));
     await logAdmin(req, 'Added a garage', 'garage', garage.id, garage.name);
     res.status(201).json({ garage });
@@ -1740,9 +1765,10 @@ function createApp(db, config = {}) {
           a.address_text, vetted, code, 'application')).lastInsertRowid);
       }
       if (kind !== 'shop') {
-        garageId = Number((await db.prepare(`INSERT INTO garages (name, phone, whatsapp_number, latitude, longitude, address_text, specialties)
-          VALUES (?,?,?,?,?,?,?)`).run(a.business_name, a.phone, a.whatsapp_number, a.latitude, a.longitude,
-          a.address_text, a.specialties)).lastInsertRowid);
+        // The front photo from the application becomes the garage's photo.
+        garageId = Number((await db.prepare(`INSERT INTO garages (name, phone, whatsapp_number, latitude, longitude, address_text, specialties, photo_url)
+          VALUES (?,?,?,?,?,?,?,?)`).run(a.business_name, a.phone, a.whatsapp_number, a.latitude, a.longitude,
+          a.address_text, a.specialties, a.front_photo)).lastInsertRowid);
       }
       const existing = await db.prepare('SELECT * FROM users WHERE email = ?').get(a.email);
       if (existing) {

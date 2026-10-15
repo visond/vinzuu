@@ -804,7 +804,15 @@
       lat: input('eb-lat', { value: b.latitude, inputMode: 'decimal' }), lon: input('eb-lon', { value: b.longitude, inputMode: 'decimal' }),
       vetted: kind === 'shop' ? h('input', { id: 'eb-vet', type: 'checkbox', checked: !!b.vetted }) : null,
       spec: kind === 'garage' ? input('eb-spec', { value: b.specialties || '', maxLength: 160 }) : null,
+      photo: kind === 'garage' ? h('input', { id: 'eb-photo', type: 'file', accept: 'image/*' }) : null,
+      preview: kind === 'garage' ? h('img', { class: 'photo-preview', alt: 'Garage photo', src: b.photo_url || null, hidden: !b.photo_url }) : null,
     };
+    let photo = null;
+    if (f.photo) f.photo.addEventListener('change', async (e) => {
+      photo = null; f.preview.src = b.photo_url || ''; f.preview.hidden = !b.photo_url;
+      if (!e.target.files[0]) return;
+      try { photo = await resizeImage(e.target.files[0], 800); f.preview.src = photo; f.preview.hidden = false; } catch (err) { setStatus(status, err.message, 'error'); }
+    });
     const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
     dialog(`Edit ${b.name}`, (close) => [
       h('p', { class: 'muted', text: `Only the vinzuu team can change the name and the map location. The ${kind} owner can change the rest themselves too.` }),
@@ -813,6 +821,7 @@
       fieldEl('Opening hours', f.hours),
       h('div', { class: 'row stack-sm' }, fieldEl('Latitude', f.lat), fieldEl('Longitude', f.lon)),
       f.spec ? fieldEl('What they are good at', f.spec) : null,
+      f.photo ? fieldEl(b.photo_url ? 'Change the photo' : 'Photo of the garage', f.photo) : null, f.preview,
       f.vetted ? h('div', { class: 'field' }, h('label', {}, f.vetted, ' Vetted: we checked they sell genuine parts')) : null,
       status,
       h('div', { class: 'dialog-actions' },
@@ -821,6 +830,7 @@
             opening_hours: f.hours.value, latitude: f.lat.value, longitude: f.lon.value };
           if (f.vetted) body.vetted = f.vetted.checked;
           if (f.spec) body.specialties = f.spec.value;
+          if (photo) body.photo_url = photo;
           try { await call(`/api/admin/${table}/${b.id}`, { method: 'PUT', body }); close(); showTab(table); } catch (err) { setStatus(status, err.message, 'error'); }
         } }),
         h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: close }))]);
@@ -904,14 +914,24 @@
     const f = {
       name: input('g-name'), phone: input('g-phone', { type: 'tel' }), whatsapp: input('g-wa', { type: 'tel' }),
       lat: input('g-lat'), lon: input('g-lon'), address: input('g-addr'), specialties: input('g-spec'),
+      photo: h('input', { id: 'g-photo', type: 'file', accept: 'image/*' }),
+      preview: h('img', { class: 'photo-preview', alt: 'Photo preview', hidden: true }),
     };
+    let photo = null;
+    f.photo.addEventListener('change', async (e) => {
+      photo = null; f.preview.hidden = true;
+      if (!e.target.files[0]) return;
+      try { photo = await resizeImage(e.target.files[0], 800); f.preview.src = photo; f.preview.hidden = false; setStatus(status, ''); } catch (err) { setStatus(status, err.message, 'error'); }
+    });
     const form = h('form', { class: 'panel', novalidate: true, onsubmit: async (event) => {
       event.preventDefault();
+      if (!photo) return setStatus(status, 'Add a photo of the garage.', 'error');
       setStatus(status, 'Saving…');
       try {
         await call('/api/admin/garages', { method: 'POST', body: {
           name: f.name.value, phone: f.phone.value, whatsapp_number: f.whatsapp.value || null,
           latitude: f.lat.value, longitude: f.lon.value, address_text: f.address.value, specialties: f.specialties.value,
+          photo_url: photo,
         } });
         setStatus(status, 'Garage added.', 'ok');
         setTimeout(() => showTab('garages'), 1200);
@@ -922,6 +942,7 @@
       h('div', { class: 'row stack-sm' }, fieldEl('WhatsApp (optional)', f.whatsapp), fieldEl('Area or address', f.address)),
       h('div', { class: 'row stack-sm' }, fieldEl('Latitude', f.lat), fieldEl('Longitude', f.lon)),
       fieldEl('What they are good at', f.specialties, 'For example: brakes, body work, Korean cars.'),
+      fieldEl('Photo of the garage', f.photo, 'The front of the garage, so customers recognise it when they arrive.'), h('div', {}, f.preview),
       h('button', { class: 'btn btn-primary', type: 'submit', text: 'Add garage' }), status);
     return h('div', {}, form, scorecardList('garages', garages, [
       { label: 'Labour prices', key: 'services', num: true },

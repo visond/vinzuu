@@ -813,6 +813,8 @@ test('a business applies, cannot sign in until approved, then lands on its dashb
   const me = await owner.get('/api/business/me');
   assert.equal(me.json.shop.name, 'Kimihurura Auto');
   assert.equal(me.json.garage.specialties, 'Brakes');
+  assert.equal((await get('/api/admin/garages', ADMIN)).json.garages.find((g) => g.id === ok.json.garage_id).photo_url, photo,
+    'the front photo becomes the garage photo');
   // The new shop cannot post either, and cannot touch another shop.
   assert.equal((await owner.post(`/api/shops/${me.json.shop.id}/listings`, {})).status, 403);
   assert.equal((await owner.get('/api/shops/1/listings')).status, 403);
@@ -1492,4 +1494,30 @@ test('start-up removes part numbers loaded twice for the same car, keeping the f
   await prepareDb(db);
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM fitment_reference').get()).n, before);
   assert.ok(await db.prepare('SELECT 1 FROM fitment_reference WHERE id = ?').get(one.id), 'the first row stays');
+});
+
+test('a garage the admin adds needs a photo, which customers then see', async () => {
+  const photo = 'data:image/jpeg;base64,/9j/4AAQ';
+  const garage = { name: 'Kigali Auto Win Garage', phone: '+250 788 333 444', latitude: -1.95, longitude: 30.06,
+    address_text: 'Kicukiro', specialties: 'Brakes, suspension' };
+  const missing = await post('/api/admin/garages', garage, ADMIN);
+  assert.equal(missing.status, 400);
+  assert.match(missing.json.error, /photo of the garage/);
+  assert.equal((await post('/api/admin/garages', { ...garage, photo_url: 'javascript:alert(1)' }, ADMIN)).status, 400);
+
+  const added = await post('/api/admin/garages', { ...garage, photo_url: photo }, ADMIN);
+  assert.equal(added.status, 201);
+  const near = (await get('/api/garages/nearby?radius_km=any')).json.garages.find((g) => g.id === added.json.garage.id);
+  assert.match(near.photo, new RegExp(`^/api/garages/${added.json.garage.id}/photo\\?v=`));
+  assert.ok(!('photo_url' in near), 'the list links to the photo instead of carrying it');
+  const img = await fetch(base + near.photo);
+  assert.equal(img.status, 200);
+  assert.equal(img.headers.get('content-type'), 'image/jpeg');
+  assert.deepEqual([...new Uint8Array(await img.arrayBuffer())], [...Buffer.from('/9j/4AAQ', 'base64')]);
+
+  // The admin can change the photo later; a garage without one shows a stock photo instead.
+  const changed = await call('PUT', `/api/admin/garages/${added.json.garage.id}`, { photo_url: 'data:image/png;base64,iVBO' }, ADMIN);
+  assert.equal(changed.json.garage.photo_url, 'data:image/png;base64,iVBO');
+  assert.equal((await call('PUT', `/api/admin/garages/${added.json.garage.id}`, { photo_url: '' }, ADMIN)).status, 400, 'the photo cannot be removed');
+  assert.equal((await get('/api/garages/1/photo')).status, 404);
 });

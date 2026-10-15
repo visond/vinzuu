@@ -165,7 +165,7 @@ function garageCard(g, i, message) {
   const tags = String(g.specialties || '').split(',').map((t) => t.trim()).filter(Boolean).slice(0, 3);
   return h('article', { class: 'garage-card' },
     h('div', { class: 'gc-photo' },
-      h('img', { src: GARAGE_PHOTOS[i % GARAGE_PHOTOS.length], alt: '', loading: 'lazy', width: 400, height: 250 }),
+      h('img', { src: g.photo || GARAGE_PHOTOS[i % GARAGE_PHOTOS.length], alt: g.photo ? `${g.name}, from outside` : '', loading: 'lazy', width: 400, height: 250 }),
       h('span', { class: 'gc-distance', text: `${g.distance_km} km` })),
     h('div', { class: 'gc-body' },
       h('h3', { text: g.name }),
