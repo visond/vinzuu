@@ -177,7 +177,9 @@ function createApp(db, config = {}) {
   app.disable('x-powered-by');
   // Online the database is set up while the first request waits (config.ready); locally it is
   // ready before the server starts.
-  if (config.ready) app.use(async (req, res, next) => { await config.ready; next(); });
+  // config.ready is a promise, or a function returning one (start() passes a function, so a setup
+  // that failed, for example because two copies of the server started at once, is retried).
+  if (config.ready) app.use(async (req, res, next) => { await (typeof config.ready === 'function' ? config.ready() : config.ready); next(); });
   app.use(express.json({ limit: '1mb' }));
 
   app.use((req, res, next) => {
@@ -1939,7 +1941,8 @@ async function ensureAdminFromEnv(db) {
   const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
   if (user) await db.prepare("UPDATE users SET role = 'admin', shop_id = NULL, garage_id = NULL WHERE id = ?").run(user.id);
   else {
-    await db.prepare("INSERT INTO users (name, email, password_hash, auth_provider, role) VALUES ('Admin', ?, ?, 'local', 'admin')")
+    // OR IGNORE: another copy of the server may create the same account at the same moment.
+    await db.prepare("INSERT OR IGNORE INTO users (name, email, password_hash, auth_provider, role) VALUES ('Admin', ?, ?, 'local', 'admin')")
       .run(email, auth.hashPassword(password));
   }
   return email;
@@ -1956,13 +1959,26 @@ function start() {
   if (process.argv.includes('--no-demo')) process.env.SEED_DEMO = 'false';
   const db = connectDb();
   const info = {};
-  const ready = (async () => {
+  const setUp = async () => {
     await prepareDb(db);
     info.seeded = process.env.SEED_DEMO !== 'false' && await seedDemo(db);
     info.adminAccount = await ensureAdminFromEnv(db);
     info.demo = await isDemo(db);
-  })();
-  ready.catch((err) => { console.error('Could not set up the database:', err); });
+  };
+  // Set up once. If it fails (online, two copies starting together can collide on the shared
+  // database), the error is logged and the next request tries again instead of failing forever.
+  let setup = null;
+  const ready = () => {
+    if (!setup) {
+      setup = setUp().catch((err) => {
+        console.error('Could not set up the database (will retry on the next request):', err);
+        setup = null;
+        throw err;
+      });
+    }
+    return setup;
+  };
+  ready().catch(() => {});
   const adminToken = process.env.ADMIN_TOKEN;
   const app = createApp(db, { adminToken, ready });
   return { app, db, ready, info, adminToken };
@@ -1973,7 +1989,7 @@ if (process.env.VERCEL) {
 } else if (require.main === module) {
   const { app, ready, info, adminToken } = start();
   const port = Number(process.env.PORT) || 3000;
-  ready.then(() => app.listen(port, () => {
+  ready().then(() => app.listen(port, () => {
     console.log(`\n${APP_NAME} running at http://localhost:${port}`);
     console.log(`  Customer app:  http://localhost:${port}/`);
     console.log(`  Sellers & Garages: http://localhost:${port}/business.html`);

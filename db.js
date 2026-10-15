@@ -363,6 +363,7 @@ async function prepareDb(db) {
   await migratePlateNotUnique(db);
   await ensureCategories(db);
   await ensureRealPartNumbers(db);
+  await removeDuplicatePartNumbers(db);
   return db;
 }
 
@@ -422,7 +423,12 @@ async function ensureColumn(db, table, column, type) {
     db.columns = new Set(rows.map((r) => `${r.t}.${r.c}`));
   }
   if (db.columns.has(`${table}.${column}`)) return;
-  await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  try {
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  } catch (err) {
+    // Online, another copy of the server starting at the same moment may have just added it.
+    if (!/duplicate column name/i.test(String(err && err.message))) throw err;
+  }
   db.columns.add(`${table}.${column}`);
 }
 
@@ -466,13 +472,23 @@ async function addFitmentIfNew(db, r) {
  */
 async function ensureRealPartNumbers(db, dir = path.join(__dirname, 'lib', 'oe')) {
   if (!fs.existsSync(dir)) return 0;
-  const done = new Set((await db.prepare("SELECT value FROM meta WHERE key LIKE 'oe_file:%'").all()).map((r) => r.value));
+  const stamps = async () => new Set((await db.prepare("SELECT value FROM meta WHERE key LIKE 'oe_file:%'").all()).map((r) => r.value));
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith('.csv')).sort()
+    .map((file) => { const textCsv = fs.readFileSync(path.join(dir, file), 'utf8'); return { file, textCsv, stamp: `${file}:${textCsv.length}:${hash(textCsv)}` }; });
+  // Usually every file is loaded already: one read, no lock.
+  const loaded = await stamps();
+  if (files.every((f) => loaded.has(f.stamp))) return 0;
+  // Online several copies of the server can start at once on one database. The loading runs in one
+  // write transaction, and checks again inside it, so only the first copy adds the rows.
+  return db.transaction(() => loadPartNumberFiles(db, files, stamps));
+}
+
+async function loadPartNumberFiles(db, files, stamps) {
+  const done = await stamps();
   const cats = new Map((await db.prepare('SELECT name, type FROM part_categories').all()).map((c) => [c.name, c.type]));
   let added = 0;
   let existing = null;
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.csv')).sort()) {
-    const textCsv = fs.readFileSync(path.join(dir, file), 'utf8');
-    const stamp = `${file}:${textCsv.length}:${hash(textCsv)}`;
+  for (const { file, textCsv, stamp } of files) {
     if (done.has(stamp)) continue; // this exact file was loaded before
     // One read of what is there, then every new row (and the file's stamp) in one batch.
     if (!existing) {
@@ -495,6 +511,18 @@ async function ensureRealPartNumbers(db, dir = path.join(__dirname, 'lib', 'oe')
     added += writes.length - 1;
   }
   return added;
+}
+
+/**
+ * The same number for the same car twice is never wanted (adding one returns the existing row).
+ * Early online starts could load the part-number files twice at once; this removes such copies,
+ * keeping the oldest row.
+ */
+async function removeDuplicatePartNumbers(db) {
+  const { changes } = await db.prepare(`DELETE FROM fitment_reference WHERE id NOT IN (
+    SELECT MIN(id) FROM fitment_reference
+    GROUP BY oe_number, part_category, make, model, generation, year_start, year_end, engine, origin_market)`).run();
+  return changes;
 }
 
 /** Run fn inside a transaction; roll back on any error. */

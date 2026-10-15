@@ -1,7 +1,7 @@
 'use strict';
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { openDb, seedDemo } = require('../db');
+const { openDb, prepareDb, seedDemo } = require('../db');
 const { createApp } = require('../server');
 const vindecode = require('../lib/vindecode');
 const carphotos = require('../lib/carphotos');
@@ -1458,4 +1458,38 @@ test('real part numbers in lib/oe load once into a clean database, alongside the
   assert.equal(await ensureRealPartNumbers(db, dir), 0, 'an unchanged file is not loaded again');
   assert.ok(await seedDemo(db), 'demo data still seeds next to real part numbers');
   await db.close();
+});
+
+test('online, a database setup that failed is tried again on the next request', async () => {
+  const db = await openDb(testDbTarget());
+  let attempts = 0;
+  let setup = null;
+  const ready = () => {
+    if (!setup) {
+      setup = (async () => { attempts += 1; if (attempts === 1) throw new Error('database is locked'); })()
+        .catch((err) => { setup = null; throw err; });
+    }
+    return setup;
+  };
+  const app = createApp(db, { ready });
+  const srv = await new Promise((resolve) => { const s = app.listen(0, () => resolve(s)); });
+  const url = `http://127.0.0.1:${srv.address().port}/api/meta`;
+  const errLog = console.error; console.error = () => {};
+  try {
+    assert.equal((await fetch(url)).status, 500, 'the first setup fails');
+    assert.equal((await fetch(url)).status, 200, 'the next request sets up again and works');
+    assert.equal(attempts, 2);
+  } finally { console.error = errLog; srv.close(); }
+});
+
+test('start-up removes part numbers loaded twice for the same car, keeping the first', async () => {
+  const db = await openDb(testDbTarget());
+  const one = await db.prepare('SELECT * FROM fitment_reference ORDER BY id LIMIT 1').get();
+  const before = (await db.prepare('SELECT COUNT(*) AS n FROM fitment_reference').get()).n;
+  await db.prepare(`INSERT INTO fitment_reference (oe_number, part_category, make, model, generation, year_start, year_end,
+    engine, origin_market, confidence_level, source) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(one.oe_number, one.part_category, one.make,
+    one.model, one.generation, one.year_start, one.year_end, one.engine, one.origin_market, one.confidence_level, one.source);
+  await prepareDb(db);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM fitment_reference').get()).n, before);
+  assert.ok(await db.prepare('SELECT 1 FROM fitment_reference WHERE id = ?').get(one.id), 'the first row stays');
 });
