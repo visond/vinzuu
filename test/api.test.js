@@ -1309,6 +1309,30 @@ test('a blocked account cannot sign in and its open session stops working; unblo
   assert.equal((await user.post('/api/auth/login', { email: 'block.me@example.com', password: 'Long-password123' })).status, 200);
 });
 
+test('an admin makes another account an admin and can remove it again, but never the last or their own', async () => {
+  const second = makeClient();
+  await second.post('/api/auth/signup', { name: 'Second Admin', email: 'second.admin@example.com', password: 'Long-password123' });
+  const row = (await get('/api/admin/users?q=second.admin', ADMIN)).json.users[0];
+  assert.ok([401, 403].includes((await second.get('/api/admin/stats')).status), 'a customer is not an admin');
+  assert.equal((await post(`/api/admin/users/${row.id}/make-admin`, {}, ADMIN)).status, 200);
+  assert.equal((await post(`/api/admin/users/${row.id}/make-admin`, {}, ADMIN)).status, 409, 'already an admin');
+  assert.equal((await second.get('/api/admin/stats')).status, 200, 'the new admin opens the admin console');
+  assert.equal((await second.post(`/api/admin/users/${row.id}/remove-admin`, {})).status, 409, 'not your own admin access');
+  const shopOwner = (await get('/api/admin/users?q=shop1@vinzuu.rw', ADMIN)).json.users[0];
+  assert.equal((await post(`/api/admin/users/${shopOwner.id}/make-admin`, {}, ADMIN)).status, 409, 'a shop account stays a shop account');
+  // The demo admin removes the new one; the log says who did it.
+  const cookie = await adminCookie();
+  const removed = await call('POST', `/api/admin/users/${row.id}/remove-admin`, {}, { cookie });
+  assert.equal(removed.status, 200);
+  assert.ok([401, 403].includes((await second.get('/api/admin/stats')).status), 'back to a customer');
+  const log = (await get('/api/admin/log', ADMIN)).json;
+  assert.ok(JSON.stringify(log).includes('Removed admin access'));
+  // The demo admin is now the only one, so it cannot be removed (here by the admin token).
+  const only = (await get('/api/admin/users?role=admin', ADMIN)).json.users;
+  assert.equal(only.length, 1);
+  assert.equal((await post(`/api/admin/users/${only[0].id}/remove-admin`, {}, ADMIN)).status, 409, 'at least one admin');
+});
+
 test('the admin filters bookings and cancels an open one with a reason both sides see', async () => {
   const listing = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings[0];
   const id = (await post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788555444', shop_listing_id: listing.listing_id, garage_id: 1 })).json.booking.id;
