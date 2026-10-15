@@ -1932,15 +1932,20 @@ function loadEnvFile(file = path.join(__dirname, '.env')) {
   }
 }
 
-/** ADMIN_EMAIL + ADMIN_PASSWORD (in .env or the environment) make sure that account exists and
- *  is an admin, so a real deployment has an admin without any demo data. */
+/** ADMIN_EMAIL + ADMIN_PASSWORD (in .env or the environment) make sure that account exists, is an
+ *  admin and has that password, so a real deployment has an admin without any demo data. */
 async function ensureAdminFromEnv(db) {
   const email = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD || '';
   if (!email || !password) return null;
   const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  if (user) await db.prepare("UPDATE users SET role = 'admin', shop_id = NULL, garage_id = NULL WHERE id = ?").run(user.id);
-  else {
+  if (user) {
+    await db.prepare("UPDATE users SET role = 'admin', shop_id = NULL, garage_id = NULL WHERE id = ?").run(user.id);
+    // The setting is the password: changing ADMIN_PASSWORD (then redeploying) changes this account's.
+    if (!user.password_hash || !auth.verifyPassword(password, user.password_hash)) {
+      await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(auth.hashPassword(password), user.id);
+    }
+  } else {
     // OR IGNORE: another copy of the server may create the same account at the same moment.
     await db.prepare("INSERT OR IGNORE INTO users (name, email, password_hash, auth_provider, role) VALUES ('Admin', ?, ?, 'local', 'admin')")
       .run(email, auth.hashPassword(password));
