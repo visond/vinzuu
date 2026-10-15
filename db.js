@@ -1,7 +1,9 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { DatabaseSync } = require('node:sqlite');
+const { connect } = require('./lib/dbclient');
+const { PART_CATALOG } = require('./lib/partcatalog');
+const { csvToFitment } = require('./lib/fitmentcsv');
 
 const DEFAULT_DB_PATH = path.join(__dirname, 'data', 'parts.db');
 
@@ -139,6 +141,123 @@ CREATE TABLE IF NOT EXISTS shop_listings (
 CREATE INDEX IF NOT EXISTS idx_listings_oe ON shop_listings (oe_number);
 CREATE INDEX IF NOT EXISTS idx_listings_cat ON shop_listings (part_category);
 
+-- A shop asking the vinzuu team to put a part on sale. Only an admin posts parts (so no shop
+-- can post a fake one): approving a request creates the shop_listings row it describes.
+CREATE TABLE IF NOT EXISTS listing_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shop_id INTEGER NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  oe_number TEXT,
+  part_category TEXT NOT NULL,
+  universal_spec TEXT,
+  price_rwf INTEGER NOT NULL CHECK (price_rwf > 0),
+  stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
+  condition TEXT NOT NULL CHECK (condition IN ('genuine','aftermarket')),
+  photo_url TEXT NOT NULL,
+  brand TEXT,
+  description TEXT,
+  warranty_months INTEGER,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  admin_note TEXT,
+  listing_id INTEGER REFERENCES shop_listings(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT
+);
+
+-- A business applying on /sell.html to join Vinzuu Sellers & Garages. Nothing it sends is
+-- shown to customers: an admin checks the documents, then approving it creates the shop
+-- and/or garage and the owner's account (with the password chosen here).
+CREATE TABLE IF NOT EXISTS business_applications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL CHECK (kind IN ('shop','garage','both')),
+  business_name TEXT NOT NULL,
+  owner_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  whatsapp_number TEXT,
+  address_text TEXT NOT NULL,
+  latitude REAL NOT NULL,
+  longitude REAL NOT NULL,
+  tin TEXT NOT NULL,
+  certificate_photo TEXT NOT NULL,
+  front_photo TEXT NOT NULL,
+  specialties TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  admin_note TEXT,
+  shop_id INTEGER REFERENCES shops(id) ON DELETE SET NULL,
+  garage_id INTEGER REFERENCES garages(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  decided_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_applications_email ON business_applications (email);
+
+-- A garage's fixed labour prices, shown to customers before they book. part_category links a
+-- service to the part it fits ("Fit front brake pads" -> Front Brake Pad) so the booking
+-- dialog can show the right price; it is NULL for general work such as a diagnosis.
+CREATE TABLE IF NOT EXISTS garage_services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  garage_id INTEGER NOT NULL REFERENCES garages(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  part_category TEXT,
+  price_rwf INTEGER NOT NULL CHECK (price_rwf > 0),
+  duration_minutes INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A customer's stars and comment on a shop or a garage. Only the customer who made the booking
+-- can review, and only once that side of it is finished (part collected / job done), so every
+-- review comes from a real customer. One review per booking per side; the business can reply.
+CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+  target TEXT NOT NULL CHECK (target IN ('shop','garage')),
+  shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+  garage_id INTEGER REFERENCES garages(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  author_name TEXT NOT NULL,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  reply TEXT,
+  replied_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_once ON reviews (booking_id, target) WHERE booking_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_reviews_shop ON reviews (shop_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_garage ON reviews (garage_id);
+
+-- A customer's complaint about a shop, a garage or one part (a fake part, the wrong part, a
+-- price the shop did not honour...). The admin looks into it and closes it with a note.
+CREATE TABLE IF NOT EXISTS reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+  target TEXT NOT NULL CHECK (target IN ('shop','garage','listing')),
+  shop_id INTEGER REFERENCES shops(id) ON DELETE CASCADE,
+  garage_id INTEGER REFERENCES garages(id) ON DELETE CASCADE,
+  listing_id INTEGER REFERENCES shop_listings(id) ON DELETE SET NULL,
+  reason TEXT NOT NULL,
+  details TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+  admin_note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  closed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports (status);
+
+-- What each admin changed and when: approvals, rejections, hiding, suspending, deleting.
+CREATE TABLE IF NOT EXISTS admin_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  admin_email TEXT NOT NULL,
+  action TEXT NOT NULL,
+  target_type TEXT,
+  target_id INTEGER,
+  detail TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Spec 8.6
 CREATE TABLE IF NOT EXISTS garages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -181,17 +300,69 @@ CREATE TABLE IF NOT EXISTS search_gaps (
 );
 `;
 
-function openDb(dbPath = process.env.DB_PATH || DEFAULT_DB_PATH) {
-  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  const db = new DatabaseSync(dbPath);
-  db.exec(SCHEMA);
-  ensureColumn(db, 'vehicles', 'user_id', 'INTEGER REFERENCES users(id)');
-  ensureColumn(db, 'users', 'phone', 'TEXT');
+/**
+ * Connects to the database: online (TURSO_DATABASE_URL set) that is Turso; otherwise the local
+ * file at DB_PATH (default data/parts.db). Nothing is read or written yet.
+ */
+function connectDb(dbPath = process.env.TURSO_DATABASE_URL || process.env.DB_PATH || DEFAULT_DB_PATH) {
+  // Vercel has no lasting disk: a file database there would be wiped on every restart.
+  if (process.env.VERCEL && !/^[a-z]+:/.test(dbPath)) {
+    throw new Error('Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel (Settings > Environment Variables), then redeploy.');
+  }
+  const isUrl = /^[a-z]+:/.test(dbPath);
+  if (!isUrl && dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  return connect(dbPath, process.env.TURSO_AUTH_TOKEN);
+}
+
+/** Opens the database and waits until its tables are up to date. */
+async function openDb(dbPath) {
+  return prepareDb(connectDb(dbPath));
+}
+
+/** Creates missing tables and columns, and loads the part list and the real part numbers. */
+async function prepareDb(db) {
+  await db.exec(SCHEMA);
+  await ensureColumn(db, 'vehicles', 'user_id', 'INTEGER REFERENCES users(id)');
+  await ensureColumn(db, 'users', 'phone', 'TEXT');
   // The odometer reading the owner last gave, for the "My garage" inspection reminders.
-  ensureColumn(db, 'vehicles', 'mileage_km', 'INTEGER');
-  ensureColumn(db, 'vehicles', 'mileage_at', 'TEXT');
-  migratePlateNotUnique(db);
-  ensureCategories(db);
+  await ensureColumn(db, 'vehicles', 'mileage_km', 'INTEGER');
+  await ensureColumn(db, 'vehicles', 'mileage_at', 'TEXT');
+  // Who an account belongs to: a customer, a business (it runs the shop in shop_id and/or the
+  // garage in garage_id) or an admin. Signing in sends each one to its own dashboard.
+  await ensureColumn(db, 'users', 'role', "TEXT NOT NULL DEFAULT 'customer'");
+  await ensureColumn(db, 'users', 'shop_id', 'INTEGER REFERENCES shops(id)');
+  await ensureColumn(db, 'users', 'garage_id', 'INTEGER REFERENCES garages(id)');
+  // What the admin checked about a part: its brand, a description customers read, and the
+  // warranty. hidden = 1 takes it off sale without deleting it.
+  await ensureColumn(db, 'shop_listings', 'brand', 'TEXT');
+  await ensureColumn(db, 'shop_listings', 'description', 'TEXT');
+  await ensureColumn(db, 'shop_listings', 'warranty_months', 'INTEGER');
+  await ensureColumn(db, 'shop_listings', 'hidden', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn(db, 'shops', 'opening_hours', 'TEXT');
+  await ensureColumn(db, 'garages', 'opening_hours', 'TEXT');
+  // A booking is one request seen from two sides: the shop reserves the part, the garage
+  // schedules the fitting. Each side keeps its own progress.
+  await ensureColumn(db, 'bookings', 'shop_status', "TEXT NOT NULL DEFAULT 'requested'");
+  await ensureColumn(db, 'bookings', 'garage_status', "TEXT NOT NULL DEFAULT 'requested'");
+  await ensureColumn(db, 'bookings', 'garage_time', 'TEXT');
+  await ensureColumn(db, 'bookings', 'garage_note', 'TEXT');
+  // The signed-in customer who made the booking: they see it under "My bookings" and review it.
+  await ensureColumn(db, 'bookings', 'user_id', 'INTEGER REFERENCES users(id)');
+  // The admin can suspend a shop or garage (it disappears from search until reactivated), block
+  // an account (it can no longer sign in), and cancel a booking. Each keeps the reason.
+  await ensureColumn(db, 'shops', 'suspended', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn(db, 'shops', 'suspended_reason', 'TEXT');
+  await ensureColumn(db, 'garages', 'suspended', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn(db, 'garages', 'suspended_reason', 'TEXT');
+  await ensureColumn(db, 'users', 'blocked', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn(db, 'users', 'blocked_reason', 'TEXT');
+  await ensureColumn(db, 'users', 'last_login_at', 'TEXT');
+  await ensureColumn(db, 'bookings', 'admin_note', 'TEXT');
+  await ensureColumn(db, 'part_categories', 'grp', 'TEXT');
+  await ensureColumn(db, 'part_categories', 'sort_order', 'INTEGER');
+  await migratePlateNotUnique(db);
+  await ensureCategories(db);
+  await ensureRealPartNumbers(db);
   return db;
 }
 
@@ -199,15 +370,16 @@ function openDb(dbPath = process.env.DB_PATH || DEFAULT_DB_PATH) {
  *  UNIQUE constraint can't be dropped with ALTER TABLE in SQLite, so this rebuilds the table
  *  without it when an old one is found, preserving every row (and re-adds the vin unique index,
  *  since dropping the table drops its indexes too). No-ops on a database that never had it. */
-function migratePlateNotUnique(db) {
-  const hasOldConstraint = db.prepare("PRAGMA index_list('vehicles')").all().some((idx) => {
-    if (!idx.unique || !idx.name.startsWith('sqlite_autoindex_')) return false;
-    const cols = db.prepare(`PRAGMA index_info('${idx.name}')`).all();
-    return cols.length === 1 && cols[0].name === 'plate_number';
-  });
+async function migratePlateNotUnique(db) {
+  let hasOldConstraint = false;
+  for (const idx of await db.prepare("PRAGMA index_list('vehicles')").all()) {
+    if (!idx.unique || !idx.name.startsWith('sqlite_autoindex_')) continue;
+    const cols = await db.prepare(`PRAGMA index_info('${idx.name}')`).all();
+    if (cols.length === 1 && cols[0].name === 'plate_number') hasOldConstraint = true;
+  }
   if (!hasOldConstraint) return;
-  tx(db, () => {
-    db.exec(`
+  await tx(db, async () => {
+    await db.exec(`
       CREATE TABLE vehicles_new (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         plate_number TEXT NOT NULL,
@@ -228,60 +400,107 @@ function migratePlateNotUnique(db) {
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
     `);
-    db.exec(`INSERT INTO vehicles_new
+    await db.exec(`INSERT INTO vehicles_new
       (id, plate_number, vin, wmi_code, make, model, generation, year, engine, transmission,
        origin_market, drive_side, import_source, owner_phone, registered_by, user_id, created_at)
       SELECT id, plate_number, vin, wmi_code, make, model, generation, year, engine, transmission,
        origin_market, drive_side, import_source, owner_phone, registered_by, user_id, created_at
       FROM vehicles`);
-    db.exec('DROP TABLE vehicles');
-    db.exec('ALTER TABLE vehicles_new RENAME TO vehicles');
-    db.exec('CREATE INDEX IF NOT EXISTS idx_vehicles_plate ON vehicles (plate_number)');
-    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_vin ON vehicles (vin) WHERE vin IS NOT NULL');
+    await db.exec('DROP TABLE vehicles');
+    await db.exec('ALTER TABLE vehicles_new RENAME TO vehicles');
+    await db.exec('CREATE INDEX IF NOT EXISTS idx_vehicles_plate ON vehicles (plate_number)');
+    await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicles_vin ON vehicles (vin) WHERE vin IS NOT NULL');
   });
 }
 
-/** Upgrade a database file created by an earlier version that did not have this column yet. */
-function ensureColumn(db, table, column, type) {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
-  if (!cols.some((c) => c.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+/** Upgrade a database file created by an earlier version that did not have this column yet.
+ *  Every table's columns are read in one query the first time, so start-up stays quick online. */
+async function ensureColumn(db, table, column, type) {
+  if (!db.columns) {
+    const rows = await db.prepare(`SELECT m.name AS t, p.name AS c FROM sqlite_master m
+      JOIN pragma_table_info(m.name) p WHERE m.type = 'table'`).all();
+    db.columns = new Set(rows.map((r) => `${r.t}.${r.c}`));
   }
+  if (db.columns.has(`${table}.${column}`)) return;
+  await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  db.columns.add(`${table}.${column}`);
 }
 
-/** Part categories are real reference data (not demo data), so they exist even in a clean database. */
-function ensureCategories(db) {
-  if (db.prepare('SELECT COUNT(*) AS n FROM part_categories').get().n > 0) return;
-  const ins = db.prepare('INSERT INTO part_categories (name, type, keywords) VALUES (?, ?, ?)');
-  tx(db, () => { for (const c of CATEGORIES) ins.run(...c); });
+/** Part categories are real reference data (not demo data), so they exist even in a clean database.
+ *  The list lives in lib/partcatalog.js. New ones are added to an existing database on start-up,
+ *  and every one's group, order and keywords are refreshed; nothing is ever removed. */
+async function ensureCategories(db) {
+  const have = new Map((await db.prepare('SELECT name, keywords, grp, sort_order FROM part_categories').all()).map((c) => [c.name, c]));
+  const writes = [];
+  for (const c of PART_CATALOG) {
+    const old = have.get(c.name);
+    if (!old) writes.push(['INSERT OR IGNORE INTO part_categories (name, type, keywords) VALUES (?, ?, ?)', [c.name, c.type, c.keywords]]);
+    if (!old || old.keywords !== c.keywords || old.grp !== c.grp || old.sort_order !== c.sort) {
+      writes.push(['UPDATE part_categories SET keywords = ?, grp = ?, sort_order = ? WHERE name = ?', [c.keywords, c.grp, c.sort, c.name]]);
+    }
+  }
+  await db.batch(writes);
+}
+
+/** The columns that make two part-number rows "the same number for the same car". */
+const fitmentKey = (r) => JSON.stringify(r.slice(0, 9).map((v) => (v == null ? null : String(v))));
+const FITMENT_INSERT = `INSERT INTO fitment_reference (oe_number, part_category, make, model, generation, year_start, year_end,
+    engine, origin_market, confidence_level, source, verified_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`;
+
+/** Inserts a part-number row unless the same number is already there for the same car.
+ *  Returns true when it was added. */
+async function addFitmentIfNew(db, r) {
+  const same = await db.prepare(`SELECT 1 FROM fitment_reference WHERE oe_number = ? AND part_category = ? AND make = ? AND model = ?
+    AND generation IS ? AND year_start = ? AND year_end = ? AND engine IS ? AND origin_market IS ? LIMIT 1`)
+    .get(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8]);
+  if (same) return false;
+  await db.prepare(`INSERT INTO fitment_reference (oe_number, part_category, make, model, generation, year_start, year_end,
+    engine, origin_market, confidence_level, source, verified_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(...r);
+  return true;
+}
+
+/**
+ * Real part numbers (not demo data), researched from public parts catalogues and kept in
+ * lib/oe/<make>.csv with the page each one was read from. Each version of a file is loaded once,
+ * on start-up, and only rows not already in the table are added, so the admin's edits stay.
+ */
+async function ensureRealPartNumbers(db, dir = path.join(__dirname, 'lib', 'oe')) {
+  if (!fs.existsSync(dir)) return 0;
+  const done = new Set((await db.prepare("SELECT value FROM meta WHERE key LIKE 'oe_file:%'").all()).map((r) => r.value));
+  const cats = new Map((await db.prepare('SELECT name, type FROM part_categories').all()).map((c) => [c.name, c.type]));
+  let added = 0;
+  let existing = null;
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.csv')).sort()) {
+    const textCsv = fs.readFileSync(path.join(dir, file), 'utf8');
+    const stamp = `${file}:${textCsv.length}:${hash(textCsv)}`;
+    if (done.has(stamp)) continue; // this exact file was loaded before
+    // One read of what is there, then every new row (and the file's stamp) in one batch.
+    if (!existing) {
+      existing = new Set((await db.prepare(`SELECT oe_number, part_category, make, model, generation, year_start, year_end,
+        engine, origin_market FROM fitment_reference`).all()).map((r) => fitmentKey(Object.values(r))));
+    }
+    const writes = [];
+    for (const { body: b } of csvToFitment(textCsv)) {
+      const ys = Number(b.year_start); const ye = Number(b.year_end);
+      if (!b.oe_number || !b.make || !b.model || !b.source || cats.get(b.part_category) !== 'model_specific'
+        || !Number.isInteger(ys) || !Number.isInteger(ye) || ye < ys) continue;
+      const conf = ['MEDIUM', 'LOW'].includes(b.confidence_level) || (b.confidence_level === 'HIGH' && b.verified_by) ? b.confidence_level : 'LOW';
+      const row = [b.oe_number, b.part_category, b.make, b.model, b.generation, ys, ye, b.engine, b.origin_market, conf, b.source, b.verified_by];
+      if (existing.has(fitmentKey(row))) continue;
+      existing.add(fitmentKey(row));
+      writes.push([FITMENT_INSERT, row]);
+    }
+    writes.push(['INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [`oe_file:${file}`, stamp]]);
+    await db.batch(writes);
+    added += writes.length - 1;
+  }
+  return added;
 }
 
 /** Run fn inside a transaction; roll back on any error. */
-function tx(db, fn) {
-  db.exec('BEGIN');
-  try {
-    const result = fn();
-    db.exec('COMMIT');
-    return result;
-  } catch (err) {
-    db.exec('ROLLBACK');
-    throw err;
-  }
+async function tx(db, fn) {
+  return await db.transaction(fn);
 }
-
-// Real reference data: the part categories customers can pick from. Add new ones here.
-// "keywords" are the everyday words people use, so "brake noise" finds Front Brake Pad.
-const CATEGORIES = [
-  ['Front Brake Pad', 'model_specific', 'brake,brakes,braking,squeal,squealing,noise,grinding,stopping,pedal'],
-  ['Rear Brake Pad', 'model_specific', 'brake,brakes,rear brake,noise'],
-  ['Oil Filter', 'model_specific', 'oil,filter,service,maintenance'],
-  ['Air Filter', 'model_specific', 'air,filter,service,dust,power'],
-  ['Front Bumper', 'model_specific', 'bumper,accident,crash,body,damage'],
-  ['Headlight Assembly', 'model_specific', 'headlight,light,lamp,night,dim'],
-  ['Battery', 'universal', 'battery,start,starting,dead,flat,electrical'],
-  ['Wiper Blade', 'universal', 'wiper,wipers,rain,windscreen,windshield,streaks'],
-  ['Engine Oil', 'universal', 'engine oil,oil,service,lubricant,oil change'],
-];
 
 // ---------------------------------------------------------------------------
 // DEMO DATA. Everything below is invented so you can click through the app.
@@ -365,37 +584,38 @@ function placeholderPhoto(text) {
   return `/img/placeholder.svg?text=${encodeURIComponent(text)}`;
 }
 
-function seedDemo(db) {
-  const already = db.prepare('SELECT COUNT(*) AS n FROM fitment_reference').get().n;
-  if (already > 0) { backfillDemoVins(db); return false; }
+async function seedDemo(db) {
+  // Counts only demo rows: the real part numbers in lib/oe/ are loaded into every database.
+  const already = (await db.prepare('SELECT COUNT(*) AS n FROM fitment_reference WHERE source = ?').get(DEMO_SOURCE)).n;
+  if (already > 0) { await backfillDemoVins(db); await ensureDemoAccounts(db); return false; }
 
-  tx(db, () => {
+  await tx(db, async () => {
     const insFit = db.prepare(`INSERT INTO fitment_reference
       (oe_number, part_category, make, model, generation, year_start, year_end, engine, origin_market,
        confidence_level, source, verified_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
-    for (const f of FITMENT) insFit.run(...f, DEMO_SOURCE, null);
+    for (const f of FITMENT) await insFit.run(...f, DEMO_SOURCE, null);
 
     const insShop = db.prepare(`INSERT INTO shops
       (name, phone, whatsapp_number, latitude, longitude, address_text, vetted, access_code, onboarded_by)
       VALUES (?,?,?,?,?,?,?,?,?)`);
-    for (const s of SHOPS) insShop.run(...s, 'demo seed');
+    for (const s of SHOPS) await insShop.run(...s, 'demo seed');
 
     const insGarage = db.prepare(`INSERT INTO garages
       (name, phone, whatsapp_number, latitude, longitude, address_text, specialties) VALUES (?,?,?,?,?,?,?)`);
-    for (const g of GARAGES) insGarage.run(...g);
+    for (const g of GARAGES) await insGarage.run(...g);
 
     const insVeh = db.prepare(`INSERT INTO vehicles
       (plate_number, vin, wmi_code, make, model, generation, year, engine, transmission, origin_market,
        drive_side, import_source, registered_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     for (const v of VEHICLES) {
-      insVeh.run(v[0], v[10], v[7], v[1], v[2], v[3], v[4], v[5], v[6], v[8], 'LHD', v[9], 'demo seed');
+      await insVeh.run(v[0], v[10], v[7], v[1], v[2], v[3], v[4], v[5], v[6], v[8], 'LHD', v[9], 'demo seed');
     }
 
     // Listings: each OE number is stocked by 3 of the 5 demo shops, with prices that differ.
     const insListing = db.prepare(`INSERT INTO shop_listings
       (shop_id, oe_number, part_category, universal_spec, price_rwf, stock_quantity, condition, photo_url)
       VALUES (?,?,?,?,?,?,?,?)`);
-    const shopIds = db.prepare('SELECT id FROM shops ORDER BY id').all().map((r) => r.id);
+    const shopIds = (await db.prepare('SELECT id FROM shops ORDER BY id').all()).map((r) => r.id);
     for (const f of FITMENT) {
       const [oe, category] = f;
       const h = hash(oe);
@@ -405,38 +625,170 @@ function seedDemo(db) {
         const price = Math.round((BASE_PRICE[category] * factor) / 500) * 500;
         const stock = hash(oe + 's' + shopId) % 7 === 0 ? 0 : 1 + (hash(oe + shopId) % 6);
         const condition = hash(oe + 'c' + shopId) % 2 === 0 ? 'genuine' : 'aftermarket';
-        insListing.run(shopId, oe, category, null, price, stock, condition, placeholderPhoto(category));
+        await insListing.run(shopId, oe, category, null, price, stock, condition, placeholderPhoto(category));
       }
     }
-    UNIVERSAL_LISTINGS.forEach(([category, spec, base], i) => {
+    for (const [i, [category, spec, base]] of UNIVERSAL_LISTINGS.entries()) {
       for (let k = 0; k < 2; k++) {
         const shopId = shopIds[(i + k * 2) % shopIds.length];
         const factor = 0.9 + ((hash(spec + shopId) % 40) / 100);
-        insListing.run(shopId, null, category, spec, Math.round((base * factor) / 500) * 500,
+        await insListing.run(shopId, null, category, spec, Math.round((base * factor) / 500) * 500,
           2 + (i % 4), 'aftermarket', placeholderPhoto(category));
       }
-    });
+    }
 
-    db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo', '1')").run();
+    await db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo', '1')").run();
   });
+  await ensureDemoAccounts(db);
   return true;
+}
+
+// Demo sign-ins, so the admin console and Vinzuu Sellers & Garages can be tried. Invented,
+// like the rest of the demo data.
+const DEMO_ADMIN = { email: 'admin@vinzuu.rw', password: 'Admin-vinzuu1' };
+const DEMO_BUSINESS_PASSWORD = 'Vinzuu-demo1';
+const DEMO_CUSTOMER_EMAIL = 'customer@vinzuu.rw';
+
+// [name, part_category or null, price, minutes]: labour prices for each demo garage.
+const DEMO_SERVICES = [
+  ['Fit front brake pads', 'Front Brake Pad', 15000, 60],
+  ['Fit rear brake pads', 'Rear Brake Pad', 15000, 60],
+  ['Oil and filter change', 'Oil Filter', 10000, 45],
+  ['Replace air filter', 'Air Filter', 5000, 20],
+  ['Fit and test a battery', 'Battery', 5000, 20],
+  ['Fit wiper blades', 'Wiper Blade', 2000, 10],
+  ['Fit a headlight', 'Headlight Assembly', 20000, 90],
+  ['Fit a front bumper', 'Front Bumper', 35000, 180],
+  ['Engine diagnosis', null, 15000, 60],
+];
+
+/** Adds the demo admin, one business account per demo shop and garage, plus one account that
+ *  runs both a shop and a garage (it lands on the "shop or garage?" choice). Also labour prices
+ *  and a few bookings, so the dashboards are not empty. Runs on older demo databases too, and
+ *  never touches an account or row that already exists. */
+async function ensureDemoAccounts(db) {
+  if (!(await isDemo(db))) return;
+  const { hashPassword } = require('./lib/auth');
+  const exists = async (email) => await db.prepare('SELECT 1 FROM users WHERE email = ?').get(email);
+  const ins = db.prepare(`INSERT INTO users (name, email, password_hash, auth_provider, role, shop_id, garage_id)
+    VALUES (?,?,?,'local',?,?,?)`);
+  const bizHash = hashPassword(DEMO_BUSINESS_PASSWORD);
+  await tx(db, async () => {
+    if (!(await exists(DEMO_ADMIN.email))) await ins.run('Vinzuu Admin', DEMO_ADMIN.email, hashPassword(DEMO_ADMIN.password), 'admin', null, null);
+    const shops = await db.prepare("SELECT id, name FROM shops WHERE onboarded_by = 'demo seed' ORDER BY id").all();
+    for (const [i, shop] of shops.entries()) {
+      const email = `shop${i + 1}@vinzuu.rw`;
+      if (!(await exists(email))) await ins.run(shop.name, email, bizHash, 'business', shop.id, null);
+    }
+    const garages = await db.prepare(`SELECT id, name FROM garages WHERE name LIKE 'Demo Garage %' ORDER BY id`).all();
+    for (const [i, garage] of garages.entries()) {
+      const email = `garage${i + 1}@vinzuu.rw`;
+      if (!(await exists(email))) await ins.run(garage.name, email, bizHash, 'business', null, garage.id);
+    }
+    if (shops.length && garages.length && !(await exists('both@vinzuu.rw'))) {
+      await ins.run('Demo Shop and Garage', 'both@vinzuu.rw', bizHash, 'business', shops[0].id, garages[0].id);
+    }
+
+    if (await db.prepare("SELECT 1 FROM meta WHERE key = 'demo_business'").get()) return;
+    const insSvc = db.prepare('INSERT INTO garage_services (garage_id, name, part_category, price_rwf, duration_minutes) VALUES (?,?,?,?,?)');
+    for (const [gi, garage] of garages.entries()) {
+      for (const [name, cat, price, mins] of DEMO_SERVICES) await insSvc.run(garage.id, name, cat, price + gi * 1000, mins);
+    }
+    // Three bookings on the first demo shop's parts, fitted at the first demo garage.
+    const car = await db.prepare("SELECT id FROM vehicles WHERE registered_by = 'demo seed' ORDER BY id LIMIT 1").get();
+    const listings = shops.length ? await db.prepare('SELECT id FROM shop_listings WHERE shop_id = ? AND stock_quantity > 0 ORDER BY id LIMIT 3').all(shops[0].id) : [];
+    const insBk = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, note, shop_status, garage_status, garage_time, created_at)
+      VALUES (?,?,?,?,?,?,?,?, datetime('now', ?))`);
+    const plan = [
+      ['+250788000101', 'Please keep it for me until Saturday.', 'requested', 'requested', null, '-2 hours'],
+      ['+250788000102', null, 'confirmed', 'accepted', "date('now', '+1 day') || ' 10:00'", '-1 day'],
+      ['+250788000103', 'Car makes a noise when braking.', 'collected', 'done', "date('now', '-2 day') || ' 14:00'", '-3 day'],
+    ];
+    if (car && garages.length) {
+      for (const [i, l] of listings.entries()) {
+        const [ph, note, ss, gs, timeSql, ago] = plan[i];
+        const time = timeSql ? (await db.prepare(`SELECT ${timeSql} AS t`).get()).t : null;
+        await insBk.run(ph, car.id, l.id, garages[0].id, note, ss, gs, time, ago);
+      }
+    }
+    // A few invented reviews, so the stars and comments can be seen.
+    const insRv = db.prepare(`INSERT INTO reviews (target, shop_id, garage_id, author_name, rating, comment, reply, created_at)
+      VALUES (?,?,?,?,?,?,?, datetime('now', ?))`);
+    const DEMO_REVIEWS = [
+      [5, 'Genuine part, exactly what the site said. They kept it for me until I came.', 'Thank you, welcome back!'],
+      [4, 'Good price. I waited a little at the counter.', null],
+      [3, 'The part was fine but the shop was hard to find.', 'Sorry about that, we are next to the bus park.'],
+    ];
+    for (const [si, shop] of shops.entries()) {
+      for (const [i, [r, c, rep]] of DEMO_REVIEWS.slice(si % 2).entries()) {
+        await insRv.run('shop', shop.id, null, ['Eric M.', 'Aline U.', 'Jean B.'][i], r, c, rep, `-${si + i + 1} day`);
+      }
+    }
+    const GARAGE_REVIEWS = [
+      [5, 'Fitted my brake pads in under an hour, fair price.', 'Thanks for choosing us.'],
+      [4, 'Good work, they explained what they changed.', null],
+    ];
+    for (const [gi, garage] of garages.entries()) {
+      for (const [i, [r, c, rep]] of GARAGE_REVIEWS.entries()) {
+        await insRv.run('garage', null, garage.id, ['Diane K.', 'Patrick N.'][i], r, c, rep, `-${gi + i + 1} day`);
+      }
+    }
+    await db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo_business', '1')").run();
+  });
+  await ensureDemoAdminData(db, bizHash);
+}
+
+/** A demo customer account, a few weeks of past bookings (so the admin's charts have something
+ *  to draw) and one open customer report. Runs once per demo database. */
+async function ensureDemoAdminData(db, bizHash) {
+  if (await db.prepare("SELECT 1 FROM meta WHERE key = 'demo_admin'").get()) return;
+  await tx(db, async () => {
+    let customer = await db.prepare('SELECT id FROM users WHERE email = ?').get(DEMO_CUSTOMER_EMAIL);
+    if (!customer) {
+      customer = { id: Number((await db.prepare(`INSERT INTO users (name, email, phone, password_hash, auth_provider, role, created_at)
+        VALUES ('Demo Customer', ?, '+250788000100', ?, 'local', 'customer', datetime('now', '-40 day'))`).run(DEMO_CUSTOMER_EMAIL, bizHash)).lastInsertRowid) };
+    }
+    await db.prepare('UPDATE bookings SET user_id = ? WHERE user_id IS NULL').run(customer.id);
+    const car = await db.prepare("SELECT id FROM vehicles WHERE registered_by = 'demo seed' ORDER BY id LIMIT 1").get();
+    const listings = await db.prepare(`SELECT l.id FROM shop_listings l JOIN shops s ON s.id = l.shop_id
+      WHERE s.onboarded_by = 'demo seed' ORDER BY l.id LIMIT 12`).all();
+    const garages = await db.prepare("SELECT id FROM garages WHERE name LIKE 'Demo Garage %' ORDER BY id").all();
+    if (car && listings.length && garages.length) {
+      const ins = db.prepare(`INSERT INTO bookings (customer_phone, vehicle_id, shop_listing_id, garage_id, shop_status, garage_status, garage_time, created_at)
+        VALUES (?,?,?,?,?,?,?, datetime('now', ?))`);
+      // Past weeks: mostly finished, a few cancelled, so the charts and scorecards show something.
+      const ago = [5, 9, 12, 16, 19, 23, 26, 33, 37, 41, 48, 52];
+      for (const [i, days] of ago.entries()) {
+        const cancelled = i % 5 === 3;
+        await ins.run(`+25078800${String(200 + i)}`, car.id, listings[i % listings.length].id, garages[i % garages.length].id,
+          cancelled ? 'cancelled' : 'collected', cancelled ? 'declined' : 'done',
+          cancelled ? null : (await db.prepare(`SELECT date('now', ?) || ' 10:00' AS t`).get(`-${days - 1} day`)).t, `-${days} day`);
+      }
+    }
+    const shop = await db.prepare("SELECT id FROM shops WHERE onboarded_by = 'demo seed' ORDER BY id LIMIT 1 OFFSET 1").get();
+    if (shop) {
+      await db.prepare(`INSERT INTO reports (user_id, target, shop_id, reason, details, created_at)
+        VALUES (?, 'shop', ?, 'price', 'The site said 45,000 RWF but at the counter they asked for 60,000.', datetime('now', '-1 day'))`).run(customer.id, shop.id);
+    }
+    await db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('demo_admin', '1')").run();
+  });
 }
 
 /** Demo databases created before the demo cars had VINs: give each seeded car its VIN, so the
  *  VIN-only customer page can reach them. Skips a car that already has a VIN, and a VIN that some
  *  other car has since claimed, so it never overwrites anything a person entered. */
-function backfillDemoVins(db) {
-  if (!isDemo(db)) return;
+async function backfillDemoVins(db) {
+  if (!(await isDemo(db))) return;
   const setVin = db.prepare(`UPDATE vehicles SET vin = ? WHERE id = (
       SELECT id FROM vehicles WHERE plate_number = ? AND registered_by = 'demo seed' AND vin IS NULL
       ORDER BY id LIMIT 1)
     AND NOT EXISTS (SELECT 1 FROM vehicles WHERE vin = ?)`);
-  for (const v of VEHICLES) setVin.run(v[10], v[0], v[10]);
+  for (const v of VEHICLES) await setVin.run(v[10], v[0], v[10]);
 }
 
-function isDemo(db) {
-  const row = db.prepare("SELECT value FROM meta WHERE key = 'demo'").get();
+async function isDemo(db) {
+  const row = await db.prepare("SELECT value FROM meta WHERE key = 'demo'").get();
   return !!row && row.value === '1';
 }
 
-module.exports = { openDb, tx, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH };
+module.exports = { openDb, connectDb, prepareDb, tx, addFitmentIfNew, ensureRealPartNumbers, seedDemo, isDemo, DEMO_VIN, DEFAULT_DB_PATH, DEMO_ADMIN, DEMO_BUSINESS_PASSWORD, DEMO_CUSTOMER_EMAIL };

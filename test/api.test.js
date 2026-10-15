@@ -10,6 +10,18 @@ const alg = require('../lib/algorithms');
 let server;
 let base;
 
+// Each test database is in memory, or, with TEST_LIBSQL=1, a temporary file opened through the
+// libsql client that Vinzuu uses online with Turso, so both database paths get the same tests.
+// TEST_DB_URLS (comma-separated, one empty database server per test database, e.g. local sqld
+// servers at http://127.0.0.1:8081,...) runs them against a real server, the way Turso is reached.
+let dbCounter = 0;
+function testDbTarget() {
+  if (process.env.TEST_DB_URLS) return process.env.TEST_DB_URLS.split(',')[dbCounter++];
+  if (!process.env.TEST_LIBSQL) return ':memory:';
+  const dir = require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'vz-db-'));
+  return `file:${require('node:path').join(dir, `t${++dbCounter}.db`)}`;
+}
+
 // Stands in for the online VIN decoder (NHTSA vPIC): it knows one US-built Kia Sorento, the way
 // vPIC answers for a North American VIN, and nothing else. Counts calls to prove the cache works.
 const VPIC_SORENTO = {
@@ -71,8 +83,8 @@ async function fakeVinLookup(vin) {
 const ADMIN = { 'x-admin-token': 'test-admin' };
 
 before(async () => {
-  const db = openDb(':memory:');
-  seedDemo(db);
+  const db = await openDb(testDbTarget());
+  await seedDemo(db);
   const app = createApp(db, { adminToken: 'test-admin', writeLimit: { windowMs: 60_000, max: 10_000 }, vinLookup: fakeVinLookup, wikiJson: fakeWiki });
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   base = `http://127.0.0.1:${server.address().port}`;
@@ -104,7 +116,10 @@ function makeClient() {
     const json = await res.json().catch(() => null);
     return { status: res.status, json };
   }
-  return { get: (p) => request('GET', p), post: (p, b) => request('POST', p, b), patch: (p, b) => request('PATCH', p, b) };
+  return {
+    get: (p) => request('GET', p), post: (p, b) => request('POST', p, b), patch: (p, b) => request('PATCH', p, b),
+    put: (p, b) => request('PUT', p, b), del: (p) => request('DELETE', p),
+  };
 }
 const post = (p, b, h) => call('POST', p, b, h);
 
@@ -228,7 +243,8 @@ test('a lineup model with no part numbers yet registers, and a part search for i
     plate_number: 'RXA321Z', vin: 'KMHSU81XDCU123321', make: 'Hyundai', model: 'Santa Fe', year: 2012,
   });
   assert.equal(reg.status, 201);
-  const s = await get(`/api/parts/search?vehicle_id=${reg.json.vehicle.id}&part_category=Oil%20Filter`);
+  // Nobody has added an oxygen sensor number for any car yet.
+  const s = await get(`/api/parts/search?vehicle_id=${reg.json.vehicle.id}&part_category=Oxygen%20Sensor`);
   assert.equal(s.json.match_type, 'none');
   assert.equal(s.json.reason, 'not_in_database');
 });
@@ -609,7 +625,7 @@ test('a "Not sure" generation is settled by the year when only one generation co
   });
   const unsure = await get(`/api/parts/search?vehicle_id=${both.json.vehicle.id}&part_category=Front%20Brake%20Pad`);
   assert.equal(unsure.json.match_type, 'relaxed', 'the engine is still unknown, so the match is only a close one');
-  assert.equal(unsure.json.oe_numbers[0].oe_number, 'DEMO-TYT-E170-FBP-01');
+  assert.ok(unsure.json.oe_numbers.some((o) => o.oe_number === 'DEMO-TYT-E170-FBP-01'));
   assert.ok(unsure.json.oe_numbers.every((o) => o.confidence === 'LOW'));
 
   const genOnly = await post('/api/vehicles/register', {
@@ -698,7 +714,7 @@ test('bad coordinates are rejected instead of producing nonsense distances', asy
 
 // ---------- shop console ----------
 
-test('shops need their code, only manage their own listings, and cannot list unknown part numbers', async () => {
+test('shops cannot post parts: they send requests, and only an admin can post or approve them', async () => {
   const noCode = await get('/api/shop/me');
   assert.equal(noCode.status, 401);
   const me = await get('/api/shop/me', { 'x-shop-code': '111111' });
@@ -709,30 +725,193 @@ test('shops need their code, only manage their own listings, and cannot list unk
   assert.equal(other.status, 403);
 
   const photo = '/img/placeholder.svg?text=test';
-  const good = await post('/api/shops/1/listings', {
+  const part = {
     part_category: 'Front Brake Pad', oe_number: 'DEMO-TYT-XA40-FBP-01', price_rwf: 41000,
-    stock_quantity: 4, condition: 'genuine', photo_url: photo,
-  }, { 'x-shop-code': '111111' });
-  assert.equal(good.status, 201);
+    stock_quantity: 4, condition: 'genuine', photo_url: photo, brand: 'Toyota', description: 'Set of 4 ceramic pads.',
+  };
+  const direct = await post('/api/shops/1/listings', part, { 'x-shop-code': '111111' });
+  assert.equal(direct.status, 403, 'a shop can no longer post a part itself');
+  assert.equal(direct.json.code, 'admin_only');
 
-  const unknown = await post('/api/shops/1/listings', {
-    part_category: 'Front Brake Pad', oe_number: 'NOT-A-REAL-NUMBER', price_rwf: 41000,
-    stock_quantity: 4, condition: 'genuine', photo_url: photo,
-  }, { 'x-shop-code': '111111' });
+  const unknown = await post('/api/shops/1/listing-requests', { ...part, oe_number: 'NOT-A-REAL-NUMBER' }, { 'x-shop-code': '111111' });
   assert.equal(unknown.status, 422);
   assert.equal(unknown.json.code, 'unknown_oe');
-
-  const noPhoto = await post('/api/shops/1/listings', {
-    part_category: 'Front Brake Pad', oe_number: 'DEMO-TYT-XA40-FBP-01', price_rwf: 41000,
-    stock_quantity: 4, condition: 'genuine',
-  }, { 'x-shop-code': '111111' });
+  const noPhoto = await post('/api/shops/1/listing-requests', { ...part, photo_url: null }, { 'x-shop-code': '111111' });
   assert.equal(noPhoto.status, 400);
-
-  const badPhoto = await post('/api/shops/1/listings', {
-    part_category: 'Front Brake Pad', oe_number: 'DEMO-TYT-XA40-FBP-01', price_rwf: 41000,
-    stock_quantity: 4, condition: 'genuine', photo_url: 'javascript:alert(1)',
-  }, { 'x-shop-code': '111111' });
+  const badPhoto = await post('/api/shops/1/listing-requests', { ...part, photo_url: 'javascript:alert(1)' }, { 'x-shop-code': '111111' });
   assert.equal(badPhoto.status, 400);
+
+  const sent = await post('/api/shops/1/listing-requests', part, { 'x-shop-code': '111111' });
+  assert.equal(sent.status, 201);
+  assert.equal(sent.json.request.status, 'pending');
+  const before = (await get('/api/shops/1/listings', { 'x-shop-code': '111111' })).json.listings.length;
+
+  assert.equal((await post(`/api/admin/listing-requests/${sent.json.request.id}/approve`, {}, { 'x-shop-code': '111111' })).status, 401,
+    'a shop cannot approve its own request');
+  const approved = await post(`/api/admin/listing-requests/${sent.json.request.id}/approve`, { price_rwf: 40000 }, ADMIN);
+  assert.equal(approved.status, 200);
+  assert.equal(approved.json.listing.price_rwf, 40000, 'the admin can correct the price while approving');
+  assert.equal(approved.json.listing.description, 'Set of 4 ceramic pads.');
+  const after = (await get('/api/shops/1/listings', { 'x-shop-code': '111111' })).json.listings;
+  assert.equal(after.length, before + 1);
+  assert.ok(after.find((l) => l.id === approved.json.listing.id).fits.length > 0, 'each part says which cars it fits');
+  assert.equal((await post(`/api/admin/listing-requests/${sent.json.request.id}/approve`, {}, ADMIN)).status, 409, 'approved only once');
+
+  // The shop keeps price and stock; what the part is stays as the admin checked it.
+  const id = approved.json.listing.id;
+  const priced = await call('PUT', `/api/shops/1/listings/${id}`, { price_rwf: 39000, stock_quantity: 2 }, { 'x-shop-code': '111111' });
+  assert.equal(priced.json.listing.price_rwf, 39000);
+  const relabel = await call('PUT', `/api/shops/1/listings/${id}`, { condition: 'aftermarket' }, { 'x-shop-code': '111111' });
+  assert.equal(relabel.status, 403);
+  const redescribe = await call('PUT', `/api/shops/1/listings/${id}`, { description: 'Genuine Toyota!!' }, { 'x-shop-code': '111111' });
+  assert.equal(redescribe.status, 403);
+
+  // An admin posts directly, and can hide a part so customers stop seeing it.
+  const posted = await post('/api/admin/listings', { ...part, shop_id: 2, oe_number: 'DEMO-TYT-XA40-OF-20', part_category: 'Oil Filter' }, ADMIN);
+  assert.equal(posted.status, 201);
+  const visible = async () => (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-OF-20&radius_km=any')).json.listings
+    .some((l) => l.listing_id === posted.json.listing.id);
+  assert.ok(await visible());
+  await call('PUT', `/api/admin/listings/${posted.json.listing.id}`, { hidden: true }, ADMIN);
+  assert.ok(!(await visible()), 'a hidden part is off sale');
+
+  const rejectMe = await post('/api/shops/1/listing-requests', part, { 'x-shop-code': '111111' });
+  assert.equal((await post(`/api/admin/listing-requests/${rejectMe.json.request.id}/reject`, {}, ADMIN)).status, 400, 'a rejection needs a reason');
+  await post(`/api/admin/listing-requests/${rejectMe.json.request.id}/reject`, { admin_note: 'Photo is blurry.' }, ADMIN);
+  const mine = (await get('/api/shops/1/listing-requests', { 'x-shop-code': '111111' })).json.requests;
+  assert.equal(mine.find((r) => r.id === rejectMe.json.request.id).admin_note, 'Photo is blurry.');
+});
+
+test('a business applies, cannot sign in until approved, then lands on its dashboard', async () => {
+  const photo = 'data:image/jpeg;base64,AAAA';
+  const form = {
+    kind: 'both', business_name: 'Kimihurura Auto', owner_name: 'Alice Uwase', email: 'alice.auto@gmail.com',
+    password: 'Strong-pass1', phone: '+250 788 555 111', address_text: 'Kimihurura', latitude: -1.95, longitude: 30.08,
+    tin: '123456789', certificate_photo: photo, front_photo: photo, specialties: 'Brakes',
+  };
+  assert.equal((await post('/api/business/apply', { ...form, tin: '12' })).status, 400, 'TIN is 9 digits');
+  assert.equal((await post('/api/business/apply', { ...form, latitude: 10 })).status, 400, 'the location must be in Rwanda');
+  const applied = await post('/api/business/apply', form);
+  assert.equal(applied.status, 201);
+  assert.equal((await post('/api/business/apply', form)).status, 409, 'one pending application per email');
+
+  const owner = makeClient();
+  const early = await owner.post('/api/auth/login', { email: form.email, password: form.password });
+  assert.equal(early.status, 403);
+  assert.equal(early.json.code, 'application_pending');
+
+  const list = (await get('/api/admin/applications?status=pending', ADMIN)).json.applications;
+  const mine = list.find((a) => a.email === form.email);
+  assert.ok(mine && !('password_hash' in mine), 'the password hash never leaves the server');
+  const ok = await post(`/api/admin/applications/${mine.id}/approve`, {}, ADMIN);
+  assert.ok(ok.json.shop_id && ok.json.garage_id);
+
+  const signedIn = await owner.post('/api/auth/login', { email: form.email, password: form.password });
+  assert.equal(signedIn.status, 200);
+  assert.equal(signedIn.json.user.role, 'business');
+  assert.equal(signedIn.json.user.home, '/business.html');
+  const me = await owner.get('/api/business/me');
+  assert.equal(me.json.shop.name, 'Kimihurura Auto');
+  assert.equal(me.json.garage.specialties, 'Brakes');
+  // The new shop cannot post either, and cannot touch another shop.
+  assert.equal((await owner.post(`/api/shops/${me.json.shop.id}/listings`, {})).status, 403);
+  assert.equal((await owner.get('/api/shops/1/listings')).status, 403);
+  assert.equal((await owner.get('/api/admin/stats')).status, 401, 'a business is not an admin');
+
+  // A customer account is told it is not a business, and a rejected applicant hears why.
+  const customer = makeClient();
+  await customer.post('/api/auth/signup', { name: 'Bob', email: 'bob.customer@example.com', password: 'Long-password123' });
+  assert.equal((await customer.get('/api/business/me')).json.code, 'not_business');
+  const second = await post('/api/business/apply', { ...form, email: 'second@example.com', kind: 'garage' });
+  await post(`/api/admin/applications/${second.json.application.id}/reject`, { admin_note: 'TIN does not match.' }, ADMIN);
+  const rejected = await makeClient().post('/api/auth/login', { email: 'second@example.com', password: form.password });
+  assert.equal(rejected.json.code, 'application_rejected');
+  assert.match(rejected.json.error, /TIN does not match/);
+});
+
+test('admins and demo businesses sign in with accounts, and "/" sends each to its own home', async () => {
+  const admin = makeClient();
+  const a = await admin.post('/api/auth/login', { email: 'admin@vinzuu.rw', password: 'Admin-vinzuu1' });
+  assert.equal(a.json.user.home, '/admin.html');
+  assert.equal((await admin.get('/api/admin/stats')).status, 200, 'the admin session works without the token');
+  const both = makeClient();
+  const b = await both.post('/api/auth/login', { email: 'both@vinzuu.rw', password: 'Vinzuu-demo1' });
+  assert.equal(b.json.user.role, 'business');
+  const me = (await both.get('/api/business/me')).json;
+  assert.ok(me.shop && me.garage, 'this demo account runs a shop and a garage');
+  const res = await fetch(`${base}/`, { redirect: 'manual', headers: { cookie: '' } });
+  assert.equal(res.status, 200, 'signed out, "/" is the public homepage');
+  const old = await fetch(`${base}/shop.html`, { redirect: 'manual' });
+  assert.equal(old.headers.get('location'), '/business.html');
+});
+
+test('garages accept, decline and finish jobs, and set labour prices customers can see', async () => {
+  const garage = makeClient();
+  await garage.post('/api/auth/login', { email: 'garage1@vinzuu.rw', password: 'Vinzuu-demo1' });
+  const listing = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings[0];
+  const customer = makeClient();
+  await customer.post('/api/auth/signup', { name: 'Grace Mukamana', email: 'grace.jobs@example.com', password: 'Long-password123' });
+  const booked = await customer.post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788123456', shop_listing_id: listing.listing_id, garage_id: 1 });
+  assert.equal(booked.status, 201);
+  const id = booked.json.booking.id;
+
+  const jobs = (await garage.get('/api/garage/jobs')).json.jobs;
+  const job = jobs.find((j) => j.id === id);
+  assert.equal(job.garage_status, 'requested');
+  assert.ok(!('vin' in job), 'garages see a masked VIN only');
+  assert.equal((await garage.put(`/api/garage/jobs/${id}`, { action: 'done' })).status, 409, 'accept before done');
+  assert.equal((await garage.put(`/api/garage/jobs/${id}`, { action: 'accept' })).status, 400, 'accepting needs a time');
+  const accepted = await garage.put(`/api/garage/jobs/${id}`, { action: 'accept', time: '2026-10-20T10:30' });
+  assert.equal(accepted.json.job.garage_time, '2026-10-20 10:30');
+  assert.equal((await garage.put(`/api/garage/jobs/${id}`, { action: 'done' })).json.job.garage_status, 'done');
+
+  const other = makeClient();
+  await other.post('/api/auth/login', { email: 'garage2@vinzuu.rw', password: 'Vinzuu-demo1' });
+  assert.equal((await other.put(`/api/garage/jobs/${id}`, { action: 'decline', reason: 'x' })).status, 404, 'only the chosen garage');
+  assert.equal((await garage.get('/api/shop/me')).status, 401, 'a garage-only account has no shop side');
+
+  const added = await garage.post('/api/garage/services', { name: 'Fit a radiator', price_rwf: 25000, duration_minutes: 120 });
+  assert.equal(added.status, 201);
+  const near = (await get('/api/garages/nearby?radius_km=any')).json.garages.find((g) => g.id === 1);
+  assert.ok(near.services.some((s) => s.name === 'Fit a radiator' && s.price_rwf === 25000));
+  assert.ok(near.services.some((s) => s.part_category === 'Front Brake Pad'), 'demo garages have labour prices per part');
+});
+
+test('only a customer whose booking is finished can review, once, and the business can reply', async () => {
+  const listing = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings[0];
+  const customer = makeClient();
+  await customer.post('/api/auth/signup', { name: 'Jean Claude Habimana', email: 'jc.reviews@example.com', password: 'Long-password123' });
+  const id = (await customer.post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788123456', shop_listing_id: listing.listing_id, garage_id: 2 })).json.booking.id;
+
+  let mine = (await customer.get('/api/me/bookings')).json.bookings.find((b) => b.id === id);
+  assert.deepEqual(mine.review, { shop: null, garage: null }, 'nothing to review yet');
+  assert.equal((await customer.post(`/api/me/bookings/${id}/reviews`, { target: 'shop', rating: 5 })).status, 409);
+
+  const code = ['111111', '222222', '333333', '444444', '555555'][listing.shop_id - 1];
+  await call('PUT', `/api/shops/${listing.shop_id}/bookings/${id}`, { status: 'collected' }, { 'x-shop-code': code });
+  mine = (await customer.get('/api/me/bookings')).json.bookings.find((b) => b.id === id);
+  assert.equal(mine.review.shop, 'can_review');
+
+  const stranger = makeClient();
+  await stranger.post('/api/auth/signup', { name: 'Not Me', email: 'stranger.reviews@example.com', password: 'Long-password123' });
+  assert.equal((await stranger.post(`/api/me/bookings/${id}/reviews`, { target: 'shop', rating: 1 })).status, 404, 'only the customer who booked');
+
+  assert.equal((await customer.post(`/api/me/bookings/${id}/reviews`, { target: 'shop', rating: 6 })).status, 400);
+  const rated = await customer.post(`/api/me/bookings/${id}/reviews`, { target: 'shop', rating: 4, comment: 'Good pads, fair price.' });
+  assert.equal(rated.status, 201);
+  assert.equal((await customer.post(`/api/me/bookings/${id}/reviews`, { target: 'shop', rating: 5 })).status, 409, 'one review per booking');
+
+  const pub = (await get(`/api/reviews?shop_id=${listing.shop_id}`)).json;
+  const review = pub.reviews.find((r) => r.comment === 'Good pads, fair price.');
+  assert.equal(review.author_name, 'Jean H.', 'first name and last initial only');
+  const shown = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings.find((l) => l.shop_id === listing.shop_id);
+  assert.equal(shown.shop_rating.count, pub.rating.count, 'listings carry the shop rating');
+
+  const replied = await call('PUT', `/api/shop/reviews/${review.id}`, { reply: 'Thank you!' }, { 'x-shop-code': code });
+  assert.equal(replied.json.review.reply, 'Thank you!');
+  const otherCode = code === '111111' ? '222222' : '111111';
+  assert.equal((await call('PUT', `/api/shop/reviews/${review.id}`, { reply: 'spam' }, { 'x-shop-code': otherCode })).status, 404);
+  assert.equal((await call('DELETE', `/api/admin/reviews/${review.id}`, null, ADMIN)).status, 200, 'an admin can remove an abusive review');
 });
 
 test('the fitment table is not browsable without signing in', async () => {
@@ -898,7 +1077,7 @@ test('Google sign-in creates an account, links a verified email to a password ac
     verified: { sub: 'g-2', email: 'both@example.com', email_verified: true, name: 'Both Ways' },
     unverified: { sub: 'g-3', email: 'victim@example.com', email_verified: false, name: 'Someone Else' },
   };
-  const app = createApp(open(':memory:'), {
+  const app = createApp(await open(testDbTarget()), {
     writeLimit: { windowMs: 60_000, max: 10_000 },
     googleClientId: 'test-client.apps.googleusercontent.com',
     verifyGoogleIdToken: async (idToken) => { if (!tokens[idToken]) throw new Error('That sign-in could not be verified.'); return tokens[idToken]; },
@@ -978,12 +1157,12 @@ test('every demo car has a VIN, and the example VIN shown on the site finds the 
   }
 });
 
-test('a demo database seeded before demo cars had VINs gets them on the next start', () => {
-  const db = openDb(':memory:');
-  seedDemo(db);
-  db.exec("UPDATE vehicles SET vin = NULL WHERE registered_by = 'demo seed'");
-  assert.equal(seedDemo(db), false); // already seeded: only the VINs are filled in
-  const rows = db.prepare("SELECT plate_number, vin FROM vehicles WHERE registered_by = 'demo seed' ORDER BY plate_number").all();
+test('a demo database seeded before demo cars had VINs gets them on the next start', async () => {
+  const db = await openDb(testDbTarget());
+  await seedDemo(db);
+  await db.exec("UPDATE vehicles SET vin = NULL WHERE registered_by = 'demo seed'");
+  assert.equal(await seedDemo(db), false); // already seeded: only the VINs are filled in
+  const rows = await db.prepare("SELECT plate_number, vin FROM vehicles WHERE registered_by = 'demo seed' ORDER BY plate_number").all();
   assert.deepEqual(rows.map((r) => r.vin), ['JTMBK31V996054321', 'KNDPM3AC8J7100002', '5XYPG4A38JG100003', 'KMHJ3813DHU100004']);
 });
 
@@ -1036,4 +1215,247 @@ test('signed in, "/" opens your garage; signed out it is the public homepage', a
   assert.equal(signedIn.status, 302);
   assert.equal(signedIn.headers.get('location'), '/index.html');
   assert.equal((await fetch(`${base}/welcome.html`, { redirect: 'manual', headers: { cookie } })).status, 200);
+});
+
+// ---------- admin dashboard: suspend, reports, scorecards, accounts, bookings, charts, log, CSV ----------
+
+test('suspending a shop hides its parts and blocks bookings until it is reactivated, and the owner sees why', async () => {
+  const oe = 'DEMO-TYT-XA40-FBP-01';
+  const before = (await get(`/api/parts/listings?oe_numbers=${oe}&radius_km=any`)).json.listings;
+  const target = before[0];
+  assert.equal((await post(`/api/admin/shops/${target.shop_id}/suspend`, {}, ADMIN)).status, 400, 'a reason is required');
+  assert.equal((await post(`/api/admin/shops/${target.shop_id}/suspend`, { reason: 'Customers report fake pads' }, ADMIN)).status, 200);
+  const during = (await get(`/api/parts/listings?oe_numbers=${oe}&radius_km=any`)).json.listings;
+  assert.ok(!during.some((l) => l.shop_id === target.shop_id), 'its parts are not shown');
+  const booked = await post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788123456', shop_listing_id: target.listing_id });
+  assert.equal(booked.status, 409);
+
+  const owner = makeClient();
+  await owner.post('/api/auth/login', { email: `shop${target.shop_id}@vinzuu.rw`, password: 'Vinzuu-demo1' });
+  const me = (await owner.get('/api/business/me')).json;
+  assert.equal(me.shop.suspended, true);
+  assert.equal(me.shop.suspended_reason, 'Customers report fake pads');
+
+  const card = (await get('/api/admin/shops', ADMIN)).json.shops.find((s) => s.id === target.shop_id);
+  assert.ok(card.flags.includes('Suspended'));
+  assert.equal((await post(`/api/admin/shops/${target.shop_id}/reactivate`, {}, ADMIN)).status, 200);
+  const after = (await get(`/api/parts/listings?oe_numbers=${oe}&radius_km=any`)).json.listings;
+  assert.ok(after.some((l) => l.shop_id === target.shop_id), 'back on sale');
+
+  assert.equal((await post('/api/admin/garages/3/suspend', { reason: 'Closed for renovation' }, ADMIN)).status, 200);
+  assert.ok(!(await get('/api/garages/nearby?radius_km=any')).json.garages.some((g) => g.id === 3));
+  assert.equal((await post('/api/admin/garages/3/reactivate', {}, ADMIN)).status, 200);
+  assert.ok((await get('/api/garages/nearby?radius_km=any')).json.garages.some((g) => g.id === 3));
+});
+
+test('the admin can edit any detail of a shop or garage, including its name and location', async () => {
+  const r = await call('PUT', '/api/admin/garages/2', { name: 'Demo Garage Two Renamed', latitude: -1.95, longitude: 30.1, opening_hours: 'Mon to Sat 8 to 18' }, ADMIN);
+  assert.equal(r.status, 200);
+  assert.equal(r.json.garage.name, 'Demo Garage Two Renamed');
+  assert.equal(r.json.garage.latitude, -1.95);
+  assert.equal((await call('PUT', '/api/admin/shops/2', { phone: '123' }, ADMIN)).status, 400);
+  const shop = await call('PUT', '/api/admin/shops/2', { opening_hours: 'Every day 7 to 20', vetted: true }, ADMIN);
+  assert.equal(shop.json.shop.opening_hours, 'Every day 7 to 20');
+  const log = (await get('/api/admin/log', ADMIN)).json.log;
+  assert.ok(log.some((l) => l.action === 'Edited a garage' && /Renamed/.test(l.detail)));
+});
+
+test('a customer can report a problem once from a booking or a part, and the admin closes it', async () => {
+  const listing = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings[0];
+  assert.equal((await post('/api/reports', { listing_id: listing.listing_id, reason: 'fake' })).status, 401, 'sign in first');
+  const customer = makeClient();
+  await customer.post('/api/auth/signup', { name: 'Report Tester', email: 'report.tester@example.com', password: 'Long-password123' });
+  const id = (await customer.post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788123456', shop_listing_id: listing.listing_id, garage_id: 1 })).json.booking.id;
+
+  assert.equal((await customer.post('/api/reports', { booking_id: id, target: 'shop', reason: 'made_up' })).status, 400);
+  assert.equal((await customer.post('/api/reports', { booking_id: id, target: 'garage', reason: 'other' })).status, 400, '"something else" needs details');
+  const made = await customer.post('/api/reports', { booking_id: id, target: 'shop', reason: 'price', details: 'Asked for more at the counter.' });
+  assert.equal(made.status, 201);
+  assert.equal((await customer.post('/api/reports', { booking_id: id, target: 'shop', reason: 'price' })).status, 409, 'once');
+  assert.equal((await customer.post('/api/reports', { listing_id: listing.listing_id, reason: 'fake' })).status, 201, 'a part straight from the results');
+  const mine = (await customer.get('/api/me/bookings')).json.bookings.find((b) => b.id === id);
+  assert.deepEqual(mine.reported, { shop: true });
+
+  const stranger = makeClient();
+  await stranger.post('/api/auth/signup', { name: 'Someone Else', email: 'report.stranger@example.com', password: 'Long-password123' });
+  assert.equal((await stranger.post('/api/reports', { booking_id: id, target: 'shop', reason: 'rude' })).status, 404);
+
+  const { reports } = (await get('/api/admin/reports?status=open', ADMIN)).json;
+  const report = reports.find((r) => r.id === made.json.report.id);
+  assert.equal(report.user_email, 'report.tester@example.com');
+  assert.equal(report.shop_id, listing.shop_id);
+  const card = (await get('/api/admin/shops', ADMIN)).json.shops.find((s) => s.id === listing.shop_id);
+  assert.ok(card.open_reports >= 1 && card.flags.some((f) => /open report/.test(f)));
+  assert.equal((await post(`/api/admin/reports/${report.id}/close`, {}, ADMIN)).status, 400, 'say what you did');
+  assert.equal((await post(`/api/admin/reports/${report.id}/close`, { admin_note: 'Called the shop, price corrected.' }, ADMIN)).status, 200);
+  assert.equal((await post(`/api/admin/reports/${report.id}/close`, { admin_note: 'again' }, ADMIN)).status, 409);
+});
+
+test('a blocked account cannot sign in and its open session stops working; unblocking restores it', async () => {
+  const user = makeClient();
+  await user.post('/api/auth/signup', { name: 'Block Me', email: 'block.me@example.com', password: 'Long-password123' });
+  assert.ok((await user.get('/api/auth/me')).json.user);
+  const row = (await get('/api/admin/users?q=block.me', ADMIN)).json.users[0];
+  assert.equal(row.role, 'customer');
+  assert.equal((await post(`/api/admin/users/${row.id}/block`, {}, ADMIN)).status, 400, 'a reason is required');
+  assert.equal((await post(`/api/admin/users/${row.id}/block`, { reason: 'Fake bookings' }, ADMIN)).status, 200);
+  assert.equal((await user.get('/api/auth/me')).json.user, null, 'signed out at once');
+  const again = await user.post('/api/auth/login', { email: 'block.me@example.com', password: 'Long-password123' });
+  assert.equal(again.status, 403);
+  assert.match(again.json.error, /Fake bookings/);
+  const adminRow = (await get('/api/admin/users?role=admin', ADMIN)).json.users[0];
+  assert.equal((await post(`/api/admin/users/${adminRow.id}/block`, { reason: 'x' }, ADMIN)).status, 409);
+  assert.equal((await post(`/api/admin/users/${row.id}/unblock`, {}, ADMIN)).status, 200);
+  assert.equal((await user.post('/api/auth/login', { email: 'block.me@example.com', password: 'Long-password123' })).status, 200);
+});
+
+test('the admin filters bookings and cancels an open one with a reason both sides see', async () => {
+  const listing = (await get('/api/parts/listings?oe_numbers=DEMO-TYT-XA40-FBP-01&radius_km=any')).json.listings[0];
+  const id = (await post('/api/bookings', { plate_number: 'RXA001A', customer_phone: '+250788555444', shop_listing_id: listing.listing_id, garage_id: 1 })).json.booking.id;
+  const open = (await get('/api/admin/bookings?stage=open&q=788555444', ADMIN)).json.bookings;
+  assert.deepEqual(open.map((b) => b.id), [id]);
+  assert.equal((await post(`/api/admin/bookings/${id}/cancel`, {}, ADMIN)).status, 400);
+  const done = await post(`/api/admin/bookings/${id}/cancel`, { reason: 'The customer asked us to cancel.' }, ADMIN);
+  assert.equal(done.status, 200);
+  assert.equal(done.json.booking.shop_status, 'cancelled');
+  assert.equal(done.json.booking.garage_status, 'declined');
+  assert.equal((await post(`/api/admin/bookings/${id}/cancel`, { reason: 'again' }, ADMIN)).status, 409);
+  const cancelled = (await get('/api/admin/bookings?stage=cancelled&q=788555444', ADMIN)).json.bookings;
+  assert.equal(cancelled[0].admin_note, 'The customer asked us to cancel.');
+  const finished = (await get('/api/admin/bookings?stage=finished', ADMIN)).json.bookings;
+  assert.ok(finished.every((b) => b.stage === 'finished'));
+});
+
+test('activity counts come per week, and every admin change is in the log', async () => {
+  const a = (await get('/api/admin/activity?weeks=8', ADMIN)).json;
+  assert.equal(a.weeks.length, 8);
+  assert.ok(a.weeks.reduce((n, w) => n + w.bookings, 0) > 0, 'demo bookings are counted');
+  assert.ok(a.top_parts.length && a.top_shops.length);
+  const log = (await get('/api/admin/log', ADMIN)).json.log;
+  for (const action of ['Suspended a shop', 'Reactivated a shop', 'Blocked an account', 'Cancelled a booking', 'Closed a report']) {
+    assert.ok(log.some((l) => l.action === action), action);
+  }
+  assert.ok((await get('/api/admin/log?type=user', ADMIN)).json.log.every((l) => l.target_type === 'user'));
+});
+
+test('the admin downloads bookings, parts and cars as CSV files Excel can open', async () => {
+  const res = await fetch(`${base}/api/admin/export/bookings.csv`, { headers: ADMIN });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /text\/csv/);
+  assert.match(res.headers.get('content-disposition'), /vinzuu-bookings-\d{4}-\d{2}-\d{2}\.csv/);
+  const bytes = Buffer.from(await res.arrayBuffer());
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf], 'starts with the UTF-8 byte-order mark');
+  const body = bytes.subarray(3).toString('utf8');
+  assert.ok(body.startsWith('id,created_at,stage'));
+  assert.ok(body.split('\r\n').length > 5);
+  for (const what of ['parts', 'cars', 'shops', 'garages', 'customers', 'reviews', 'reports']) {
+    assert.equal((await fetch(`${base}/api/admin/export/${what}.csv`, { headers: ADMIN })).status, 200, what);
+  }
+  assert.equal((await fetch(`${base}/api/admin/export/passwords.csv`, { headers: ADMIN })).status, 404);
+  assert.equal((await fetch(`${base}/api/admin/export/bookings.csv`)).status, 401);
+});
+
+test('each account gets the places it can switch to, and an admin opens a shop dashboard read-only', async () => {
+  const admin = makeClient();
+  const signedIn = (await admin.post('/api/auth/login', { email: 'admin@vinzuu.rw', password: 'Admin-vinzuu1' })).json.user;
+  assert.equal(signedIn.home, '/admin.html', 'the admin lands on the admin dashboard');
+  assert.deepEqual(signedIn.portals.map((p) => p.key), ['admin', 'seller', 'customer']);
+  const shop = makeClient();
+  assert.deepEqual((await shop.post('/api/auth/login', { email: 'shop1@vinzuu.rw', password: 'Vinzuu-demo1' })).json.user.portals.map((p) => p.key), ['seller', 'customer']);
+  const customer = makeClient();
+  assert.deepEqual((await customer.post('/api/auth/login', { email: 'customer@vinzuu.rw', password: 'Vinzuu-demo1' })).json.user.portals, []);
+
+  assert.equal((await admin.get('/api/business/me')).json.code, 'admin_pick');
+  const view = (await admin.get('/api/business/me?shop_id=1')).json;
+  assert.equal(view.view_as_admin, true);
+  assert.equal(view.shop.id, 1);
+  assert.equal(view.garage, null);
+
+  const asShop = async (method, path, body) => {
+    const res = await fetch(base + path, { method, headers: { 'content-type': 'application/json', 'x-view-shop': '1', cookie: await adminCookie() }, body: body ? JSON.stringify(body) : undefined });
+    return { status: res.status, json: await res.json() };
+  };
+  assert.equal((await asShop('GET', '/api/shops/1/listings')).status, 200, 'the admin can look');
+  const write = await asShop('PUT', '/api/shop/profile', { phone: '+250788000000' });
+  assert.equal(write.status, 403, 'but not change anything');
+  assert.equal(write.json.code, 'view_only');
+  assert.equal((await call('GET', '/api/shops/1/listings', null, { 'x-view-shop': '1' })).status, 401, 'the header alone opens nothing');
+  const nosy = await fetch(`${base}/api/shops/1/listings`, { headers: { 'x-view-shop': '1', cookie: await cookieFor('shop2@vinzuu.rw', 'Vinzuu-demo1') } });
+  assert.equal(nosy.status, 403, 'another shop cannot use it to look at shop 1');
+});
+
+async function cookieFor(email, password) {
+  const res = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password }) });
+  return res.headers.getSetCookie()[0].split(';')[0];
+}
+const adminCookie = () => cookieFor('admin@vinzuu.rw', 'Admin-vinzuu1');
+
+// ---------- full part list and part numbers ----------
+
+test('the part list is grouped like a parts catalogue and keeps every older part name', async () => {
+  const { json } = await get('/api/catalog');
+  const names = json.categories.map((c) => c.name);
+  for (const old of ['Front Brake Pad', 'Rear Brake Pad', 'Oil Filter', 'Air Filter', 'Front Bumper', 'Headlight Assembly', 'Battery', 'Wiper Blade', 'Engine Oil']) {
+    assert.ok(names.includes(old), old);
+  }
+  assert.ok(json.categories.length > 100);
+  assert.equal(new Set(names).size, names.length, 'no duplicate names');
+  assert.ok(json.categories.every((c) => c.group), 'every part has a group');
+  assert.equal(json.categories[0].group, 'Service parts');
+  assert.equal(json.categories.find((c) => c.name === 'Tyre').type, 'universal');
+  assert.equal(json.categories.find((c) => c.name === 'Cabin Air Filter').type, 'model_specific');
+});
+
+test('part numbers for a form are narrowed to the chosen car', async () => {
+  const all = await get('/api/admin/oe-numbers?part_category=Oil%20Filter', ADMIN);
+  const rav4 = await get('/api/admin/oe-numbers?part_category=Oil%20Filter&make=Toyota&model=RAV4&generation=XA40', ADMIN);
+  assert.equal(rav4.status, 200);
+  assert.ok(rav4.json.rows.length > 0);
+  assert.ok(rav4.json.rows.every((r) => r.make === 'Toyota' && r.model === 'RAV4' && (r.generation === 'XA40' || r.generation === null)));
+  assert.ok(all.json.rows.length > rav4.json.rows.length);
+});
+
+test('part numbers import from a CSV: good rows added, repeats skipped, bad rows reported by line', async () => {
+  const csv = [
+    'oe_number;part;make;model;generation;year_from;year_to;engine;built_in;confidence;source',
+    'CSV-TEST-1;Cabin Air Filter;Hyundai;Tucson;TL;2015;2020;;;medium;"Hyundai catalogue; page 4"',
+    'CSV-TEST-2;Not a part;Hyundai;Tucson;TL;2015;2020;;;LOW;test',
+    'CSV-TEST-3;Spark Plug;Hyundai;Tucson;TL;2020;2015;;;LOW;test',
+    'CSV-TEST-4;Tyre;Hyundai;Tucson;TL;2015;2020;;;LOW;test',
+  ].join('\r\n');
+  const dry = await post('/api/admin/fitment-reference/import', { csv, dry_run: true }, ADMIN);
+  assert.equal(dry.status, 200);
+  assert.equal(dry.json.added, 1);
+  assert.deepEqual(dry.json.errors.map((e) => e.line), [3, 4, 5]);
+  assert.equal((await get('/api/admin/fitment-reference?q=CSV-TEST-1', ADMIN)).json.rows.length, 0, 'a check saves nothing');
+
+  const first = await post('/api/admin/fitment-reference/import', { csv }, ADMIN);
+  assert.equal(first.json.added, 1);
+  const again = await post('/api/admin/fitment-reference/import', { csv }, ADMIN);
+  assert.equal(again.json.added, 0);
+  assert.equal(again.json.skipped, 1);
+  const [row] = (await get('/api/admin/fitment-reference?q=CSV-TEST-1', ADMIN)).json.rows;
+  assert.equal(row.confidence_level, 'MEDIUM');
+  assert.equal(row.source, 'Hyundai catalogue; page 4');
+  assert.equal(row.engine, null);
+  assert.equal((await post('/api/admin/fitment-reference/import', { csv: '' }, ADMIN)).status, 400);
+});
+
+test('real part numbers in lib/oe load once into a clean database, alongside the demo data', async () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { ensureRealPartNumbers } = require('../db');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vz-oe-'));
+  fs.writeFileSync(path.join(dir, 'toyota.csv'), 'oe_number,part,make,model,generation,year_from,year_to,engine,built_in,confidence,source\n'
+    + 'REAL-1,Oil Filter,Toyota,RAV4,XA40,2013,2018,2.0L Petrol,,MEDIUM,https://example.com/a\n'
+    + 'REAL-2,Battery,Toyota,RAV4,XA40,2013,2018,,,MEDIUM,https://example.com/b\n'
+    + 'REAL-3,Spark Plug,Toyota,RAV4,XA40,2013,2018,,,HIGH,https://example.com/c\n');
+  const db = await openDb(testDbTarget());
+  assert.equal(await ensureRealPartNumbers(db, dir), 2, 'the universal Battery row is skipped');
+  assert.equal((await db.prepare("SELECT confidence_level FROM fitment_reference WHERE oe_number = 'REAL-3'").get()).confidence_level, 'LOW',
+    'HIGH without a "verified by" is lowered');
+  assert.equal(await ensureRealPartNumbers(db, dir), 0, 'an unchanged file is not loaded again');
+  assert.ok(await seedDemo(db), 'demo data still seeds next to real part numbers');
+  await db.close();
 });

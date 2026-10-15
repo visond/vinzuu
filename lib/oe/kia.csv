@@ -1,0 +1,209 @@
+oe_number,part,make,model,generation,year_from,year_to,engine,built_in,confidence,source
+26320-3CAA0,Oil Filter,Kia,Carnival,YP,2017,2017,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sedona-oil_filter.html
+28113-F2000,Air Filter,Kia,Cerato,BD,2019,2022,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2020-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2021-kia-forte-air_filter.html
+28113-F2000,Air Filter,Kia,Cerato,BD,2020,2022,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2020-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2021-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-forte-air_filter.html
+97133-F2000,Cabin Air Filter,Kia,Cerato,BD,2019,2020,,,LOW,https://www.kiapartsnow.com/oem-2019-kia-forte-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2020-kia-forte-cabin_air_filter.html
+97133-F2000,Cabin Air Filter,Kia,Cerato,BD,2022,2022,,,LOW,https://www.kiapartsnow.com/oem-2022-kia-forte-cabin_air_filter.html
+26300-35505,Oil Filter,Kia,Cerato,BD,2019,2020,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-forte-oil_filter.html ; https://www.kiapartsnow.com/oem-2020-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,BD,2020,2020,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2020-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,BD,2022,2022,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,BD,2022,2022,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-forte-oil_filter.html
+18867-09095,Spark Plug,Kia,Cerato,BD,2019,2021,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-forte-spark_plug.html ; https://www.kiapartsnow.com/oem-2020-kia-forte-spark_plug.html ; https://www.kiapartsnow.com/oem-2021-kia-forte-spark_plug.html
+18849-08080,Spark Plug,Kia,Cerato,BD,2020,2021,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2020-kia-forte-spark_plug.html ; https://www.kiapartsnow.com/oem-2021-kia-forte-spark_plug.html
+28113-3X000,Air Filter,Kia,Cerato,YD,2014,2018,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2015-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2016-kia-forte-air_filter.html
+28113-3X000,Air Filter,Kia,Cerato,YD,2014,2018,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2015-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2016-kia-forte-air_filter.html
+28113-A5800,Air Filter,Kia,Cerato,YD,2014,2018,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2015-kia-forte-air_filter.html ; https://www.kiapartsnow.com/oem-2016-kia-forte-air_filter.html
+97133-2H001,Cabin Air Filter,Kia,Cerato,YD,2016,2016,,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-cabin_air_filter.html
+58101-A7A00,Front Brake Pad,Kia,Cerato,YD,2014,2014,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-brake_pad_set.html
+58101-A7A00,Front Brake Pad,Kia,Cerato,YD,2014,2014,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-brake_pad_set.html
+58101-A7A00,Front Brake Pad,Kia,Cerato,YD,2016,2016,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-brake_pad_set.html
+58101-A7A00,Front Brake Pad,Kia,Cerato,YD,2016,2016,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Cerato,YD,2014,2014,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,YD,2014,2014,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,YD,2014,2014,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,YD,2016,2016,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,YD,2016,2017,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-oil_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-forte-oil_filter.html
+26300-35505,Oil Filter,Kia,Cerato,YD,2016,2017,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-oil_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-forte-oil_filter.html
+58302-A7B30,Rear Brake Pad,Kia,Cerato,YD,2014,2014,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-brake_pad_set.html
+58302-A7B30,Rear Brake Pad,Kia,Cerato,YD,2014,2014,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-forte-brake_pad_set.html
+58302-A7B30,Rear Brake Pad,Kia,Cerato,YD,2016,2016,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-brake_pad_set.html
+58302-A7B30,Rear Brake Pad,Kia,Cerato,YD,2016,2016,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-brake_pad_set.html
+18846-11070,Spark Plug,Kia,Cerato,YD,2016,2016,1.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-spark_plug.html
+18846-11070,Spark Plug,Kia,Cerato,YD,2016,2016,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-forte-spark_plug.html
+28113-C1100,Air Filter,Kia,K5,JF,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-air_filter.html
+28113-C1500,Air Filter,Kia,K5,JF,2018,2018,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-air_filter.html
+28113-C1500,Air Filter,Kia,K5,JF,2018,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-air_filter.html
+97133-C1010,Cabin Air Filter,Kia,K5,JF,2018,2018,,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-cabin_air_filter.html
+58101-D4A20,Front Brake Pad,Kia,K5,JF,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-brake_pad_set.html
+58101-D4A20,Front Brake Pad,Kia,K5,JF,2018,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-brake_pad_set.html
+58101-D4A20,Front Brake Pad,Kia,K5,JF,2018,2018,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-brake_pad_set.html
+26300-35505,Oil Filter,Kia,K5,JF,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-oil_filter.html
+26300-35505,Oil Filter,Kia,K5,JF,2018,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-oil_filter.html
+26300-35505,Oil Filter,Kia,K5,JF,2018,2018,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-oil_filter.html
+58302-D4A50,Rear Brake Pad,Kia,K5,JF,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-brake_pad_set.html
+58302-D4A50,Rear Brake Pad,Kia,K5,JF,2018,2018,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-brake_pad_set.html
+18849-11070,Spark Plug,Kia,K5,JF,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-spark_plug.html
+18849-08080,Spark Plug,Kia,K5,JF,2018,2018,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-spark_plug.html
+18849-09085,Spark Plug,Kia,K5,JF,2018,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-optima-spark_plug.html
+97133-G6000,Cabin Air Filter,Kia,Picanto,JA,2017,2023,,,LOW,https://partsouq.com/shop/product/97133G6000-hyundai-kia-filterassy-air/16248422
+51712-07500,Front Brake Disc,Kia,Picanto,SA,2004,2011,1.0L Petrol,,LOW,https://www.manomano.co.uk/p/brake-disc-pad-front-for-kia-picanto-10l-11l-sa-5171207500-2004-11-93897718
+51712-07500,Front Brake Disc,Kia,Picanto,SA,2004,2011,1.1L Petrol,,LOW,https://www.manomano.co.uk/p/brake-disc-pad-front-for-kia-picanto-10l-11l-sa-5171207500-2004-11-93897718
+58101-07A20,Front Brake Pad,Kia,Picanto,SA,2004,2011,1.0L Petrol,,LOW,https://www.manomano.co.uk/p/brake-disc-pad-front-for-kia-picanto-10l-11l-sa-5171207500-2004-11-93897718
+58101-07A20,Front Brake Pad,Kia,Picanto,SA,2004,2011,1.1L Petrol,,LOW,https://www.manomano.co.uk/p/brake-disc-pad-front-for-kia-picanto-10l-11l-sa-5171207500-2004-11-93897718
+58101-1YA30,Front Brake Pad,Kia,Picanto,TA,2011,2017,,,LOW,https://azmotorfactors.co.uk/product/front-brake-pad-set-fits-kia-picanto-juratek-jcp8088
+28113-1G000,Air Filter,Kia,Rio,JB,2009,2009,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2009-kia-rio-air_filter.html
+58101-1GA00,Front Brake Pad,Kia,Rio,JB,2009,2009,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2009-kia-rio-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Rio,JB,2006,2011,1.6L Petrol,,LOW,https://www.kiapartsnow.com/genuine/kia-filter-assy-eng~2630035503.html
+58302-1GA00,Rear Brake Pad,Kia,Rio,JB,2009,2009,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2009-kia-rio-brake_pad_set.html
+18814-11051,Spark Plug,Kia,Rio,JB,2009,2009,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2009-kia-rio-spark_plug.html
+28113-1R100,Air Filter,Kia,Rio,UB,2012,2017,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2012-kia-rio-air_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-rio-air_filter.html ; https://www.kiapartsnow.com/oem-2014-kia-rio-air_filter.html
+97133-2E210,Cabin Air Filter,Kia,Rio,UB,2012,2012,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2012-kia-rio-cabin_air_filter.html
+97133-2E210,Cabin Air Filter,Kia,Rio,UB,2014,2014,1.6L Petrol,,MEDIUM,https://www.kiapartsnow.com/oem-2014-kia-rio-cabin_air_filter.html ; https://k-spare.com/hyundai-kia-filter-assy-air-971332e210.html
+97133-2E210,Cabin Air Filter,Kia,Rio,UB,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-rio-cabin_air_filter.html
+58101-1RA01,Front Brake Pad,Kia,Rio,UB,2012,2012,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2012-kia-rio-brake_pad_set.html
+58101-1RA01,Front Brake Pad,Kia,Rio,UB,2014,2014,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-rio-brake_pad_set.html
+58101-1RA01,Front Brake Pad,Kia,Rio,UB,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-rio-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Rio,UB,2012,2012,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2012-kia-rio-oil_filter.html
+26300-35505,Oil Filter,Kia,Rio,UB,2014,2015,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-rio-oil_filter.html ; https://www.kiapartsnow.com/oem-2015-kia-rio-oil_filter.html
+26300-35505,Oil Filter,Kia,Rio,UB,2017,2017,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-rio-oil_filter.html
+58302-1RA30,Rear Brake Pad,Kia,Rio,UB,2012,2012,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2012-kia-rio-brake_pad_set.html
+58302-1RA30,Rear Brake Pad,Kia,Rio,UB,2014,2014,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-rio-brake_pad_set.html
+58302-1RA30,Rear Brake Pad,Kia,Rio,UB,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-rio-brake_pad_set.html
+18846-10060,Spark Plug,Kia,Rio,UB,2012,2012,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2012-kia-rio-spark_plug.html
+18846-10060,Spark Plug,Kia,Rio,UB,2014,2014,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-rio-spark_plug.html
+18846-10060,Spark Plug,Kia,Rio,UB,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-rio-spark_plug.html
+28113-H8100,Air Filter,Kia,Rio,YB,2018,2019,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-rio-air_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-rio-air_filter.html
+28113-H8100,Air Filter,Kia,Rio,YB,2021,2021,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-rio-air_filter.html
+97133-F2000,Cabin Air Filter,Kia,Rio,YB,2018,2019,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-rio-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-rio-cabin_air_filter.html
+97133-F2000,Cabin Air Filter,Kia,Rio,YB,2021,2021,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-rio-cabin_air_filter.html
+58101-H9A60,Front Brake Pad,Kia,Rio,YB,2019,2019,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-rio-brake_pad_set.html
+58101-H9A60,Front Brake Pad,Kia,Rio,YB,2021,2021,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-rio-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Rio,YB,2018,2019,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-rio-oil_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-rio-oil_filter.html
+26350-2M000,Oil Filter,Kia,Rio,YB,2021,2021,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-rio-oil_filter.html
+58302-H5A00,Rear Brake Pad,Kia,Rio,YB,2019,2019,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-rio-brake_pad_set.html
+58302-H5A00,Rear Brake Pad,Kia,Rio,YB,2021,2021,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-rio-brake_pad_set.html
+18846-10060,Spark Plug,Kia,Rio,YB,2019,2019,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-rio-spark_plug.html
+18871-11070,Spark Plug,Kia,Rio,YB,2021,2021,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-rio-spark_plug.html
+28113-Q5000,Air Filter,Kia,Seltos,SP2,2022,2022,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-air_filter.html
+28113-Q5000,Air Filter,Kia,Seltos,SP2,2022,2022,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-air_filter.html
+97133-J9000,Cabin Air Filter,Kia,Seltos,SP2,2022,2022,,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-cabin_air_filter.html
+58101-J9A05,Front Brake Pad,Kia,Seltos,SP2,2022,2022,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-brake_pad_set.html
+58101-J9A15,Front Brake Pad,Kia,Seltos,SP2,2022,2022,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Seltos,SP2,2022,2022,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-oil_filter.html
+26300-35505,Oil Filter,Kia,Seltos,SP2,2022,2022,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-oil_filter.html
+58302-J9A00,Rear Brake Pad,Kia,Seltos,SP2,2022,2022,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-brake_pad_set.html
+58302-J9A00,Rear Brake Pad,Kia,Seltos,SP2,2022,2022,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-brake_pad_set.html
+18849-08080,Spark Plug,Kia,Seltos,SP2,2022,2022,1.6L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-spark_plug.html
+18867-09095,Spark Plug,Kia,Seltos,SP2,2022,2022,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2022-kia-seltos-spark_plug.html
+28113-3E500,Air Filter,Kia,Sorento,BL,2007,2007,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2007-kia-sorento-air_filter.html
+28113-3E500,Air Filter,Kia,Sorento,BL,2007,2007,3.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2007-kia-sorento-air_filter.html
+58101-3EU04,Front Brake Pad,Kia,Sorento,BL,2007,2007,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2007-kia-sorento-brake_pad_set.html
+58101-3EU04,Front Brake Pad,Kia,Sorento,BL,2007,2007,3.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2007-kia-sorento-brake_pad_set.html
+58302-3EU01,Rear Brake Pad,Kia,Sorento,BL,2007,2007,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2007-kia-sorento-brake_pad_set.html
+58302-3EU01,Rear Brake Pad,Kia,Sorento,BL,2007,2007,3.8L Petrol,,LOW,https://www.kiapartsnow.com/oem-2007-kia-sorento-brake_pad_set.html
+28113-L1000,Air Filter,Kia,Sorento,MQ4,2021,2023,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-air_filter.html
+28113-L1000,Air Filter,Kia,Sorento,MQ4,2021,2023,2.5L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-air_filter.html
+28113-L5100,Air Filter,Kia,Sorento,MQ4,2021,2023,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-air_filter.html
+97133-L1000,Cabin Air Filter,Kia,Sorento,MQ4,2021,2023,,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-cabin_air_filter.html
+58101-P2A01,Front Brake Pad,Kia,Sorento,MQ4,2021,2023,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-brake_pad_set.html
+58101-P2A01,Front Brake Pad,Kia,Sorento,MQ4,2021,2023,2.5L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-brake_pad_set.html
+26350-2S001,Oil Filter,Kia,Sorento,MQ4,2021,2023,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-oil_filter.html
+26350-2S001,Oil Filter,Kia,Sorento,MQ4,2021,2023,2.5L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-oil_filter.html
+26350-2M000,Oil Filter,Kia,Sorento,MQ4,2021,2023,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-oil_filter.html
+58302-P2A30,Rear Brake Pad,Kia,Sorento,MQ4,2021,2023,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-brake_pad_set.html
+58302-P2A30,Rear Brake Pad,Kia,Sorento,MQ4,2021,2023,2.5L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2021-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2022-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2023-kia-sorento-brake_pad_set.html
+18875-08085,Spark Plug,Kia,Sorento,MQ4,2022,2022,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2022-kia-sorento-spark_plug.html
+28113-A9100,Air Filter,Kia,Sorento,UM,2016,2020,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-air_filter.html
+28113-A9100,Air Filter,Kia,Sorento,UM,2016,2020,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-air_filter.html
+28113-A9100,Air Filter,Kia,Sorento,UM,2016,2020,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-air_filter.html
+97134-C6900,Cabin Air Filter,Kia,Sorento,UM,2016,2020,,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-cabin_air_filter.html
+58101-C6A00,Front Brake Pad,Kia,Sorento,UM,2016,2020,,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Sorento,UM,2016,2020,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-oil_filter.html
+26300-35505,Oil Filter,Kia,Sorento,UM,2016,2020,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-oil_filter.html
+26320-3CAA0,Oil Filter,Kia,Sorento,UM,2016,2018,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-oil_filter.html
+26320-3CKB0,Oil Filter,Kia,Sorento,UM,2019,2020,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2020-kia-sorento-oil_filter.html
+25330-1P000,Radiator Cap,Kia,Sorento,UM,2017,2017,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sorento-radiator_cap.html
+25330-1P000,Radiator Cap,Kia,Sorento,UM,2017,2017,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sorento-radiator_cap.html
+25330-1P000,Radiator Cap,Kia,Sorento,UM,2017,2017,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sorento-radiator_cap.html
+58302-C6A00,Rear Brake Pad,Kia,Sorento,UM,2016,2020,,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-brake_pad_set.html
+18849-11070,Spark Plug,Kia,Sorento,UM,2016,2020,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-spark_plug.html
+18846-11070,Spark Plug,Kia,Sorento,UM,2016,2018,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-spark_plug.html
+18849-09085,Spark Plug,Kia,Sorento,UM,2016,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2017-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2018-kia-sorento-spark_plug.html
+18849-11070,Spark Plug,Kia,Sorento,UM,2019,2020,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2019-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2020-kia-sorento-spark_plug.html
+25500-2GGA0,Thermostat,Kia,Sorento,UM,2017,2017,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sorento-thermostat.html
+25500-3C150,Thermostat,Kia,Sorento,UM,2017,2017,3.3L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sorento-thermostat.html
+25500-2GTA0,Thermostat,Kia,Sorento,UM,2017,2017,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sorento-thermostat.html
+51750-C5000,Wheel Bearing,Kia,Sorento,UM,2018,2018,,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sorento-wheel_bearing.html
+28113-2P100,Air Filter,Kia,Sorento,XM,2011,2012,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-air_filter.html
+28113-2P100,Air Filter,Kia,Sorento,XM,2011,2012,3.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-air_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-air_filter.html
+28113-2W100,Air Filter,Kia,Sorento,XM,2013,2013,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2013-kia-sorento-air_filter.html
+97133-1U000,Cabin Air Filter,Kia,Sorento,XM,2011,2013,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sorento-cabin_air_filter.html
+97133-1U000,Cabin Air Filter,Kia,Sorento,XM,2011,2013,3.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sorento-cabin_air_filter.html
+58101-1UA00,Front Brake Pad,Kia,Sorento,XM,2011,2012,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-brake_pad_set.html
+58101-1UA00,Front Brake Pad,Kia,Sorento,XM,2011,2012,3.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-brake_pad_set.html
+58101-4ZA00,Front Brake Pad,Kia,Sorento,XM,2013,2013,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2013-kia-sorento-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Sorento,XM,2011,2013,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sorento-oil_filter.html
+26320-3CAA0,Oil Filter,Kia,Sorento,XM,2011,2013,3.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-oil_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sorento-oil_filter.html
+58302-0WA00,Rear Brake Pad,Kia,Sorento,XM,2011,2012,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-brake_pad_set.html
+58302-0WA00,Rear Brake Pad,Kia,Sorento,XM,2011,2012,3.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-brake_pad_set.html
+18846-11070,Spark Plug,Kia,Sorento,XM,2011,2013,3.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2013-kia-sorento-spark_plug.html
+18845-11160,Spark Plug,Kia,Sorento,XM,2011,2012,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sorento-spark_plug.html ; https://www.kiapartsnow.com/oem-2012-kia-sorento-spark_plug.html
+18851-11060,Spark Plug,Kia,Sorento,XM,2013,2013,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2013-kia-sorento-spark_plug.html
+28113-B2000,Air Filter,Kia,Soul,PS,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-air_filter.html
+28113-B2000,Air Filter,Kia,Soul,PS,2016,2016,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-air_filter.html
+58101-B2A00,Front Brake Pad,Kia,Soul,PS,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-brake_pad_set.html
+58101-B2A00,Front Brake Pad,Kia,Soul,PS,2016,2016,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Soul,PS,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-oil_filter.html
+26300-35505,Oil Filter,Kia,Soul,PS,2016,2016,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-oil_filter.html
+18846-11070,Spark Plug,Kia,Soul,PS,2016,2016,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-spark_plug.html
+18846-10060,Spark Plug,Kia,Soul,PS,2016,2016,1.6L Petrol,,LOW,https://www.kiapartsnow.com/oem-2016-kia-soul-spark_plug.html
+28113-08000,Air Filter,Kia,Sportage,KM,2008,2008,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-air_filter.html
+28113-08000,Air Filter,Kia,Sportage,KM,2008,2008,2.7L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-air_filter.html
+58101-1FA50,Front Brake Pad,Kia,Sportage,KM,2008,2008,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-brake_pad_set.html
+58101-1FA50,Front Brake Pad,Kia,Sportage,KM,2008,2008,2.7L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Sportage,KM,2008,2008,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-oil_filter.html
+26300-35505,Oil Filter,Kia,Sportage,KM,2008,2008,2.7L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-oil_filter.html
+58302-1FA50,Rear Brake Pad,Kia,Sportage,KM,2008,2008,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-brake_pad_set.html
+58302-1FA50,Rear Brake Pad,Kia,Sportage,KM,2008,2008,2.7L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-brake_pad_set.html
+27410-37100,Spark Plug,Kia,Sportage,KM,2008,2008,2.0L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-spark_plug.html
+27410-23700,Spark Plug,Kia,Sportage,KM,2008,2008,2.7L Petrol,,LOW,https://www.kiapartsnow.com/oem-2008-kia-sportage-spark_plug.html
+28113-N9000,Air Filter,Kia,Sportage,NQ5,2023,2025,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2025-kia-sportage-air_filter.html
+28113-P0400,Air Filter,Kia,Sportage,NQ5,2023,2025,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2025-kia-sportage-air_filter.html
+97133-N9100,Cabin Air Filter,Kia,Sportage,NQ5,2023,2024,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-cabin_air_filter.html
+97133-N9100,Cabin Air Filter,Kia,Sportage,NQ5,2023,2024,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-cabin_air_filter.html
+58101-N9A11,Front Brake Pad,Kia,Sportage,NQ5,2023,2025,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2025-kia-sportage-brake_pad_set.html
+58101-P0A11,Front Brake Pad,Kia,Sportage,NQ5,2023,2025,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2025-kia-sportage-brake_pad_set.html
+26350-2S001,Oil Filter,Kia,Sportage,NQ5,2023,2024,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-oil_filter.html
+26350-2M000,Oil Filter,Kia,Sportage,NQ5,2023,2024,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-oil_filter.html
+58302-N9A15,Rear Brake Pad,Kia,Sportage,NQ5,2023,2025,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2025-kia-sportage-brake_pad_set.html
+58302-N9A15,Rear Brake Pad,Kia,Sportage,NQ5,2023,2025,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2025-kia-sportage-brake_pad_set.html
+18875-08085,Spark Plug,Kia,Sportage,NQ5,2023,2024,1.6L Hybrid,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-spark_plug.html
+18871-11070,Spark Plug,Kia,Sportage,NQ5,2023,2024,2.5L Petrol,,LOW,https://www.kiapartsnow.com/oem-2023-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2024-kia-sportage-spark_plug.html
+28113-D3300,Air Filter,Kia,Sportage,QL,2017,2021,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-air_filter.html
+28113-D3300,Air Filter,Kia,Sportage,QL,2017,2021,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-air_filter.html
+97133-D3200,Cabin Air Filter,Kia,Sportage,QL,2017,2020,,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-cabin_air_filter.html
+25212-2GGA1,Drive Belt,Kia,Sportage,QL,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sportage-serpentine_belt.html
+58101-D9A00,Front Brake Pad,Kia,Sportage,QL,2017,2021,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-brake_pad_set.html
+58101-D3A11,Front Brake Pad,Kia,Sportage,QL,2017,2021,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Sportage,QL,2017,2021,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-oil_filter.html
+26300-35505,Oil Filter,Kia,Sportage,QL,2017,2021,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-oil_filter.html
+25330-D3000,Radiator Cap,Kia,Sportage,QL,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sportage-radiator_cap.html
+25330-D3000,Radiator Cap,Kia,Sportage,QL,2018,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sportage-radiator_cap.html
+58302-D3A00,Rear Brake Pad,Kia,Sportage,QL,2017,2021,,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-brake_pad_set.html
+55311-D9140,Rear Shock Absorber,Kia,Sportage,QL,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sportage-shock_absorber.html
+55311-D9140,Rear Shock Absorber,Kia,Sportage,QL,2018,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sportage-shock_absorber.html
+18849-11070,Spark Plug,Kia,Sportage,QL,2017,2021,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-spark_plug.html
+18857-09085,Spark Plug,Kia,Sportage,QL,2017,2021,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2017-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2018-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2019-kia-sportage-spark_plug.html
+25500-2GGA0,Thermostat,Kia,Sportage,QL,2018,2018,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sportage-thermostat.html
+25500-2GTA0,Thermostat,Kia,Sportage,QL,2018,2018,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2018-kia-sportage-thermostat.html
+28113-2S000,Air Filter,Kia,Sportage,SL,2011,2015,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-air_filter.html
+28113-3W500,Air Filter,Kia,Sportage,SL,2011,2015,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-air_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-air_filter.html
+97133-2E210,Cabin Air Filter,Kia,Sportage,SL,2011,2015,,,MEDIUM,https://www.kiapartsnow.com/oem-2011-kia-sportage-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-cabin_air_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-cabin_air_filter.html
+58101-2SA00,Front Brake Pad,Kia,Sportage,SL,2011,2013,,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-brake_pad_set.html
+58101-3WA65,Front Brake Pad,Kia,Sportage,SL,2014,2015,,,LOW,https://www.kiapartsnow.com/oem-2014-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2015-kia-sportage-brake_pad_set.html
+26300-35505,Oil Filter,Kia,Sportage,SL,2011,2015,,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-oil_filter.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-oil_filter.html
+58302-2SA00,Rear Brake Pad,Kia,Sportage,SL,2011,2013,,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-brake_pad_set.html
+58302-2SA10,Rear Brake Pad,Kia,Sportage,SL,2014,2015,,,LOW,https://www.kiapartsnow.com/oem-2014-kia-sportage-brake_pad_set.html ; https://www.kiapartsnow.com/oem-2015-kia-sportage-brake_pad_set.html
+18845-11160,Spark Plug,Kia,Sportage,SL,2011,2013,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-spark_plug.html
+18849-09085,Spark Plug,Kia,Sportage,SL,2011,2015,2.0L Turbo Petrol,,LOW,https://www.kiapartsnow.com/oem-2011-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2012-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2013-kia-sportage-spark_plug.html
+18851-11060,Spark Plug,Kia,Sportage,SL,2014,2015,2.4L Petrol,,LOW,https://www.kiapartsnow.com/oem-2014-kia-sportage-spark_plug.html ; https://www.kiapartsnow.com/oem-2015-kia-sportage-spark_plug.html

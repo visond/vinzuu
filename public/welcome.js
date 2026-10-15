@@ -202,7 +202,9 @@
     setStatus(signinForm.hidden ? $('signup-status') : $('signin-status'), message, 'error');
   }
 
-  function afterSignIn() { location.href = '/index.html'; }
+  // Each account has its own home: customers their garage, shops and garages Vinzuu Sellers &
+  // Garages, admins the admin console.
+  function afterSignIn(res) { location.href = (res && res.user && res.user.home) || '/index.html'; }
 
   api('/api/meta').then((meta) => {
     $('demo-banner').hidden = !meta.demo;
@@ -220,8 +222,7 @@
     const status = $('signin-status');
     setStatus(status, 'Signing in…');
     try {
-      await api('/api/auth/login', { method: 'POST', body: { email: $('si-email').value, password: $('si-password').value } });
-      afterSignIn();
+      afterSignIn(await api('/api/auth/login', { method: 'POST', body: { email: $('si-email').value, password: $('si-password').value } }));
     } catch (err) { setStatus(status, err.message, 'error'); }
   });
 
@@ -244,11 +245,10 @@
     if (problem) { setStatus(status, problem, 'error'); return; }
     setStatus(status, 'Creating your account…');
     try {
-      await api('/api/auth/signup', {
+      afterSignIn(await api('/api/auth/signup', {
         method: 'POST',
         body: { name: $('su-name').value, email: $('su-email').value, phone: $('su-phone').value, password },
-      });
-      afterSignIn();
+      }));
     } catch (err) { setStatus(status, err.message, 'error'); }
   });
 
@@ -287,8 +287,7 @@
         client_id: clientId,
         callback: async (response) => {
           try {
-            await api('/api/auth/google', { method: 'POST', body: { id_token: response.credential } });
-            afterSignIn();
+            afterSignIn(await api('/api/auth/google', { method: 'POST', body: { id_token: response.credential } }));
           } catch (err) { oauthStatus(err.message); }
         },
       });

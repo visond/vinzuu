@@ -128,7 +128,7 @@ Sportage | | SUV
   NB | 2000-2004 | 2.0L Petrol (FE); 2.0L Diesel (RF); 2.2L Diesel (R2)
   KM | 2004-2010 | 2.0L Petrol (G4GC); 2.7L Petrol (G6BA); 2.0L Diesel (D4EA)
   SL | 2010-2015 | 1.6L Petrol (G4FD); 2.0L Petrol (G4KD); 2.4L Petrol (G4KE); 2.0L Turbo Petrol (G4KF); 1.7L Diesel (D4FD); 2.0L Diesel (D4HA)
-  QL | 2015-2021 | 1.6L Petrol (G4FD); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NA); 2.4L Petrol (G4KJ); 1.6L Diesel (D4FE); 1.7L Diesel (D4FD); 2.0L Diesel (D4HA)
+  QL | 2015-2021 | 1.6L Petrol (G4FD); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NA); 2.4L Petrol (G4KJ); 2.0L Turbo Petrol (G4KH); 1.6L Diesel (D4FE); 1.7L Diesel (D4FD); 2.0L Diesel (D4HA)
   NQ5 | 2021-now | 1.6L Turbo Petrol (G4FP); 2.0L Petrol (G4NM); 2.0L Petrol (G4NN); 2.5L Petrol (G4KN); 1.6L Hybrid (G4FT); 1.6L Plug-in Hybrid (G4FT); 2.0L LPG (L4NB); 1.6L Diesel (D4FE); 2.0L Diesel (D4HD)
 
 Stinger | | Liftback

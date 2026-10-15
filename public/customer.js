@@ -245,6 +245,7 @@
     loadFits();
     renderInspection();
     loadShopsNear();
+    loadMyBookings();
     if (state.wantedPart) {
       const wanted = state.wantedPart;
       state.wantedPart = null; // only once: picking another car later starts from the list
@@ -463,6 +464,100 @@
     } catch (err) {
       grid.replaceChildren(h('p', { class: 'muted', text: 'We could not load repair shops right now. Refresh the page to try again.' }));
     }
+  }
+
+  // ---------------------------------------------------------------- my bookings and reviews
+
+  const BOOKING_SHOP = { requested: 'Waiting for the shop', confirmed: 'Reserved for you', collected: 'Collected', cancelled: 'Cancelled by the shop' };
+  const BOOKING_GARAGE = { requested: 'Waiting for the garage', accepted: 'Booked', done: 'Done', declined: 'Declined' };
+
+  async function loadMyBookings() {
+    const section = $('my-bookings');
+    if (!state.user) { section.hidden = true; return; }
+    let bookings = [];
+    try { bookings = (await api('/api/me/bookings')).bookings; } catch (err) { section.hidden = true; return; }
+    section.hidden = !bookings.length;
+    $('booking-list').replaceChildren(...bookings.map(bookingItem));
+  }
+
+  function bookingItem(b) {
+    const slot = b.garage_time ? new Date(b.garage_time.replace(' ', 'T')).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const side = (who, name, statusText, review, target) => h('div', { class: 'bk-side' },
+      h('span', { class: 'bk-who', text: who }), h('strong', { text: name }),
+      h('span', { class: 'small muted', text: statusText }),
+      typeof review === 'number' ? h('span', { class: 'bk-rated' }, starsEl(review), ' You rated this')
+        : review === 'can_review' ? h('button', { class: 'btn btn-primary btn-small', type: 'button', text: `Rate the ${target}`, onclick: () => openReviewForm(b, target, name) }) : null,
+      b.reported && b.reported[target] ? h('span', { class: 'small muted bk-reported', text: 'You reported a problem. The vinzuu team is looking into it.' })
+        : h('button', { class: 'link-btn small bk-report', type: 'button', text: 'Report a problem', onclick: () => openReportForm({ booking_id: b.id, target }, name) }));
+    return h('li', { class: 'booking-item' },
+      h('div', { class: 'bk-head' }, h('strong', { text: b.part_category ? `${b.part_category}${b.oe_number ? ` (${b.oe_number})` : ''}` : 'Repair' }),
+        h('span', { class: 'small muted', text: `${b.year} ${b.make} ${b.model} · booked ${String(b.created_at).slice(0, 10)}` })),
+      h('div', { class: 'bk-sides' },
+        b.shop_name ? side('Part from', b.shop_name, b.admin_note && b.shop_status === 'cancelled' ? `Cancelled by vinzuu: ${b.admin_note}`
+          : BOOKING_SHOP[b.shop_status] || b.shop_status, b.review.shop, 'shop') : null,
+        b.garage_name ? side('Fitted by', b.garage_name,
+          b.garage_status === 'accepted' ? `Booked for ${slot}` : b.garage_status === 'declined' ? (/^Cancelled by vinzuu/.test(b.garage_note || '') ? b.garage_note : `Declined: ${b.garage_note || ''}`) : (BOOKING_GARAGE[b.garage_status] || b.garage_status),
+          b.review.garage, 'garage') : null));
+  }
+
+  function openReviewForm(b, target, name) {
+    const dlg = $('booking-dialog');
+    let stars = 0;
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    const comment = h('textarea', { id: 'rv-comment', maxLength: 500, rows: 4, placeholder: target === 'shop' ? 'Was the part as described? How was the service?' : 'Was the work good? Was it ready on time?' });
+    const picker = h('div', { class: 'star-pick', role: 'radiogroup', 'aria-label': 'Stars' }, ...[1, 2, 3, 4, 5].map((n) => h('button', {
+      type: 'button', role: 'radio', 'aria-checked': 'false', 'aria-label': `${n} ${n === 1 ? 'star' : 'stars'}`, text: '★',
+      onclick: () => { stars = n; picker.querySelectorAll('button').forEach((x, i) => { x.classList.toggle('on', i < n); x.setAttribute('aria-checked', String(i + 1 === n)); }); },
+    })));
+    dlg.replaceChildren(h('div', { class: 'dialog-body' },
+      h('h2', { id: 'booking-title', text: `Rate ${name}` }),
+      h('p', { class: 'muted', text: 'Your first name and last initial are shown with your review.' }),
+      picker,
+      h('div', { class: 'field' }, h('label', { for: 'rv-comment', text: 'Comment (optional)' }), comment),
+      status,
+      h('div', { class: 'dialog-actions' },
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Send review', onclick: async () => {
+          if (!stars) return setStatus(status, 'Choose from 1 to 5 stars.', 'error');
+          try {
+            await api(`/api/me/bookings/${b.id}/reviews`, { method: 'POST', body: { target, rating: stars, comment: comment.value || null } });
+            closeDialog(dlg);
+            loadMyBookings();
+          } catch (err) { setStatus(status, err.message, 'error'); }
+        } }),
+        h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: () => closeDialog(dlg) }))));
+    showDialog(dlg);
+  }
+
+  /** Tell the vinzuu team about a problem with a shop, a garage or a part. what is
+   *  { booking_id, target } from "My bookings", or { listing_id } from the search results. */
+  function openReportForm(what, name) {
+    const dlg = $('booking-dialog');
+    const reasons = Object.entries(state.meta.report_reasons || {});
+    const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
+    const details = h('textarea', { id: 'rp-details', maxLength: 500, rows: 4, placeholder: 'What happened? For example: the price at the counter was higher than on Vinzuu.' });
+    const list = h('div', { class: 'report-reasons', role: 'radiogroup', 'aria-label': 'What went wrong?' }, ...reasons.map(([key, label], i) => h('label', { class: 'report-reason' },
+      h('input', { type: 'radio', name: 'rp-reason', value: key, checked: i === 0 }), h('span', { text: label }))));
+    dlg.replaceChildren(h('div', { class: 'dialog-body' },
+      h('h2', { id: 'booking-title', text: `Report a problem with ${name}` }),
+      h('p', { class: 'muted', text: 'Only the vinzuu team sees this. We check every report and can hide a part or suspend a shop or garage.' }),
+      h('fieldset', { class: 'plain-fieldset' }, h('legend', { text: 'What went wrong?' }), list),
+      h('div', { class: 'field' }, h('label', { for: 'rp-details', text: 'Tell us more' }), details),
+      status,
+      h('div', { class: 'dialog-actions' },
+        h('button', { class: 'btn btn-primary', type: 'button', text: 'Send report', onclick: async () => {
+          const reason = (list.querySelector('input:checked') || {}).value;
+          if (reason === 'other' && !details.value.trim()) return setStatus(status, 'Tell us what happened.', 'error');
+          try {
+            await api('/api/reports', { method: 'POST', body: { ...what, reason, details: details.value || null } });
+            dlg.querySelector('.dialog-body').replaceChildren(
+              h('h2', { id: 'booking-title', text: 'Thank you' }),
+              h('p', { text: 'The vinzuu team will look into it and may call you on your phone number.' }),
+              h('div', { class: 'dialog-actions' }, h('button', { class: 'btn btn-primary', type: 'button', text: 'Close', onclick: () => closeDialog(dlg) })));
+            if (what.booking_id) loadMyBookings();
+          } catch (err) { setStatus(status, err.message, 'error'); }
+        } }),
+        h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: () => closeDialog(dlg) }))));
+    showDialog(dlg);
   }
 
   // ---------------------------------------------------------------- a new car: check, details, save
@@ -862,8 +957,11 @@
     });
     if (terms.length) cats = cats.filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
     const loading = !state.fits;
-    const fitting = cats.filter((x) => loading || x.fit.fit !== 'none');
-    const unmatched = loading ? [] : cats.filter((x) => x.fit.fit === 'none');
+    // Standard-size parts (oil, bulbs, tyres) fit every car, so they only make the list when a
+    // shop has them; otherwise they would bury the parts matched to this car.
+    const listed = (x) => x.fit.fit !== 'none' && (x.fit.fit !== 'universal' || x.fit.shops > 0);
+    const fitting = cats.filter((x) => loading || listed(x));
+    const unmatched = loading ? [] : cats.filter((x) => !listed(x));
     // In stock first, then the closest matches.
     if (!loading) fitting.sort((a, b) => (b.fit.shops > 0) - (a.fit.shops > 0) || (a.fit.fit === 'relaxed') - (b.fit.fit === 'relaxed'));
 
@@ -887,9 +985,18 @@
     box.replaceChildren(unmatched.length ? h('details', { class: 'unlisted' },
       h('summary', { text: `Can't find your part? ${unmatched.length} more ${unmatched.length === 1 ? 'isn\'t' : 'aren\'t'} matched to your ${v.model} yet` }),
       h('p', { class: 'small muted', text: 'Ask for one and we\'ll note it, so shops know what to stock for your car.' }),
-      h('div', { class: 'unlisted-list' }, ...unmatched.map(({ c }) => h('button', {
-        class: 'chip-btn', type: 'button', 'aria-pressed': String(state.category === c.name), text: c.name, onclick: () => pickCategory(c),
-      })))) : '');
+      ...groupBy(unmatched, ({ c }) => c.group || 'Other parts').map(([g, list]) => [
+        h('p', { class: 'unlisted-group', text: g }),
+        h('div', { class: 'unlisted-list' }, ...list.map(({ c }) => h('button', {
+          class: 'chip-btn', type: 'button', 'aria-pressed': String(state.category === c.name), text: c.name, onclick: () => pickCategory(c),
+        })))])) : '');
+  }
+
+  /** [[key, items], …] in first-seen order. */
+  function groupBy(items, keyOf) {
+    const m = new Map();
+    for (const x of items) { const k = keyOf(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }
+    return [...m];
   }
 
   function partCard(c, fit) {
@@ -1097,16 +1204,19 @@
     const wa = whatsappLink(l.shop_whatsapp || l.shop_phone, shopMessage(l));
     return h('li', { class: 'result' },
       h('img', { class: 'photo', src: l.photo_url, alt: `${l.part_category} at ${l.shop_name}`, loading: 'lazy', width: 88, height: 88 }),
-      h('div', {}, h('div', { class: 'shop', text: l.shop_name }), h('div', { class: 'small muted', text: l.shop_address || '' })),
+      h('div', {}, h('div', { class: 'shop', text: l.shop_name }), h('div', { class: 'small muted', text: l.shop_address || '' }),
+        l.shop_rating ? h('div', { class: 'shop-rating' }, ratingEl(l.shop_rating, 'shop', l.shop_id, l.shop_name)) : null),
       h('div', { class: 'price' }, rwf.format(l.price_rwf), ' ', h('small', { text: 'RWF' })),
       h('div', { class: 'meta', text: `${l.distance_km} km away, ${l.condition === 'genuine' ? 'genuine part' : 'aftermarket part'}, ${l.in_stock} in stock` }),
-      h('div', { class: 'meta', text: detail }),
+      h('div', { class: 'meta', text: [detail, l.brand ? `Brand: ${l.brand}` : null, l.warranty_months ? `${l.warranty_months}-month warranty` : null].filter(Boolean).join(' · ') }),
       fits ? h('div', { class: 'meta', text: fits }) : null,
+      l.description ? h('p', { class: 'result-desc', text: l.description }) : null,
       h('div', { class: 'badge-row' }, badgeEl(l.badge)),
       h('div', { class: 'actions' },
         wa ? h('a', { class: 'btn btn-secondary btn-small', href: wa, target: '_blank', rel: 'noopener', text: 'WhatsApp the shop' }) : null,
         h('a', { class: 'btn btn-secondary btn-small', href: `tel:${l.shop_phone}`, text: 'Call' }),
-        h('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'Book installation', onclick: () => openBooking(l) })));
+        h('button', { class: 'btn btn-primary btn-small', type: 'button', text: 'Book installation', onclick: () => openBooking(l) }),
+        state.user ? h('button', { class: 'link-btn small result-report', type: 'button', text: 'Report this part', onclick: () => openReportForm({ listing_id: l.listing_id }, `${l.part_category} at ${l.shop_name}`) }) : null));
   }
 
   function useMyLocation() {
@@ -1150,9 +1260,15 @@
     const phoneInput = h('input', { id: 'b-phone', type: 'tel', inputMode: 'tel', autocomplete: 'tel', placeholder: '+250 788 123 456' });
     const note = h('textarea', { id: 'b-note', maxLength: 300, placeholder: 'For example: I can come after 5pm' });
 
+    // Each garage shows its rating and, when it has one, its fixed labour price for this part.
+    const labour = (g) => (g.services || []).find((s) => s.part_category === listing.part_category);
     const garageChoices = garages.map((g, i) => h('label', { class: 'garage-option' },
       h('input', { type: 'radio', name: 'garage', value: String(g.id), checked: i === 0 }),
-      h('span', {}, h('strong', { text: g.name }), h('span', { class: 'small muted sub', text: `${g.distance_km} km away. ${g.specialties || ''}` }))));
+      h('span', {}, h('strong', { text: g.name }),
+        g.rating && g.rating.count ? h('span', { class: 'sub go-rating' }, starsEl(g.rating.average), ` ${g.rating.average} (${g.rating.count})`) : null,
+        h('span', { class: 'small muted sub', text: `${g.distance_km} km away. ${g.specialties || ''}` }),
+        labour(g) ? h('span', { class: 'sub go-price' }, `Fitting: ${fmtRwf(labour(g).price_rwf)}`,
+          h('span', { class: 'muted', text: ` · total with the part ${fmtRwf(labour(g).price_rwf + listing.price_rwf)}` })) : null)));
 
     const form = h('form', { novalidate: true, onsubmit: async (event) => {
       event.preventDefault();
@@ -1166,6 +1282,7 @@
           shop_listing_id: listing.listing_id, garage_id: Number(chosen.value), note: note.value || null,
         } });
         showBookingDone(dlg, res);
+        loadMyBookings();
       } catch (err) { setStatus(status, err.message, 'error'); }
     } },
       h('p', { class: 'muted', text: `${listing.part_category} from ${listing.shop_name}, ${fmtRwf(listing.price_rwf)}` }),
