@@ -1,0 +1,401 @@
+# Toyota passenger cars, SUVs, vans, pickups, light trucks and minibuses on sale in model years
+# 2000 to 2026, including the Japanese-market models that reach East Africa as used imports.
+# China-only models and Daihatsu-built kei cars sold under the Toyota name are left out.
+# Compiled in October 2026 from the Wikipedia article for each model and its generations.
+# Generation codes are Toyota's chassis codes; engine codes are Toyota engine codes.
+# Check before treating them as fitment.
+#
+# Format:   Model | other names | body
+#             CODE | first-last model year (last "now" if still made) | engines, ';'-separated
+# An engine is "<litres>L <fuel> (<engine code>)", or "Electric" / "Hydrogen fuel cell".
+
+4Runner | Hilux Surf | SUV
+  N180 | 2000-2002 | 2.7L Petrol (3RZ-FE); 3.4L Petrol (5VZ-FE); 3.0L Diesel (1KZ-TE); 3.0L Diesel (1KD-FTV)
+  N210 | 2002-2009 | 2.7L Petrol (3RZ-FE); 4.0L Petrol (1GR-FE); 4.7L Petrol (2UZ-FE); 3.0L Diesel (1KD-FTV)
+  N280 | 2009-2024 | 2.7L Petrol (2TR-FE); 4.0L Petrol (1GR-FE)
+  N500 | 2025-now | 2.4L Turbo Petrol (T24A-FTS); 2.4L Hybrid (T24A-FTS)
+
+Agya | Wigo | Hatchback
+  B100 | 2013-2023 | 1.0L Petrol (1KR-FE); 1.2L Petrol (3NR-VE)
+  B400 | 2023-now | 1.0L Petrol (1KR-VE); 1.2L Petrol (WA-VE)
+
+Allex | | Hatchback
+  E120 | 2001-2006 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (1ZZ-FE); 1.8L Petrol (2ZZ-GE)
+
+Allion | Premio | Sedan
+  T240 | 2001-2007 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE)
+  T260 | 2007-2021 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (2ZR-FE); 1.8L Petrol (2ZR-FAE); 2.0L Petrol (3ZR-FAE)
+
+Alphard | Vellfire | Minivan
+  H10 | 2002-2008 | 2.4L Petrol (2AZ-FE); 3.0L Petrol (1MZ-FE); 2.4L Hybrid (2AZ-FXE)
+  H20 | 2008-2015 | 2.4L Petrol (2AZ-FE); 3.5L Petrol (2GR-FE); 2.4L Hybrid (2AZ-FXE)
+  H30 | 2015-2023 | 2.5L Petrol (2AR-FE); 3.5L Petrol (2GR-FKS); 2.5L Hybrid (2AR-FXE)
+  H40 | 2023-now | 2.5L Hybrid (A25A-FXS); 2.4L Turbo Petrol (T24A-FTS); 2.5L Plug-in Hybrid (A25A-FXS)
+
+Altezza | Lexus IS | Sedan, wagon
+  XE10 | 2000-2005 | 2.0L Petrol (3S-GE); 2.0L Petrol (1G-FE); 3.0L Petrol (2JZ-GE)
+
+Aqua | Prius C | Hatchback
+  NHP10 | 2011-2021 | 1.5L Hybrid (1NZ-FXE)
+  MXPK10 | 2021-now | 1.5L Hybrid (M15A-FXE)
+
+Aristo | Lexus GS | Sedan
+  S160 | 2000-2004 | 3.0L Petrol (2JZ-GE); 3.0L Turbo Petrol (2JZ-GTE); 4.0L Petrol (1UZ-FE)
+
+Auris | Corolla Hatchback, Blade | Hatchback, wagon
+  E150 | 2006-2012 | 1.4L Petrol (4ZZ-FE); 1.5L Petrol (1NZ-FE); 1.6L Petrol (1ZR-FE); 1.8L Petrol (2ZR-FE); 1.4L Diesel (1ND-TV); 2.0L Diesel (1AD-FTV); 1.8L Hybrid (2ZR-FXE)
+  E180 | 2012-2018 | 1.2L Turbo Petrol (8NR-FTS); 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.6L Petrol (1ZR-FAE); 1.8L Petrol (2ZR-FAE); 1.8L Hybrid (2ZR-FXE); 1.4L Diesel (1ND-TV); 1.6L Diesel (BMW N47); 2.0L Diesel (1AD-FTV)
+
+Avalon | | Sedan
+  XX20 | 2000-2004 | 3.0L Petrol (1MZ-FE)
+  XX30 | 2005-2012 | 3.5L Petrol (2GR-FE)
+  XX40 | 2013-2018 | 3.5L Petrol (2GR-FE); 2.5L Hybrid (2AR-FXE)
+  XX50 | 2019-2022 | 3.5L Petrol (2GR-FKS); 2.5L Hybrid (A25A-FXS)
+
+Avanza | Veloz | MPV
+  F600 | 2003-2011 | 1.3L Petrol (K3-VE); 1.5L Petrol (3SZ-VE)
+  F650 | 2011-2021 | 1.3L Petrol (K3-VE); 1.3L Petrol (1NR-VE); 1.5L Petrol (3SZ-VE); 1.5L Petrol (2NR-VE)
+  W100 | 2021-now | 1.3L Petrol (1NR-VE); 1.5L Petrol (2NR-VE)
+
+Avensis | | Sedan, hatchback, wagon
+  T220 | 2000-2003 | 1.6L Petrol (3ZZ-FE); 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE); 2.0L Diesel (1CD-FTV)
+  T250 | 2003-2009 | 1.6L Petrol (3ZZ-FE); 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE); 2.4L Petrol (2AZ-FSE); 2.0L Diesel (1CD-FTV); 2.2L Diesel (2AD-FTV)
+  T270 | 2009-2018 | 1.6L Petrol (1ZR-FAE); 1.8L Petrol (2ZR-FAE); 2.0L Petrol (3ZR-FAE); 2.0L Diesel (1AD-FTV); 2.2L Diesel (2AD-FHV)
+
+Aygo | | Hatchback
+  AB10 | 2005-2014 | 1.0L Petrol (1KR-FE); 1.4L Diesel (DV4)
+  AB40 | 2014-2021 | 1.0L Petrol (1KR-FE)
+
+Aygo X | | Crossover
+  AB70 | 2022-now | 1.0L Petrol (1KR-FE); 1.5L Hybrid (M15A-FXE)
+
+bB | Scion xB | Hatchback
+  XP30 | 2000-2005 | 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE)
+  QNC20 | 2005-2016 | 1.3L Petrol (K3-VE); 1.5L Petrol (3SZ-VE)
+
+Belta | Yaris Sedan, Vios | Sedan
+  XP90 | 2005-2012 | 1.0L Petrol (1KR-FE); 1.3L Petrol (2SZ-FE); 1.3L Petrol (2NZ-FE)
+
+Blade | | Hatchback
+  E150 | 2006-2012 | 2.4L Petrol (2AZ-FE); 3.5L Petrol (2GR-FE)
+
+bZ4X | bZ | Crossover
+  EA10 | 2022-now | Electric
+
+C-HR | | Crossover
+  AX10 | 2016-2023 | 1.2L Turbo Petrol (8NR-FTS); 2.0L Petrol (M20A-FKS); 2.0L Petrol (3ZR-FAE); 1.8L Hybrid (2ZR-FXE); 2.0L Hybrid (M20A-FXS)
+  AX20 | 2023-now | 1.8L Hybrid (2ZR-FXE); 2.0L Hybrid (M20A-FXS); 2.0L Plug-in Hybrid (M20A-FXS); Electric
+
+Caldina | | Wagon
+  T210 | 2000-2002 | 1.8L Petrol (7A-FE); 2.0L Petrol (3S-FE); 2.0L Petrol (3S-GE); 2.2L Diesel (3C-TE)
+  T240 | 2002-2007 | 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE); 2.0L Turbo Petrol (3S-GTE)
+
+Camry | Aurion | Sedan
+  XV20 | 2000-2001 | 2.2L Petrol (5S-FE); 3.0L Petrol (1MZ-FE)
+  XV30 | 2002-2006 | 2.4L Petrol (2AZ-FE); 3.0L Petrol (1MZ-FE); 3.3L Petrol (3MZ-FE)
+  XV40 | 2006-2011 | 2.4L Petrol (2AZ-FE); 2.5L Petrol (2AR-FE); 3.5L Petrol (2GR-FE); 2.4L Hybrid (2AZ-FXE)
+  XV50 | 2011-2017 | 2.0L Petrol (1AZ-FE); 2.0L Petrol (6AR-FSE); 2.5L Petrol (2AR-FE); 3.5L Petrol (2GR-FE); 2.5L Hybrid (2AR-FXE)
+  XV70 | 2017-2024 | 2.0L Petrol (M20A-FKS); 2.5L Petrol (A25A-FKS); 3.5L Petrol (2GR-FKS); 2.5L Hybrid (A25A-FXS)
+  XV80 | 2025-now | 2.0L Petrol (M20A-FKS); 2.5L Hybrid (A25A-FXS)
+
+Camry Solara | | Coupe, convertible
+  XV20 | 2000-2003 | 2.2L Petrol (5S-FE); 2.4L Petrol (2AZ-FE); 3.0L Petrol (1MZ-FE)
+  XV30 | 2004-2008 | 2.4L Petrol (2AZ-FE); 3.3L Petrol (3MZ-FE)
+
+Celica | | Coupe
+  T230 | 2000-2006 | 1.8L Petrol (1ZZ-FE); 1.8L Petrol (2ZZ-GE)
+
+Coaster | | Minibus
+  B50 | 2000-2017 | 4.0L Diesel (1HZ); 4.2L Diesel (1HD-FTE); 4.0L Diesel (N04C); 4.1L Diesel (15B-FTE)
+  B60 | 2017-now | 4.0L Diesel (N04C); 4.2L Diesel (1HZ); 2.8L Diesel (1GD-FTV)
+
+Corolla | Corolla Altis, Axio, Levin | Sedan, hatchback, wagon
+  E120 | 2000-2007 | 1.3L Petrol (2NZ-FE); 1.4L Petrol (4ZZ-FE); 1.5L Petrol (1NZ-FE); 1.6L Petrol (3ZZ-FE); 1.8L Petrol (1ZZ-FE); 1.8L Petrol (2ZZ-GE); 2.0L Diesel (1CD-FTV); 1.4L Diesel (1ND-TV)
+  E140 | 2006-2013 | 1.5L Petrol (1NZ-FE); 1.6L Petrol (1ZR-FE); 1.8L Petrol (2ZR-FE); 2.4L Petrol (2AZ-FE); 1.4L Diesel (1ND-TV)
+  E160 | 2012-2019 | 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.5L Petrol (2NR-FKE); 1.5L Hybrid (1NZ-FXE)
+  E170 | 2013-2019 | 1.6L Petrol (1ZR-FE); 1.8L Petrol (2ZR-FE); 2.0L Petrol (3ZR-FE); 1.8L Hybrid (2ZR-FXE); 1.4L Diesel (1ND-TV)
+  E210 | 2018-now | 1.2L Turbo Petrol (8NR-FTS); 1.5L Petrol (M15A-FKS); 1.6L Petrol (1ZR-FAE); 1.8L Petrol (2ZR-FE); 2.0L Petrol (M20A-FKS); 1.8L Hybrid (2ZR-FXE); 2.0L Hybrid (M20A-FXS)
+
+Corolla Cross | Frontlander | SUV
+  XG10 | 2020-now | 1.8L Petrol (2ZR-FE); 2.0L Petrol (M20A-FKS); 1.8L Hybrid (2ZR-FXE); 2.0L Hybrid (M20A-FXS)
+
+Corolla Fielder | | Wagon
+  E120 | 2000-2006 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (1ZZ-FE); 1.8L Petrol (2ZZ-GE)
+  E140 | 2006-2012 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (2ZR-FE)
+  E160 | 2012-2025 | 1.5L Petrol (1NZ-FE); 1.5L Petrol (2NR-FKE); 1.8L Petrol (2ZR-FAE); 1.5L Hybrid (1NZ-FXE)
+
+Corolla Rumion | Scion xB | Hatchback
+  E150N | 2007-2015 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (2ZR-FE); 2.4L Petrol (2AZ-FE)
+
+Corolla Spacio | | MPV
+  E120N | 2001-2007 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (1ZZ-FE)
+
+Corolla Verso | | MPV
+  E120 | 2001-2004 | 1.6L Petrol (3ZZ-FE); 1.8L Petrol (1ZZ-FE); 2.0L Diesel (1CD-FTV)
+  AR10 | 2004-2009 | 1.6L Petrol (3ZZ-FE); 1.8L Petrol (1ZZ-FE); 2.0L Diesel (1CD-FTV); 2.2L Diesel (2AD-FTV)
+
+Crown | Crown Athlete, Crown Royal, Crown Majesta | Sedan, crossover
+  S170 | 2000-2003 | 2.0L Petrol (1G-FE); 2.5L Petrol (1JZ-GE); 3.0L Petrol (2JZ-GE)
+  S180 | 2003-2008 | 2.5L Petrol (4GR-FSE); 3.0L Petrol (3GR-FSE); 3.5L Petrol (2GR-FSE)
+  S200 | 2008-2012 | 2.5L Petrol (4GR-FSE); 3.0L Petrol (3GR-FSE); 3.5L Petrol (2GR-FSE); 3.5L Hybrid (2GR-FSE)
+  S210 | 2012-2018 | 2.0L Turbo Petrol (8AR-FTS); 2.5L Petrol (4GR-FSE); 3.5L Petrol (2GR-FSE); 2.5L Hybrid (2AR-FSE)
+  S220 | 2018-2022 | 2.0L Turbo Petrol (8AR-FTS); 2.5L Hybrid (A25A-FXS); 3.5L Hybrid (8GR-FXS)
+  S235 | 2022-now | 2.5L Hybrid (A25A-FXS); 2.4L Turbo Hybrid (T24A-FTS); 2.5L Plug-in Hybrid (A25A-FXS); Hydrogen fuel cell
+
+Duet | | Hatchback
+  M100 | 2000-2004 | 1.0L Petrol (EJ-VE); 1.3L Petrol (K3-VE)
+
+Dyna | ToyoAce | Light truck
+  U300 | 2000-2011 | 4.0L Diesel (N04C); 4.1L Diesel (15B-FTE); 3.7L Diesel (4B); 2.0L Petrol (1TR-FE); 3.0L Diesel (1KZ-TE); 3.0L Diesel (5L-E)
+  U600 | 2011-now | 3.0L Diesel (1KD-FTV); 4.0L Diesel (N04C); 2.8L Diesel (1GD-FTV)
+
+Echo | Platz, Yaris Sedan, Vios | Sedan, hatchback
+  XP10 | 2000-2005 | 1.0L Petrol (1SZ-FE); 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE)
+
+Esquire | Noah, Voxy | Minivan
+  R80 | 2014-2021 | 2.0L Petrol (3ZR-FAE); 1.8L Hybrid (2ZR-FXE)
+
+Estima | Previa, Tarago | Minivan
+  XR30 | 2000-2006 | 2.4L Petrol (2AZ-FE); 3.0L Petrol (1MZ-FE); 2.4L Hybrid (2AZ-FXE)
+  XR50 | 2006-2019 | 2.4L Petrol (2AZ-FE); 3.5L Petrol (2GR-FE); 2.4L Hybrid (2AZ-FXE)
+
+Etios | Etios Liva, Etios Cross | Sedan, hatchback
+  XP150 | 2010-2023 | 1.2L Petrol (3NR-FE); 1.5L Petrol (2NR-FE); 1.4L Diesel (1ND-TV)
+
+FJ Cruiser | | SUV
+  XJ10 | 2006-2022 | 4.0L Petrol (1GR-FE)
+
+Fortuner | SW4 | SUV
+  AN50 | 2005-2015 | 2.7L Petrol (2TR-FE); 4.0L Petrol (1GR-FE); 2.5L Diesel (2KD-FTV); 3.0L Diesel (1KD-FTV)
+  AN160 | 2015-now | 2.7L Petrol (2TR-FE); 4.0L Petrol (1GR-FE); 2.4L Diesel (2GD-FTV); 2.8L Diesel (1GD-FTV)
+
+Funcargo | Yaris Verso | MPV
+  XP20 | 2000-2005 | 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE); 1.4L Diesel (1ND-TV)
+
+Gaia | | MPV
+  M10 | 2000-2004 | 2.0L Petrol (3S-FE); 2.2L Diesel (3C-TE)
+
+GR86 | 86, FT86 | Coupe
+  ZN6 | 2012-2021 | 2.0L Petrol (FA20)
+  ZN8 | 2021-now | 2.4L Petrol (FA24)
+
+Harrier | Venza, Lexus RX | SUV
+  XU10 | 2000-2003 | 2.2L Petrol (5S-FE); 2.4L Petrol (2AZ-FE); 3.0L Petrol (1MZ-FE)
+  XU30 | 2003-2013 | 2.4L Petrol (2AZ-FE); 3.0L Petrol (1MZ-FE); 3.5L Petrol (2GR-FE); 3.3L Hybrid (3MZ-FE)
+  XU60 | 2013-2020 | 2.0L Petrol (3ZR-FAE); 2.0L Turbo Petrol (8AR-FTS); 2.5L Hybrid (2AR-FXE)
+  XU80 | 2020-now | 2.0L Petrol (M20A-FKS); 2.5L Hybrid (A25A-FXS); 2.5L Plug-in Hybrid (A25A-FXS)
+
+Hiace | Commuter, Regius Ace, Quantum | Van, minibus
+  H100 | 2000-2004 | 2.0L Petrol (1RZ-E); 2.7L Petrol (3RZ-FE); 2.4L Diesel (2L); 3.0L Diesel (5L); 3.0L Diesel (1KZ-TE)
+  H200 | 2004-now | 2.0L Petrol (1TR-FE); 2.7L Petrol (2TR-FE); 2.5L Diesel (2KD-FTV); 3.0L Diesel (1KD-FTV); 2.8L Diesel (1GD-FTV); 3.0L Diesel (5L-E)
+  H300 | 2019-now | 3.5L Petrol (7GR-FKS); 2.8L Diesel (1GD-FTV)
+
+Highlander | Kluger | SUV
+  XU20 | 2000-2007 | 2.4L Petrol (2AZ-FE); 3.0L Petrol (1MZ-FE); 3.3L Petrol (3MZ-FE); 3.3L Hybrid (3MZ-FE)
+  XU40 | 2007-2013 | 2.7L Petrol (1AR-FE); 3.5L Petrol (2GR-FE); 3.3L Hybrid (3MZ-FE); 3.5L Hybrid (2GR-FXE)
+  XU50 | 2013-2019 | 2.7L Petrol (1AR-FE); 3.5L Petrol (2GR-FE); 3.5L Petrol (2GR-FKS); 3.5L Hybrid (2GR-FXE)
+  XU70 | 2019-now | 2.4L Turbo Petrol (T24A-FTS); 3.5L Petrol (2GR-FKS); 2.5L Hybrid (A25A-FXS)
+
+Hilux | Hilux Revo, Hilux Vigo | Pickup
+  N140 | 2000-2005 | 2.0L Petrol (1RZ-E); 2.4L Petrol (2RZ-FE); 2.7L Petrol (3RZ-FE); 3.4L Petrol (5VZ-FE); 2.4L Diesel (2L); 2.4L Diesel (2L-TE); 2.5L Diesel (2KD-FTV); 2.8L Diesel (3L); 3.0L Diesel (5L-E); 3.0L Diesel (1KZ-TE); 3.0L Diesel (1KD-FTV)
+  AN10 | 2004-2015 | 2.0L Petrol (1TR-FE); 2.7L Petrol (2TR-FE); 4.0L Petrol (1GR-FE); 2.5L Diesel (2KD-FTV); 3.0L Diesel (1KD-FTV); 3.0L Diesel (5L-E)
+  AN120 | 2015-2025 | 2.0L Petrol (1TR-FE); 2.7L Petrol (2TR-FE); 4.0L Petrol (1GR-FE); 2.4L Diesel (2GD-FTV); 2.8L Diesel (1GD-FTV)
+  AN220 | 2025-now | 2.7L Petrol (2TR-FE); 2.8L Diesel (1GD-FTV); Electric
+
+Innova | Kijang Innova, Innova Crysta | MPV
+  AN40 | 2004-2015 | 2.0L Petrol (1TR-FE); 2.7L Petrol (2TR-FE); 2.5L Diesel (2KD-FTV)
+  AN140 | 2015-now | 2.0L Petrol (1TR-FE); 2.7L Petrol (2TR-FE); 2.4L Diesel (2GD-FTV); 2.8L Diesel (1GD-FTV)
+  AG10 | 2022-now | 2.0L Petrol (M20A-FKS); 2.0L Hybrid (M20A-FXS)
+
+Ipsum | Picnic, SportsVan | MPV
+  M20 | 2001-2009 | 2.4L Petrol (2AZ-FE)
+
+Isis | | MPV
+  M10 | 2004-2017 | 1.8L Petrol (1ZZ-FE); 1.8L Petrol (2ZR-FAE); 2.0L Petrol (1AZ-FSE); 2.0L Petrol (3ZR-FAE)
+
+Ist | Scion xA, Urban Cruiser | Hatchback
+  XP60 | 2002-2007 | 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE)
+  XP110 | 2007-2016 | 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.8L Petrol (2ZR-FE); 1.4L Diesel (1ND-TV)
+
+Kijang | Tamaraw Revo, Zace | MPV
+  KF | 2000-2005 | 1.8L Petrol (7K-E); 2.4L Diesel (2L)
+
+Land Cruiser | Land Cruiser 100, 200, 300 | SUV
+  J100 | 2000-2007 | 4.7L Petrol (2UZ-FE); 4.5L Petrol (1FZ-FE); 4.2L Diesel (1HZ); 4.2L Diesel (1HD-FTE)
+  J200 | 2007-2021 | 4.0L Petrol (1GR-FE); 4.6L Petrol (1UR-FE); 4.7L Petrol (2UZ-FE); 5.7L Petrol (3UR-FE); 4.5L Diesel (1VD-FTV)
+  J300 | 2021-now | 3.5L Turbo Petrol (V35A-FTS); 4.0L Petrol (1GR-FE); 3.3L Diesel (F33A-FTV)
+
+Land Cruiser 70 | Land Cruiser 76, 78, 79, Troop Carrier | SUV, pickup
+  J70 | 2000-now | 4.0L Petrol (1GR-FE); 4.2L Diesel (1HZ); 4.2L Diesel (1HD-FTE); 4.5L Diesel (1VD-FTV); 2.8L Diesel (1GD-FTV)
+
+Land Cruiser Prado | Prado, Land Cruiser 250 | SUV
+  J90 | 2000-2002 | 2.7L Petrol (3RZ-FE); 3.4L Petrol (5VZ-FE); 3.0L Diesel (1KZ-TE); 3.0L Diesel (1KD-FTV)
+  J120 | 2002-2009 | 2.7L Petrol (3RZ-FE); 2.7L Petrol (2TR-FE); 3.4L Petrol (5VZ-FE); 4.0L Petrol (1GR-FE); 3.0L Diesel (1KZ-TE); 3.0L Diesel (5L-E); 3.0L Diesel (1KD-FTV)
+  J150 | 2009-2023 | 2.7L Petrol (2TR-FE); 3.5L Petrol (7GR-FKS); 4.0L Petrol (1GR-FE); 2.8L Diesel (1GD-FTV); 3.0L Diesel (1KD-FTV)
+  J250 | 2024-now | 2.7L Petrol (2TR-FE); 2.4L Turbo Petrol (T24A-FTS); 2.4L Hybrid (T24A-FTS); 2.8L Diesel (1GD-FTV)
+
+Mark II | Mark II Blit | Sedan, wagon
+  X110 | 2000-2007 | 2.0L Petrol (1G-FE); 2.5L Petrol (1JZ-FSE); 2.5L Turbo Petrol (1JZ-GTE)
+
+Mark X | Reiz | Sedan
+  X120 | 2004-2009 | 2.5L Petrol (4GR-FSE); 3.0L Petrol (3GR-FSE)
+  X130 | 2009-2019 | 2.5L Petrol (4GR-FSE); 3.5L Petrol (2GR-FSE)
+
+Matrix | | Hatchback
+  E130 | 2002-2008 | 1.8L Petrol (1ZZ-FE); 1.8L Petrol (2ZZ-GE); 2.4L Petrol (2AZ-FE)
+  E140 | 2008-2014 | 1.8L Petrol (2ZR-FE); 2.4L Petrol (2AZ-FE)
+
+Mirai | | Sedan
+  JPD10 | 2014-2020 | Hydrogen fuel cell
+  JPD20 | 2020-now | Hydrogen fuel cell
+
+MR2 | MR-S, MR2 Spyder | Roadster
+  W30 | 2000-2007 | 1.8L Petrol (1ZZ-FE)
+
+Nadia | | MPV
+  XN10 | 2000-2003 | 2.0L Petrol (3S-FE); 2.0L Petrol (3S-FSE)
+
+Noah | Voxy, Esquire | Minivan
+  R60 | 2001-2007 | 2.0L Petrol (1AZ-FSE)
+  R70 | 2007-2014 | 2.0L Petrol (3ZR-FE); 2.0L Petrol (3ZR-FAE)
+  R80 | 2014-2022 | 2.0L Petrol (3ZR-FAE); 1.8L Hybrid (2ZR-FXE)
+  R90 | 2022-now | 2.0L Petrol (M20A-FKS); 1.8L Hybrid (2ZR-FXE)
+
+Opa | | Hatchback
+  T10 | 2000-2005 | 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE)
+
+Passo | Boon, Daihatsu Sirion | Hatchback
+  C10 | 2004-2010 | 1.0L Petrol (1KR-FE); 1.3L Petrol (K3-VE)
+  C30 | 2010-2016 | 1.0L Petrol (1KR-FE); 1.3L Petrol (1NR-FE)
+  M700 | 2016-2023 | 1.0L Petrol (1KR-FE)
+
+Porte | Spade | Hatchback
+  P10 | 2004-2012 | 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE)
+  P140 | 2012-2020 | 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE)
+
+Premio | Allion, Corona Premio | Sedan
+  T240 | 2001-2007 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE)
+  T260 | 2007-2021 | 1.5L Petrol (1NZ-FE); 1.8L Petrol (2ZR-FE); 1.8L Petrol (2ZR-FAE); 2.0L Petrol (3ZR-FAE)
+
+Prius | | Hatchback
+  XW10 | 2000-2003 | 1.5L Hybrid (1NZ-FXE)
+  XW20 | 2003-2009 | 1.5L Hybrid (1NZ-FXE)
+  XW30 | 2009-2015 | 1.8L Hybrid (2ZR-FXE)
+  XW50 | 2015-2022 | 1.8L Hybrid (2ZR-FXE); 1.8L Plug-in Hybrid (2ZR-FXE)
+  XW60 | 2022-now | 1.8L Hybrid (2ZR-FXE); 2.0L Hybrid (M20A-FXS); 2.0L Plug-in Hybrid (M20A-FXS)
+
+Prius v | Prius Alpha, Prius+ | MPV
+  ZVW40 | 2011-2021 | 1.8L Hybrid (2ZR-FXE)
+
+Probox | Succeed | Van
+  XP50 | 2002-now | 1.3L Petrol (2NZ-FE); 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.5L Hybrid (1NZ-FXE); 1.4L Diesel (1ND-TV)
+
+Raize | Rocky | Crossover
+  A200 | 2019-now | 1.0L Turbo Petrol (1KR-VET); 1.2L Petrol (WA-VE); 1.2L Hybrid (WA-VEX)
+
+Ractis | Verso-S | MPV
+  P100 | 2005-2010 | 1.3L Petrol (2SZ-FE); 1.5L Petrol (1NZ-FE)
+  P120 | 2010-2017 | 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.4L Diesel (1ND-TV)
+
+Raum | | MPV
+  Z20 | 2003-2011 | 1.5L Petrol (1NZ-FE)
+
+RAV4 | Wildlander | SUV
+  XA20 | 2000-2005 | 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FE); 2.4L Petrol (2AZ-FE); 2.0L Diesel (1CD-FTV)
+  XA30 | 2005-2012 | 2.0L Petrol (1AZ-FE); 2.0L Petrol (3ZR-FE); 2.4L Petrol (2AZ-FE); 3.5L Petrol (2GR-FE); 2.2L Diesel (2AD-FTV); 2.2L Diesel (2AD-FHV)
+  XA40 | 2012-2018 | 2.0L Petrol (3ZR-FE); 2.0L Petrol (3ZR-FAE); 2.0L Petrol (6ZR-FE); 2.5L Petrol (2AR-FE); 2.5L Petrol (5AR-FE); 2.5L Hybrid (2AR-FXE); 2.0L Diesel (1AD-FTV); 2.2L Diesel (2AD-FTV); 2.0L Diesel (BMW B47)
+  XA50 | 2018-2025 | 2.0L Petrol (M20A-FKS); 2.5L Petrol (A25A-FKS); 2.5L Hybrid (A25A-FXS); 2.5L Plug-in Hybrid (A25A-FXS)
+  XA60 | 2025-now | 2.5L Hybrid (A25A-FXS); 2.5L Plug-in Hybrid (A25A-FXS)
+
+Roomy | Tank, Daihatsu Thor | Hatchback
+  M900 | 2016-now | 1.0L Petrol (1KR-FE); 1.0L Turbo Petrol (1KR-VET)
+
+Rush | Daihatsu Terios | SUV
+  J200 | 2006-2017 | 1.5L Petrol (3SZ-VE)
+  F800 | 2017-now | 1.5L Petrol (2NR-VE)
+
+Sequoia | | SUV
+  XK30 | 2001-2007 | 4.7L Petrol (2UZ-FE)
+  XK60 | 2008-2022 | 4.6L Petrol (1UR-FE); 4.7L Petrol (2UZ-FE); 5.7L Petrol (3UR-FE)
+  XK80 | 2023-now | 3.4L Turbo Hybrid (V35A-FTS)
+
+Sienna | Granvia | Minivan
+  XL10 | 2000-2003 | 3.0L Petrol (1MZ-FE)
+  XL20 | 2004-2010 | 3.3L Petrol (3MZ-FE); 3.5L Petrol (2GR-FE)
+  XL30 | 2011-2020 | 2.7L Petrol (1AR-FE); 3.5L Petrol (2GR-FE); 3.5L Petrol (2GR-FKS)
+  XL40 | 2021-now | 2.5L Hybrid (A25A-FXS)
+
+Sienta | | MPV
+  XP80 | 2003-2015 | 1.5L Petrol (1NZ-FE)
+  XP170 | 2015-2022 | 1.5L Petrol (2NR-FKE); 1.5L Hybrid (1NZ-FXE)
+  XP210 | 2022-now | 1.5L Petrol (M15A-FKS); 1.5L Hybrid (M15A-FXE)
+
+Succeed | Probox | Van
+  XP50 | 2002-2020 | 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.5L Hybrid (1NZ-FXE)
+
+Supra | GR Supra | Coupe
+  J29 | 2019-2026 | 2.0L Turbo Petrol (BMW B48); 3.0L Turbo Petrol (BMW B58)
+
+Tacoma | | Pickup
+  N140 | 2000-2004 | 2.4L Petrol (2RZ-FE); 2.7L Petrol (3RZ-FE); 3.4L Petrol (5VZ-FE)
+  N220 | 2005-2015 | 2.7L Petrol (2TR-FE); 4.0L Petrol (1GR-FE)
+  N300 | 2016-2023 | 2.7L Petrol (2TR-FE); 3.5L Petrol (2GR-FKS)
+  N400 | 2024-now | 2.4L Turbo Petrol (T24A-FTS); 2.4L Hybrid (T24A-FTS)
+
+Tundra | | Pickup
+  XK30 | 2000-2006 | 3.4L Petrol (5VZ-FE); 4.0L Petrol (1GR-FE); 4.7L Petrol (2UZ-FE)
+  XK50 | 2007-2021 | 4.0L Petrol (1GR-FE); 4.6L Petrol (1UR-FE); 4.7L Petrol (2UZ-FE); 5.7L Petrol (3UR-FE)
+  XK70 | 2022-now | 3.4L Turbo Petrol (V35A-FTS); 3.4L Hybrid (V35A-FTS)
+
+TownAce | LiteAce | Van, light truck
+  R40 | 2000-2007 | 1.8L Petrol (7K-E); 2.2L Diesel (3C-E)
+  S400 | 2008-now | 1.5L Petrol (3SZ-VE); 1.5L Petrol (2NR-VE)
+
+Urban Cruiser | Hyryder, Urban Cruiser Taisor | Crossover
+  XP110 | 2008-2014 | 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.4L Diesel (1ND-TV)
+  DE | 2022-now | 1.5L Petrol (K15C); 1.5L Hybrid (M15D-FXE); Electric
+
+Vanguard | RAV4 (long) | SUV
+  XA30 | 2007-2013 | 2.4L Petrol (2AZ-FE); 3.5L Petrol (2GR-FE)
+
+Venza | Harrier | Crossover
+  AV10 | 2008-2017 | 2.7L Petrol (1AR-FE); 3.5L Petrol (2GR-FE)
+  XU80 | 2021-2024 | 2.5L Hybrid (A25A-FXS)
+
+Verso | Corolla Verso | MPV
+  AR20 | 2009-2018 | 1.6L Petrol (1ZR-FAE); 1.8L Petrol (2ZR-FAE); 1.6L Diesel (BMW N47); 2.0L Diesel (1AD-FTV); 2.2L Diesel (2AD-FHV)
+
+Vista | Ardeo | Sedan, wagon
+  V50 | 2000-2003 | 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE)
+
+Vitz | Yaris, Echo | Hatchback
+  XP10 | 2000-2005 | 1.0L Petrol (1SZ-FE); 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE)
+  XP90 | 2005-2010 | 1.0L Petrol (1KR-FE); 1.3L Petrol (2SZ-FE); 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE)
+  XP130 | 2010-2019 | 1.0L Petrol (1KR-FE); 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.5L Hybrid (1NZ-FXE)
+
+Voxy | Noah, Esquire | Minivan
+  R60 | 2001-2007 | 2.0L Petrol (1AZ-FSE)
+  R70 | 2007-2014 | 2.0L Petrol (3ZR-FE); 2.0L Petrol (3ZR-FAE)
+  R80 | 2014-2022 | 2.0L Petrol (3ZR-FAE); 1.8L Hybrid (2ZR-FXE)
+  R90 | 2022-now | 2.0L Petrol (M20A-FKS); 1.8L Hybrid (2ZR-FXE)
+
+WiLL | WiLL Vi, WiLL VS, WiLL Cypha | Hatchback, sedan
+  XP | 2000-2005 | 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE); 1.8L Petrol (1ZZ-FE)
+
+Windom | Lexus ES | Sedan
+  XV20 | 2000-2001 | 2.5L Petrol (2MZ-FE); 3.0L Petrol (1MZ-FE)
+  XV30 | 2001-2006 | 3.0L Petrol (1MZ-FE)
+
+Wish | | MPV
+  AE10 | 2003-2009 | 1.8L Petrol (1ZZ-FE); 2.0L Petrol (1AZ-FSE)
+  AE20 | 2009-2017 | 1.8L Petrol (2ZR-FAE); 2.0L Petrol (3ZR-FAE)
+
+Yaris | Vitz, Vios, Belta | Hatchback, sedan
+  XP10 | 2000-2005 | 1.0L Petrol (1SZ-FE); 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE); 1.4L Diesel (1ND-TV)
+  XP90 | 2005-2011 | 1.0L Petrol (1KR-FE); 1.3L Petrol (2SZ-FE); 1.3L Petrol (2NZ-FE); 1.5L Petrol (1NZ-FE); 1.4L Diesel (1ND-TV)
+  XP130 | 2011-2020 | 1.0L Petrol (1KR-FE); 1.3L Petrol (1NR-FE); 1.5L Petrol (1NZ-FE); 1.5L Petrol (2NR-FKE); 1.5L Hybrid (1NZ-FXE); 1.4L Diesel (1ND-TV)
+  XP150 | 2013-now | 1.3L Petrol (2NZ-FE); 1.3L Petrol (1NR-FE); 1.5L Petrol (2NR-FE); 1.5L Petrol (1NZ-FE)
+  XP210 | 2020-now | 1.0L Petrol (1KR-FE); 1.5L Petrol (M15A-FKS); 1.5L Hybrid (M15A-FXE)
+
+Yaris Cross | | Crossover
+  XP210 CUV | 2020-now | 1.5L Petrol (M15A-FKS); 1.5L Hybrid (M15A-FXE)

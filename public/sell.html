@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10283B">
+  <title>Sell on vinzuu | Vinzuu Sellers &amp; Garages</title>
+  <meta name="description" content="Apply to join Vinzuu Sellers &amp; Garages: parts shops and garages in Kigali, checked before they join.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%2310283B%27/%3E%3Cg transform=%27translate(3.5,11.5) scale(0.4)%27%3E%3Cpath d=%27M3 18 Q3 10 13 9 L19 9 Q23 3 33 3 L41 9 L53 9 Q59 9 59 15 L59 18 Z%27 fill=%27%23fff%27/%3E%3Ccircle cx=%2715%27 cy=%2719%27 r=%274%27 fill=%27%230A1420%27/%3E%3Ccircle cx=%2747%27 cy=%2719%27 r=%274%27 fill=%27%230A1420%27/%3E%3Crect x=%2757%27 y=%2712%27 width=%273%27 height=%273%27 rx=%271%27 fill=%27%23F5B700%27/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="preload" href="/fonts/barlow-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <nav class="site-nav" aria-label="Main">
+    <div class="nav-row">
+      <a class="nav-logo" href="/"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#10283B" stroke="#F5B700" stroke-width="2"/><g transform="translate(3.5,11.5) scale(0.4)"><path d="M3 18 Q3 10 13 9 L19 9 Q23 3 33 3 L41 9 L53 9 Q59 9 59 15 L59 18 Z" fill="#fff"/><circle cx="15" cy="19" r="4" fill="#0A1420"/><circle cx="47" cy="19" r="4" fill="#0A1420"/><rect x="57" y="12" width="3" height="3" rx="1" fill="#F5B700"/></g></svg>Vinzuu</a>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links-wrap">&#9776;</button>
+      <div class="nav-links-wrap" id="nav-links-wrap">
+        <ul class="nav-links">
+          <li><a href="/#find">Find parts</a></li>
+          <li><a href="/#garages">Garages</a></li>
+          <li><a href="/about.html">About us</a></li>
+          <li><a href="/contact.html">Contact us</a></li>
+        </ul>
+        <div class="nav-cta">
+          <a class="btn btn-ghost btn-small" href="/sell.html">Sell on vinzuu</a>
+          <a class="btn btn-primary btn-small" href="/#auth-card" data-auth="sign-in">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <header class="content-hero sell-hero">
+    <p class="sell-kicker">Vinzuu Sellers &amp; Garages</p>
+    <h1>Sell parts or fit them, with customers who know their car</h1>
+    <p>Every customer on Vinzuu searches by VIN, so they only see the parts that fit their car. Join as a parts shop, a garage, or both.</p>
+  </header>
+
+  <main class="content-section sell-main">
+    <ol class="sell-steps" aria-label="How joining works">
+      <li><b>1</b><div><strong>Apply</strong><span>Fill in the form below with your RDB business details and two photos.</span></div></li>
+      <li><b>2</b><div><strong>We check your business</strong><span>The vinzuu team checks your documents and may call or visit you.</span></div></li>
+      <li><b>3</b><div><strong>Start working</strong><span>Sign in with your email and open your dashboard.</span></div></li>
+    </ol>
+
+    <div class="sell-sides">
+      <section class="sell-side" aria-labelledby="side-shop">
+        <h2 id="side-shop">For parts shops</h2>
+        <ul>
+          <li>We post your parts for you, checked against verified part numbers, so customers trust them.</li>
+          <li>You keep your own prices and stock up to date.</li>
+          <li>Customers reserve parts and reach you on WhatsApp.</li>
+          <li>Ratings and reviews from real customers.</li>
+        </ul>
+      </section>
+      <section class="sell-side" aria-labelledby="side-garage">
+        <h2 id="side-garage">For garages</h2>
+        <ul>
+          <li>Customers who bought a part choose you to fit it.</li>
+          <li>Accept a job with a date and time, then mark it done.</li>
+          <li>Show your labour prices, so customers know the cost before they come.</li>
+          <li>Ratings and reviews from real customers.</li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="sell-signin">Already approved, or applied and waiting? <a href="/business.html">Sign in to Vinzuu Sellers &amp; Garages</a></p>
+
+    <form id="apply-form" class="panel apply-form" novalidate aria-labelledby="apply-title">
+      <h2 id="apply-title">Apply to join</h2>
+
+      <fieldset class="group">
+        <legend>What do you run?</legend>
+        <div class="kind-cards">
+          <label class="kind-card"><input type="radio" name="kind" value="shop" checked><span><strong>A parts shop</strong><small>I sell spare parts</small></span></label>
+          <label class="kind-card"><input type="radio" name="kind" value="garage"><span><strong>A garage</strong><small>I fit parts and repair cars</small></span></label>
+          <label class="kind-card"><input type="radio" name="kind" value="both"><span><strong>Both</strong><small>I sell parts and fit them</small></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Your business</legend>
+        <div class="row stack-sm">
+          <div class="field"><label for="ap-name">Business name</label><input id="ap-name" type="text" maxlength="80" autocomplete="organization"></div>
+          <div class="field"><label for="ap-tin">TIN</label><input id="ap-tin" type="text" inputmode="numeric" maxlength="11" placeholder="9 digits">
+            <p class="hint">The 9-digit number on your RDB certificate.</p></div>
+        </div>
+        <div class="field"><label for="ap-address">Address or area</label><input id="ap-address" type="text" maxlength="120" placeholder="For example: KN 3 Rd, Nyabugogo, next to the bus park"></div>
+        <div class="field">
+          <span class="label">Where is it on the map?</span>
+          <div class="loc-row">
+            <button class="btn btn-secondary btn-small" type="button" id="ap-locate">Use my current location</button>
+            <span class="small muted" id="ap-loc-text">Press this while you are at your shop or garage.</span>
+          </div>
+          <details class="loc-manual">
+            <summary>Or type the location</summary>
+            <div class="row stack-sm">
+              <div class="field"><label for="ap-lat">Latitude</label><input id="ap-lat" type="text" inputmode="decimal" placeholder="-1.9441"></div>
+              <div class="field"><label for="ap-lon">Longitude</label><input id="ap-lon" type="text" inputmode="decimal" placeholder="30.0619"></div>
+            </div>
+            <p class="hint">On Google Maps, press and hold your shop, then copy the two numbers it shows.</p>
+          </details>
+        </div>
+        <div class="field" id="ap-spec-wrap" hidden><label for="ap-spec">What is your garage good at?</label>
+          <input id="ap-spec" type="text" maxlength="160" placeholder="For example: brakes, suspension, Korean cars"></div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Documents</legend>
+        <div class="row stack-sm">
+          <div class="field">
+            <label for="ap-cert">Photo of your RDB certificate</label>
+            <input id="ap-cert" type="file" accept="image/*">
+            <img id="ap-cert-preview" class="photo-preview" alt="RDB certificate preview" hidden>
+          </div>
+          <div class="field">
+            <label for="ap-front">Photo of your shop or garage front</label>
+            <input id="ap-front" type="file" accept="image/*">
+            <img id="ap-front-preview" class="photo-preview" alt="Business front preview" hidden>
+          </div>
+        </div>
+        <p class="hint">Only the vinzuu team sees these. Customers never do.</p>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>You, the owner</legend>
+        <div class="row stack-sm">
+          <div class="field"><label for="ap-owner">Your full name</label><input id="ap-owner" type="text" maxlength="60" autocomplete="name"></div>
+          <div class="field"><label for="ap-email">Email</label><input id="ap-email" type="email" maxlength="120" autocomplete="email">
+            <p class="hint">You sign in with this. A Gmail address also works with "Continue with Google".</p></div>
+        </div>
+        <div class="row stack-sm">
+          <div class="field"><label for="ap-phone">Phone</label><input id="ap-phone" type="tel" autocomplete="tel" placeholder="+250 788 123 456"></div>
+          <div class="field"><label for="ap-wa">WhatsApp (if different)</label><input id="ap-wa" type="tel" placeholder="+250 788 123 456"></div>
+        </div>
+        <div class="row stack-sm">
+          <div class="field"><label for="ap-pass">Choose a password</label><input id="ap-pass" type="password" autocomplete="new-password">
+            <p class="hint">At least 8 characters, with an uppercase letter, a number and a symbol.</p></div>
+          <div class="field"><label for="ap-pass2">Type it again</label><input id="ap-pass2" type="password" autocomplete="new-password"></div>
+        </div>
+        <div class="field"><label for="ap-note">Anything else we should know? (optional)</label><textarea id="ap-note" maxlength="300"></textarea></div>
+      </fieldset>
+
+      <label class="check-line"><input type="checkbox" id="ap-agree"> The documents are mine, and everything above is true.</label>
+      <button class="btn btn-primary" type="submit">Send application</button>
+      <p id="apply-status" class="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <div id="apply-done" class="panel apply-done" hidden tabindex="-1">
+      <h2>Thanks, we have your application</h2>
+      <p>The vinzuu team will check your business and contact you on your phone or email. Once you are approved, sign in with the email and password you just chose.</p>
+      <p>Until then, signing in will tell you where your application is.</p>
+      <a class="btn btn-primary" href="/business.html">Go to sign in</a>
+    </div>
+  </main>
+
+  <footer class="site-footer-marketing">
+    <div class="footer-grid">
+      <div>
+        <h4>Vinzuu</h4>
+        <p>A VIN-based spare parts and garage marketplace, built for Kigali. A Smart Computing final project at Kyungdong University, currently piloting with local shops.</p>
+      </div>
+      <div>
+        <h4>Site</h4>
+        <ul class="footer-links">
+          <li><a href="/index.html">Find a part</a></li>
+          <li><a href="/#how-it-works">How it works</a></li>
+          <li><a href="/sell.html">Sell on vinzuu</a></li>
+          <li><a href="/business.html">Sellers &amp; garages sign in</a></li>
+          <li><a href="/about.html">About us</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <ul class="footer-links">
+          <li><a href="/contact.html">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Vinzuu. Built for Kigali, Rwanda.</span>
+    </div>
+  </footer>
+
+  <script src="/common.js"></script>
+  <script src="/sell.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+# Kia passenger cars, SUVs, vans and light trucks on sale in model years 2000 to 2026.
+# Compiled in October 2026 from the Wikipedia article for each model and its generations.
+# Generation codes are Kia's own platform codes; engine codes are Hyundai-Kia engine type codes
+# (or the engine family where none is published). Check before treating them as fitment.
+#
+# Format:   Model | other names | body
+#             CODE | first-last model year (last "now" if still made) | engines, ';'-separated
+# An engine is "<litres>L <fuel> (<engine code>)", or "Electric".
+
+Bongo | K2500, K2700, K3000, K4000, Bongo III, Frontier | Light truck, van
+  SD | 2000-2004 | 2.7L Diesel (J2); 2.9L Diesel (J3); 3.0L Diesel (JT)
+  PU | 2004-now | 2.5L Diesel (D4CB); 2.9L Diesel (J3); 3.0L Diesel (JT); 2.5L Turbo LPG (L4GA); Electric
+
+Cadenza | K7 | Sedan
+  VG | 2009-2016 | 2.4L Petrol (G4KE); 2.7L Petrol (G6EA); 3.0L Petrol (G6DG); 3.3L Petrol (G6DH); 3.5L Petrol (G6DC); 2.4L Hybrid (G4KK)
+  YG | 2016-2021 | 2.4L Petrol (G4KJ); 2.5L Petrol (G4KN); 3.0L Petrol (G6DG); 3.3L Petrol (G6DH); 2.4L Hybrid (G4KK); 3.0L LPG (L6DB); 2.2L Diesel (D4HB)
+
+Carens | Rondo, Carens Clavis | MPV
+  FC | 2000-2006 | 1.8L Petrol (T8); 2.0L Petrol (FE); 2.0L Diesel (D4EA)
+  UN | 2006-2013 | 2.0L Petrol (G4KA); 2.4L Petrol (G4KC); 2.7L Petrol (G6EA); 2.0L Diesel (D4EA)
+  RP | 2013-2019 | 1.6L Petrol (G4FD); 2.0L Petrol (G4NC); 1.7L Diesel (D4FD); 2.0L LPG (L4NC)
+  KY | 2022-now | 1.5L Petrol (G4FL); 1.5L Turbo Petrol (G4LH); 1.5L Diesel (D4FE); Electric
+
+Carnival | Sedona, Grand Carnival | Minivan
+  GQ | 2000-2006 | 2.5L Petrol (K5); 3.5L Petrol (G6CU); 2.9L Diesel (J3)
+  VQ | 2006-2014 | 2.7L Petrol (G6EA); 3.5L Petrol (G6DC); 3.8L Petrol (G6DA); 2.9L Diesel (J3); 2.2L Diesel (D4HB)
+  YP | 2014-2020 | 3.3L Petrol (G6DH); 2.2L Diesel (D4HB)
+  KA4 | 2020-now | 3.5L Petrol (G6DU); 3.5L Petrol (G6DN); 2.2L Diesel (D4HE); 1.6L Hybrid (G4FT)
+
+Ceed | Cee'd, Proceed, Ceed Sportswagon | Hatchback, wagon
+  ED | 2006-2012 | 1.4L Petrol (G4FA); 1.6L Petrol (G4FC); 2.0L Petrol (G4GC); 1.6L Diesel (D4FB); 2.0L Diesel (D4EA)
+  JD | 2012-2018 | 1.4L Petrol (G4FA); 1.6L Petrol (G4FD); 1.0L Turbo Petrol (G3LC); 1.6L Turbo Petrol (G4FJ); 1.4L Diesel (D4FC); 1.6L Diesel (D4FB)
+  CD | 2018-2025 | 1.0L Turbo Petrol (G3LC); 1.4L Turbo Petrol (G4LD); 1.5L Turbo Petrol (G4LH); 1.6L Turbo Petrol (G4FJ); 1.6L Plug-in Hybrid (G4LE); 1.6L Diesel (D4FE)
+
+Cerato | Forte, K3, Spectra, Naza Forte | Sedan, hatchback, coupe
+  LD | 2003-2008 | 1.5L Petrol (G4EC); 1.6L Petrol (G4ED); 2.0L Petrol (G4GC); 1.5L Diesel (D4FA)
+  TD | 2008-2013 | 1.6L Petrol (G4FC); 2.0L Petrol (G4KD); 2.4L Petrol (G4KE); 1.6L LPG (L4FC); 1.6L Diesel (D4FB)
+  YD | 2012-2018 | 1.6L Petrol (G4FG); 1.6L Petrol (G4FD); 1.8L Petrol (G4NB); 2.0L Petrol (G4NA); 1.6L Turbo Petrol (G4FJ); 1.6L Diesel (D4FB)
+  BD | 2018-2024 | 1.6L Petrol (G4FG); 1.6L Petrol (G4FM); 2.0L Petrol (G4NH); 1.6L Turbo Petrol (G4FJ); 1.6L Diesel (D4FE)
+
+EV3 | | Crossover
+  SV1 | 2024-now | Electric
+
+EV4 | | Sedan, hatchback
+  CV1 | 2025-now | Electric
+
+EV5 | | SUV
+  OV1 | 2023-now | Electric
+
+EV6 | | Crossover
+  CV | 2021-now | Electric
+
+EV9 | | SUV
+  MV | 2023-now | Electric
+
+K4 | | Sedan, hatchback
+  CL4 | 2024-now | 2.0L Petrol (G4NS); 1.6L Turbo Petrol (G4FP)
+
+K5 | Optima, Magentis, Lotze | Sedan
+  MS | 2000-2005 | 2.0L Petrol (G4JP); 2.4L Petrol (G4JS); 2.5L Petrol (G6BV); 2.7L Petrol (G6BA)
+  MG | 2005-2010 | 2.0L Petrol (G4KA); 2.4L Petrol (G4KC); 2.7L Petrol (G6EA); 2.0L Diesel (D4EA)
+  TF | 2010-2015 | 2.0L Petrol (G4KD); 2.4L Petrol (G4KJ); 2.0L Turbo Petrol (G4KH); 2.4L Hybrid (G4KK); 2.0L LPG (L4KA); 1.7L Diesel (D4FD)
+  JF | 2015-2020 | 2.0L Petrol (G4NA); 2.4L Petrol (G4KJ); 1.6L Turbo Petrol (G4FJ); 2.0L Turbo Petrol (G4KH); 2.0L Hybrid (G4NG); 2.0L LPG (L4NA); 1.7L Diesel (D4FD)
+  DL3 | 2019-now | 2.0L Petrol (G4NS); 2.5L Petrol (G4KN); 1.6L Turbo Petrol (G4FP); 2.5L Turbo Petrol (G4KR); 2.0L Hybrid (G4NG); 2.0L LPG (L4NF)
+
+K8 | | Sedan
+  GL3 | 2021-now | 2.5L Petrol (G4KN); 3.5L Petrol (G6DU); 1.6L Hybrid (G4FT); 3.5L LPG (L6DU)
+
+K9 | K900, Quoris | Sedan
+  KH | 2012-2018 | 3.3L Petrol (G6DH); 3.8L Petrol (G6DJ); 5.0L Petrol (G8BE)
+  RJ | 2018-2026 | 3.3L Turbo Petrol (G6DP); 3.8L Petrol (G6DJ); 5.0L Petrol (G8BE)
+
+Mohave | Borrego | SUV
+  HM | 2008-2024 | 3.8L Petrol (G6DA); 4.6L Petrol (G8BA); 3.0L Diesel (D6EA); 3.0L Diesel (D6EB)
+
+Niro | | Crossover
+  DE | 2016-2022 | 1.6L Hybrid (G4LE); 1.6L Plug-in Hybrid (G4LE); Electric
+  SG2 | 2022-now | 1.6L Hybrid (G4LL); 1.6L Plug-in Hybrid (G4LL); Electric
+
+Opirus | Amanti | Sedan
+  GH | 2003-2011 | 2.7L Petrol (G6BA); 3.3L Petrol (G6DB); 3.5L Petrol (G6CU); 3.8L Petrol (G6DA)
+
+Pegas | Soluto | Sedan
+  AB | 2017-now | 1.4L Petrol (G4LC)
+
+Picanto | Morning | Hatchback
+  SA | 2004-2011 | 1.0L Petrol (G4HE); 1.1L Petrol (G4HG); 1.1L Diesel (D3FA)
+  TA | 2011-2017 | 1.0L Petrol (G3LA); 1.2L Petrol (G4LA); 1.0L LPG (L3LA)
+  JA | 2017-now | 1.0L Petrol (G3LA); 1.0L Turbo Petrol (G3LC); 1.2L Petrol (G4LA); 1.0L LPG (L3LA)
+
+Pregio | Besta | Van, minibus
+  TB | 2000-2006 | 2.7L Diesel (J2); 2.9L Diesel (J3); 2.5L Diesel (D4BH)
+
+Ray | | Hatchback
+  TAM | 2011-now | 1.0L Petrol (G3LA); 1.0L Turbo Petrol (G3LC); 1.0L LPG (L3LA); Electric
+
+Retona | | SUV
+  CE | 2000-2003 | 2.0L Petrol (FE); 2.0L Diesel (RF)
+
+Rio | Pride, K2, Rio5 | Sedan, hatchback
+  DC | 2000-2005 | 1.3L Petrol (A3E); 1.5L Petrol (A5D); 1.6L Petrol (A6D)
+  JB | 2005-2011 | 1.4L Petrol (G4EE); 1.6L Petrol (G4ED); 1.5L Diesel (D4FA)
+  UB | 2011-2017 | 1.2L Petrol (G4LA); 1.4L Petrol (G4FA); 1.6L Petrol (G4FD); 1.1L Diesel (D3FA); 1.4L Diesel (D4FC)
+  YB | 2017-2023 | 1.0L Turbo Petrol (G3LC); 1.2L Petrol (G4LA); 1.4L Petrol (G4LC); 1.6L Petrol (G4FG); 1.4L Diesel (D4FC)
+
+Seltos | | SUV
+  SP2 | 2019-2025 | 1.4L Turbo Petrol (G4LD); 1.5L Petrol (G4FL); 1.6L Petrol (G4FG); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NH); 1.5L Diesel (D4FE)
+  SP3 | 2025-now | 1.6L Turbo Petrol (G4FP); 1.6L Hybrid (G4LL)
+
+Sonet | | SUV
+  QY | 2020-now | 1.2L Petrol (G4LF); 1.0L Turbo Petrol (G3LE); 1.5L Diesel (D4FE)
+
+Sorento | | SUV
+  BL | 2002-2009 | 2.4L Petrol (G4JS); 3.3L Petrol (G6DB); 3.5L Petrol (G6CU); 3.8L Petrol (G6DA); 2.5L Diesel (D4CB)
+  XM | 2009-2014 | 2.4L Petrol (G4KE); 3.5L Petrol (G6DC); 2.0L Diesel (D4HA); 2.2L Diesel (D4HB)
+  UM | 2014-2020 | 2.4L Petrol (G4KJ); 2.0L Turbo Petrol (G4KH); 3.3L Petrol (G6DH); 3.5L Petrol (G6DP); 2.0L Diesel (D4HA); 2.2L Diesel (D4HB)
+  MQ4 | 2020-now | 2.5L Petrol (G4KN); 2.5L Turbo Petrol (G4KR); 3.5L Petrol (G6DU); 1.6L Hybrid (G4FT); 1.6L Plug-in Hybrid (G4FT); 2.2L Diesel (D4HE)
+
+Soul | | Crossover
+  AM | 2008-2013 | 1.6L Petrol (G4FC); 2.0L Petrol (G4GC); 1.6L Diesel (D4FB)
+  PS | 2013-2019 | 1.6L Petrol (G4FG); 1.6L Petrol (G4FD); 2.0L Petrol (G4NA); 1.6L Turbo Petrol (G4FJ); 1.6L Diesel (D4FB); Electric
+  SK3 | 2019-2025 | 1.6L Petrol (G4FG); 2.0L Petrol (G4NH); 1.6L Turbo Petrol (G4FJ); Electric
+
+Spectra | Sephia II, Shuma II, Mentor II | Sedan, hatchback
+  SD | 2000-2004 | 1.5L Petrol (B5); 1.6L Petrol (B6); 1.8L Petrol (T8)
+
+Sportage | | SUV
+  NB | 2000-2004 | 2.0L Petrol (FE); 2.0L Diesel (RF); 2.2L Diesel (R2)
+  KM | 2004-2010 | 2.0L Petrol (G4GC); 2.7L Petrol (G6BA); 2.0L Diesel (D4EA)
+  SL | 2010-2015 | 1.6L Petrol (G4FD); 2.0L Petrol (G4KD); 2.4L Petrol (G4KE); 2.0L Turbo Petrol (G4KF); 1.7L Diesel (D4FD); 2.0L Diesel (D4HA)
+  QL | 2015-2021 | 1.6L Petrol (G4FD); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NA); 2.4L Petrol (G4KJ); 2.0L Turbo Petrol (G4KH); 1.6L Diesel (D4FE); 1.7L Diesel (D4FD); 2.0L Diesel (D4HA)
+  NQ5 | 2021-now | 1.6L Turbo Petrol (G4FP); 2.0L Petrol (G4NM); 2.0L Petrol (G4NN); 2.5L Petrol (G4KN); 1.6L Hybrid (G4FT); 1.6L Plug-in Hybrid (G4FT); 2.0L LPG (L4NB); 1.6L Diesel (D4FE); 2.0L Diesel (D4HD)
+
+Stinger | | Liftback
+  CK | 2017-2023 | 2.0L Turbo Petrol (G4KL); 2.5L Turbo Petrol (G4KR); 3.3L Turbo Petrol (G6DP); 2.2L Diesel (D4HB)
+
+Stonic | | Crossover
+  YB CUV | 2017-now | 1.0L Turbo Petrol (G3LC); 1.25L Petrol (G4LF); 1.4L Petrol (G4LC); 1.6L Diesel (D4FB)
+
+Syros | | SUV
+  AY | 2025-now | 1.0L Turbo Petrol (G3LE); 1.5L Diesel (D4FE)
+
+Tasman | | Pickup
+  TK | 2025-now | 2.5L Turbo Petrol (G4KR); 2.2L Diesel (D4HE)
+
+Telluride | | SUV
+  ON | 2019-2026 | 3.8L Petrol (G6DN)
+  ON2 | 2026-now | 2.5L Turbo Petrol (G4KR); 2.5L Hybrid (G4KX)
+
+Venga | | MPV
+  YN | 2009-2019 | 1.4L Petrol (G4FA); 1.6L Petrol (G4FC); 1.4L Diesel (D4FC); 1.6L Diesel (D4FB)
+
+XCeed | | Crossover
+  CD CUV | 2019-now | 1.0L Turbo Petrol (G3LC); 1.4L Turbo Petrol (G4LD); 1.5L Turbo Petrol (G4LH); 1.6L Turbo Petrol (G4FJ); 1.6L Plug-in Hybrid (G4LE); 1.6L Diesel (D4FE)

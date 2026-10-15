@@ -1,6 +1,6 @@
 # Vinzuu (MVP v0.4)
 
-A customer types a plate number. The system identifies the car, finds the exact spare part number for it,
+A customer types their car's VIN (the 17-character vehicle identification number). The system identifies the car, finds the exact spare part number for it,
 shows which Kigali shops have it in stock (price, distance, trust label), and lets the customer book a
 garage to fit it.
 
@@ -24,14 +24,54 @@ Then open http://localhost:3000
 |---|---|---|
 | Welcome / sign in | `/` | Everyone starts here: sign in, or create an account |
 | Customer app | `/index.html` | Car owners: find parts, book installation, see "my cars" if signed in |
-| Shop console | `/shop.html` | Shops: add parts, update price and stock, see booking requests |
-| Admin console | `/admin.html` | You: part numbers, shops, missing-part report, stats, add or remove a car |
+| Sell on vinzuu | `/sell.html` | Parts shops and garages apply to join (RDB TIN, certificate and front photos) |
+| Vinzuu Sellers & Garages | `/business.html` | Approved shops and garages: parts (price and stock), part requests, bookings, jobs, labour prices, reviews |
+| Admin console | `/admin.html` | You: applications, customer reports, parts, shop and garage scorecards (edit, suspend), accounts (block), bookings (filter, cancel), reviews, part numbers, charts, admin log, CSV downloads |
 
-**Admin token.** Copy `.env.example` to `.env` and set `ADMIN_TOKEN` to a long random password.
-Without it the token is `dev-admin-token`, which is fine on your own laptop and nowhere else.
+**Who can post parts.** Only an admin account. A shop asks for a part from "Request a part"; an admin checks
+the photo, part number and price, then approves it. Shops change only their own price and stock.
+
+**Switching places.** Signing in takes each account to its own home: an admin to `/admin.html`, a shop or
+garage to `/business.html`, a customer to their garage. Shop, garage and admin accounts get an account menu
+(click their name) to switch: an admin to Sellers & Garages (opening any shop or garage read-only, to see what
+its owner sees) or the customer site; a shop or garage to the customer site. Customers have no such menu.
+
+**Admin account.** Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`: the server makes that account an
+admin when it starts. With demo data, `admin@vinzuu.rw` / `Admin-vinzuu1` also works. The old
+`ADMIN_TOKEN` header still works for scripts (default `dev-admin-token`, laptop only).
 
 **Session secret.** Also set `SESSION_SECRET` in `.env` to a long random string before you share the
 server with anyone. It signs the "you are signed in" cookie; the default is fine for your own laptop only.
+
+## Put it online (Vercel + Turso, both free)
+
+Vercel runs the server; Turso keeps the database. Vercel has no disk that lasts, so online the data lives in
+Turso, a hosted database that speaks the same SQL as the local file. On your laptop nothing changes: without
+`TURSO_DATABASE_URL`, Vinzuu uses `data/parts.db` as before.
+
+1. **Turso.** Sign up at https://turso.tech, create a database (pick a location near the one you choose for
+   Vercel below, for example Europe), then copy its **URL** (`libsql://...turso.io`) and create a **token**.
+2. **Vercel.** Sign up at https://vercel.com with your GitHub account, choose **Add New > Project**, and import
+   this repository. `vercel.json` already tells Vercel how to run it; leave the build settings as they are.
+3. **Settings.** Before deploying (or under **Settings > Environment Variables**, then redeploy), add:
+
+   | Name | Value |
+   |---|---|
+   | `TURSO_DATABASE_URL` | the `libsql://...` URL from step 1 |
+   | `TURSO_AUTH_TOKEN` | the token from step 1 |
+   | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | your admin account |
+   | `SESSION_SECRET` | a long random string |
+   | `ADMIN_TOKEN` | another long random string |
+   | `SEED_DEMO` | `false` for real data only (leave it out to load the demo shops and part numbers) |
+   | `GOOGLE_CLIENT_ID` | optional, for Google sign-in |
+
+4. **Region.** Under **Settings > Functions**, set the function region close to your Turso database (each
+   page asks the database a few questions, so the two should be near each other).
+5. **Google sign-in.** Add your Vercel address (`https://<your-project>.vercel.app`) to the Authorized
+   JavaScript origins of your Google client ID (see Google sign-in below).
+
+The first visit after a quiet spell takes a moment longer: Vercel starts the server and Vinzuu checks the
+database tables. Every push to the repository's main branch deploys again on its own.
 
 ## Customer accounts
 
@@ -39,35 +79,41 @@ The welcome page (`/`) lets a customer create an account or sign in with email a
 in:
 - A car they register gets saved to their account, and shows up as a row of plate chips ("my cars") the
   next time they visit, so they don't have to retype it.
-- If they sign in and re-enter a plate nobody else had claimed yet, it is adopted into their account.
-- A plain "Continue without an account" link on the welcome page skips straight to the plate-only flow
-  from the first version of this project, unchanged, for anyone who does not want to sign up.
+- If they sign in and re-enter a VIN nobody else had claimed yet, that car is adopted into their account.
+- The VIN box on the welcome page, and a plain "Continue without an account" link in the sign-in box, go
+  straight to the customer app for anyone who does not want to sign up.
+- The plate is still asked for when a car is registered, but only as a label: typing a plate never looks a
+  car up, because a plate in Rwanda can move to a different car. The VIN is what finds the car.
+
+Creating an account asks for a full name, email, an optional phone number, and a password typed twice.
+New passwords need at least 8 characters, an uppercase letter, a number and a special character (checked
+in the browser and again on the server). Accounts made before this rule can still sign in.
 
 Passwords are hashed with `scrypt` (built into Node, no extra dependency). Sessions are a signed cookie,
 not a database table, so restarting the server does not sign anyone out early.
 
-### Google and Apple sign-in
+### Google sign-in
 
-Both are **optional**. Leave `GOOGLE_CLIENT_ID` / `APPLE_CLIENT_ID` unset in `.env` and the welcome page
-just shows email sign in / create account — no broken buttons. Add one and its button appears automatically.
+**Optional.** The sign-in box always shows "Continue with Google", but until `GOOGLE_CLIENT_ID` is set in
+`.env`, tapping it just says Google isn't available yet and points people to email. Set it and the
+button starts working automatically. It works on `localhost`, so you can test it before deploying.
 
-**Google** (works on `localhost` for testing):
-1. Go to https://console.cloud.google.com/apis/credentials, create an **OAuth 2.0 Client ID** of type
-   "Web application".
-2. Under "Authorized JavaScript origins" add `http://localhost:3000` (for testing) and your real domain
-   once you deploy.
-3. Copy the client ID into `.env` as `GOOGLE_CLIENT_ID`.
+1. Go to https://console.cloud.google.com/ and create a project (for example "Vinzuu").
+2. Open **APIs & Services → OAuth consent screen** (newer consoles call it **Google Auth Platform**).
+   Choose **External**, fill in the app name, support email and developer email, and save.
+   While the app is in "Testing", only the Google accounts you add under **Test users** can sign in.
+   Click **Publish app** when you want anyone to be able to.
+3. Open **APIs & Services → Credentials → Create credentials → OAuth client ID**. Choose
+   **Web application**.
+4. Under **Authorized JavaScript origins** add `http://localhost:3000` and `http://localhost` (Google
+   needs both for local testing), plus your real domain (for example `https://your-domain.example`) once you deploy.
+   No redirect URIs are needed.
+5. Copy the client ID (it ends in `.apps.googleusercontent.com`) into `.env` as `GOOGLE_CLIENT_ID`,
+   then restart the server.
 
-**Apple** (needs a real deployed domain — it cannot be tested on `localhost`; Apple does not accept
-`localhost` as a redirect target):
-1. You need a paid Apple Developer account. Create a **Services ID** in
-   https://developer.apple.com/account/resources/identifiers/list/serviceId, enable "Sign in with Apple",
-   and configure it with your deployed domain and a return URL.
-2. Copy the Services ID into `.env` as `APPLE_CLIENT_ID`, and the return URL as `APPLE_REDIRECT_URI`.
-3. Deploy the site and test there. Until then, the Apple button simply stays hidden.
-
-The server verifies both providers' sign-in tokens itself (checking the signature against Google's/Apple's
-published public keys) rather than trusting whatever the browser sends — see `lib/auth.js`.
+The client ID is not a secret (it is visible in the page), so there is no client secret to store.
+The server verifies every Google sign-in token itself, checking the signature against Google's
+published public keys, rather than trusting whatever the browser sends; see `lib/auth.js`.
 
 ## Try it with the demo data
 
@@ -76,16 +122,23 @@ The first start loads **invented** demo data: fake shops, fake prices, and part 
 
 | Try this | What it shows |
 |---|---|
-| Plate `RXA002B`, part **Front Bumper** | A Korea-built Kia Sportage gets part `DEMO-KIA-QL-FB-KR` |
-| Plate `RXA003C`, part **Front Bumper** | The same model built in the USA gets a different part, `DEMO-KIA-QL-FB-US` |
-| Plate `RXA001A`, part **Front Brake Pad** | Three shops, three different trust labels |
-| Any plate not listed, for example `RXC777Z` | The "we do not know this car yet" registration form |
+| **Try a demo car** link under the VIN box (homepage or customer app) | Opens the demo Toyota RAV4 in one tap |
+| VIN `JTMBK31V996054321` (the example VIN shown in the box), part **Front Brake Pad** | Toyota RAV4 (plate `RXA001A`): three shops, three different trust labels |
+| VIN `KNDPM3AC8J7100002`, part **Front Bumper** | A Korea-built Kia Sportage (plate `RXA002B`) gets part `DEMO-KIA-QL-FB-KR` |
+| VIN `5XYPG4A38JG100003`, part **Front Bumper** | The same model built in the USA (plate `RXA003C`) gets a different part, `DEMO-KIA-QL-FB-US` |
+| VIN `KMHJ3813DHU100004` | Hyundai Tucson (plate `RXA004D`) |
+| Any other valid VIN, for example `JTMBK31V996000999` | The "we do not know this VIN yet" registration form |
 | Search "brake noise" | Symptom search finds the brake pads |
 | Sign up on the welcome page, then register a car | The car is saved to your account; "Change car" now shows it as a tap-to-select chip |
-| Shop console, code `111111` to `555555` | Sign in as a demo shop |
-| Admin console, your admin token, **Cars** tab | Add, correct, or delete a car directly |
+| `/business.html`, `shop1@vinzuu.rw` to `shop5@`, password `Vinzuu-demo1` | Sign in as a demo shop |
+| `/business.html`, `garage1@vinzuu.rw` to `garage3@`, or `both@vinzuu.rw` | A demo garage, or an account with both sides |
+| `/admin.html`, `admin@vinzuu.rw` / `Admin-vinzuu1`, **Cars** tab | Add, correct, or delete a car directly |
+| `/admin.html`, **Reports** tab | A demo customer's report about a shop's price, to look into and close |
+| Sign in as `customer@vinzuu.rw`, password `Vinzuu-demo1`, then try the demo car | A customer with past bookings, to rate or report |
 
-The demo plates use the `RXA` series, which Rwanda has not issued, so they cannot belong to a real car.
+The demo plates use the `RXA` series, which Rwanda has not issued, so they cannot belong to a real car. The
+demo VINs are invented too. A demo database created before the demo cars had VINs gets them filled in on the
+next start.
 
 **To start clean (real use):** stop the server, run `npm run reset-db`, then `npm run start:real`.
 
@@ -94,6 +147,9 @@ The demo plates use the `RXA` series, which Rwanda has not issued, so they canno
 ```
 npm test
 ```
+
+`TEST_LIBSQL=1 npm test` runs the same tests through the libsql client that Vinzuu uses with Turso (on a
+temporary file), so both database paths stay checked.
 
 37 tests cover the algorithms, the trust rules, privacy, access control, accounts, and the admin
 add/correct/delete-a-car endpoints. Several were checked by deliberately breaking the rule in the code and
@@ -110,7 +166,7 @@ confirming the test failed.
 | Algorithm E: confidence to customer badge | `lib/algorithms.js` (`badgeFor`) |
 | Database schema | `db.js` |
 | REST API | `server.js` |
-| Customer accounts, sessions, Google/Apple sign-in | `lib/auth.js` |
+| Customer accounts, sessions, Google sign-in | `lib/auth.js` |
 
 Safety rules worth knowing:
 
@@ -145,17 +201,20 @@ These are deliberate, and each one fixes a gap in the spec:
 
 - **The WMI table is a starter list.** `lib/algorithms.js` lists the codes for Toyota, Hyundai and Kia written from
   public directories. Verify it against ISO 3780 or manufacturer data and extend it as you meet new codes.
-- **Demo part numbers are invented.** Real fitment data has to come from manufacturer catalogues or physical checks.
-  The admin console and the missing-parts report exist to help you build it.
+- **Demo part numbers are invented** (they start with `DEMO-`). Next to them, `lib/oe/<make>.csv` holds about 640 real
+  part numbers for Toyota, Hyundai and Kia service parts (filters, spark plugs, brake pads and discs, and a few more),
+  each with the catalogue page it was read from. Most come from US-market dealer catalogues, so they are marked LOW
+  or MEDIUM confidence until someone checks them against the part in Kigali. Diesel engines are barely covered.
+  The admin adds more one by one under **Part numbers**, or many at once with **Import part numbers from a
+  spreadsheet** (same columns as those files). The missing-parts report shows where to look next.
 - **Shop login is a simple access code and admin login is one token** (not an account like customers get). Fine
   for a pilot with a handful of shops and one operator, not for the public internet.
 - **No "forgot password" flow yet.** If a customer forgets their password, the only fix right now is an admin
   resetting it directly in the database, or the customer signing up again with a different email.
-- **Apple sign-in cannot be tested on localhost.** See "Google and Apple sign-in" above.
 - **Photos are stored inside the database.** Move them to file storage (Cloudinary, S3) before you have many shops.
 - **WhatsApp works through pre-filled links.** The customer taps to send, so nothing is sent automatically. The
   WhatsApp Business API is the upgrade path.
-- **SQLite on one server.** Fine for a pilot. The schema moves to PostgreSQL with small changes.
+- **SQLite (locally) or Turso (online).** Fine for a pilot. The schema moves to PostgreSQL with small changes.
 - **No visual map yet.** Shops and garages are ranked by distance in a list, with no map view. The data is
   already there (every shop and garage has latitude/longitude, and distance is already computed server-side),
   so this is a frontend addition, not a redesign. Recommended path: Leaflet + OpenStreetMap, which is free
@@ -169,10 +228,15 @@ These are deliberate, and each one fixes a gap in the spec:
 
 ```
 server.js            the API and web server
-db.js                schema, part categories, demo data
+db.js                schema, demo data, loading the real part numbers
+lib/dbclient.js      one database interface: a local SQLite file, or Turso online
+vercel.json          how Vercel runs the server
+lib/partcatalog.js   every part type (134), grouped like a parts catalogue
+lib/oe/*.csv         real part numbers with their sources
+lib/fitmentcsv.js    reads part-number spreadsheets (CSV)
 lib/algorithms.js    pure functions: plate, VIN, WMI, distance, badges
 lib/matching.js      database algorithms: part lookup, shop listings, catalog
-lib/auth.js          passwords, session cookies, Google/Apple sign-in verification
+lib/auth.js          passwords, session cookies, Google sign-in verification
 public/              the web pages (welcome, customer, shop, admin), scripts, styles, fonts
 test/api.test.js     the test suite
 scripts/reset-db.js  deletes the local database

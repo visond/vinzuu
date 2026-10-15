@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 242 104" role="img" aria-label="van">
+<ellipse cx="121" cy="98" rx="112" ry="5" fill="#10283B" opacity="0.14"/>
+<path d="M10 76 L10 30 Q10 18 24 18 L178 18 Q193 18 204 33 L222 52 Q231 56 231 65 L231 76 Q231 81 225 81 L16 81 Q10 81 10 76 Z" fill="#0F4C81"/>
+<path d="M10 76 L10 30 Q10 18 24 18 L178 18 Q193 18 204 33 L222 52 Q231 56 231 65 L231 76 Q231 81 225 81 L16 81 Q10 81 10 76 Z" fill="none" stroke="#0B3A63" stroke-width="2" stroke-linejoin="round"/>
+<path d="M20 24 L60 24 L60 46 L20 46 Z M66 24 L110 24 L110 46 L66 46 Z M116 24 L170 24 L170 46 L116 46 Z M176 24 Q188 24 196 34 L208 48 L176 48 Z" fill="#CFE2F1"/>
+<path d="M14 64 L230 64" stroke="#0B3A63" stroke-width="1.5" opacity="0.45"/>
+<rect x="222" y="58" width="8" height="5" rx="2" fill="#F5B700"/>
+<circle cx="56" cy="81" r="17" fill="#1B2A36"/><circle cx="56" cy="81" r="8" fill="#C9D3DA"/><circle cx="56" cy="81" r="2.5" fill="#1B2A36"/><circle cx="192" cy="81" r="17" fill="#1B2A36"/><circle cx="192" cy="81" r="8" fill="#C9D3DA"/><circle cx="192" cy="81" r="2.5" fill="#1B2A36"/>
+</svg>

@@ -1,0 +1,200 @@
+# Hyundai passenger cars, SUVs, vans, light trucks and minibuses on sale in model years 2000 to 2026.
+# Compiled in October 2026 from the Wikipedia article for each model and its generations.
+# Generation codes are Hyundai's own platform codes; engine codes are Hyundai engine type codes
+# (or the engine family where Hyundai does not publish one). Check before treating them as fitment.
+#
+# Format:   Model | other names | body
+#             CODE | first-last model year (last "now" if still made) | engines, ';'-separated
+# An engine is "<litres>L <fuel> (<engine code>)", or "Electric" / "Hydrogen fuel cell".
+
+Accent | Verna, Pony, Excel, Solaris | Sedan, hatchback
+  LC | 2000-2005 | 1.3L Petrol (G4EA); 1.5L Petrol (G4EC); 1.6L Petrol (G4ED); 1.5L Diesel (D3EA)
+  MC | 2006-2011 | 1.4L Petrol (G4EE); 1.6L Petrol (G4ED); 1.5L Diesel (D4FA)
+  RB | 2011-2017 | 1.4L Petrol (G4FA); 1.6L Petrol (G4FC); 1.6L Petrol (G4FD); 1.4L Diesel (D4FC); 1.6L Diesel (D4FB)
+  HC | 2017-2022 | 1.4L Petrol (G4LC); 1.6L Petrol (G4FG); 1.6L Petrol (G4FL); 1.0L Turbo Petrol (G3LC); 1.5L Diesel (D4FE)
+  BN7 | 2023-now | 1.5L Petrol (G4FL); 1.5L Turbo Petrol (G4LH)
+
+Alcazar | Grand Creta | SUV
+  SU2 | 2021-now | 1.5L Turbo Petrol (G4LH); 2.0L Petrol (G4NA); 1.5L Diesel (D4FE)
+
+Atos | Santro, Atos Prime | Hatchback
+  MX | 2000-2014 | 1.0L Petrol (G4HC); 1.1L Petrol (G4HG)
+  AH2 | 2018-2022 | 1.1L Petrol (G4HG)
+
+Aura | Grand i10 Sedan, Grand Metro | Sedan
+  AI3 | 2020-now | 1.2L Petrol (G4LA); 1.0L Turbo Petrol (G3LD); 1.2L Diesel (D3FA)
+
+Bayon | | Crossover
+  BC3 CUV | 2021-now | 1.0L Turbo Petrol (G3LE); 1.2L Petrol (G4LF)
+
+Casper | Inster | Crossover
+  AX1 | 2021-now | 1.0L Petrol (G3LE); 1.0L Turbo Petrol (G3LD); Electric
+
+County | | Minibus
+  HD County | 2000-now | 3.9L Diesel (D4DB); 3.9L Diesel (D4DD); 3.9L Diesel (D4GA); Electric
+
+Creta | ix25, Cantus | SUV
+  GS | 2014-2020 | 1.4L Petrol (G4LC); 1.6L Petrol (G4FG); 2.0L Petrol (G4NA); 1.4L Diesel (D4FC); 1.6L Diesel (D4FB)
+  SU2 | 2020-now | 1.5L Petrol (G4FL); 1.4L Turbo Petrol (G4LD); 1.5L Turbo Petrol (G4LH); 1.6L Petrol (G4FG); 2.0L Petrol (G4NA); 1.5L Diesel (D4FE); Electric
+
+Dynasty | | Sedan
+  LX | 2000-2005 | 2.5L Petrol (G6BV); 3.0L Petrol (G6AT); 3.5L Petrol (G6CU)
+
+Elantra | Avante, i30 Sedan, Lantra | Sedan, hatchback
+  XD | 2000-2006 | 1.6L Petrol (G4ED); 1.8L Petrol (G4GB); 2.0L Petrol (G4GC); 2.0L Diesel (D4EA)
+  HD | 2006-2010 | 1.6L Petrol (G4FC); 2.0L Petrol (G4GC); 1.6L LPG (L4FC); 1.6L Diesel (D4FB)
+  MD | 2010-2015 | 1.6L Petrol (G4FG); 1.6L Petrol (G4FD); 1.8L Petrol (G4NB); 2.0L Petrol (G4NC); 1.6L Diesel (D4FB)
+  AD | 2015-2020 | 1.6L Petrol (G4FG); 2.0L Petrol (G4NH); 1.4L Turbo Petrol (G4LD); 1.6L Turbo Petrol (G4FJ); 1.6L LPG (L4FE); 1.6L Diesel (D4FB)
+  CN7 | 2020-2025 | 1.6L Petrol (G4FM); 2.0L Petrol (G4NS); 1.6L Turbo Petrol (G4FP); 2.0L Turbo Petrol (G4KH); 1.6L Hybrid (G4LE); 1.6L LPG (L4FM)
+  CN8 | 2026-now | 2.0L Petrol (G4NS); 1.6L Hybrid (G4LE)
+
+Equus | Centennial | Sedan
+  LZ | 2000-2009 | 3.0L Petrol (G6CT); 3.5L Petrol (G6CU); 4.5L Petrol (G8AA)
+  VI | 2009-2016 | 3.8L Petrol (G6DA); 4.6L Petrol (G8BA); 5.0L Petrol (G8BE)
+
+Eon | | Hatchback
+  HA | 2011-2019 | 0.8L Petrol (G3HA); 1.0L Petrol (G3LA)
+
+Entourage | | Minivan
+  VQ | 2007-2009 | 3.8L Petrol (G6DA)
+
+Exter | | Crossover
+  AI3 CUV | 2023-now | 1.2L Petrol (G4LA); 1.2L CNG (G4LA)
+
+Galloper | Galloper II, Innovation | SUV
+  JK | 2000-2003 | 3.0L Petrol (G6AT); 2.5L Diesel (D4BH)
+
+Genesis | Genesis Sedan, G80 | Sedan
+  BH | 2008-2013 | 3.3L Petrol (G6DB); 3.8L Petrol (G6DA); 4.6L Petrol (G8BA); 5.0L Petrol (G8BE)
+  DH | 2014-2016 | 3.3L Petrol (G6DH); 3.8L Petrol (G6DJ); 5.0L Petrol (G8BE)
+
+Genesis Coupe | | Coupe
+  BK | 2008-2016 | 2.0L Turbo Petrol (G4KF); 3.8L Petrol (G6DA); 3.8L Petrol (G6DJ)
+
+Getz | Click, TB | Hatchback
+  TB | 2002-2011 | 1.1L Petrol (G4HG); 1.3L Petrol (G4EA); 1.4L Petrol (G4EE); 1.6L Petrol (G4ED); 1.5L Diesel (D3EA); 1.5L Diesel (D4FA)
+
+Grandeur | Azera | Sedan
+  XG | 2000-2005 | 2.5L Petrol (G6BV); 3.0L Petrol (G6CT); 3.5L Petrol (G6CU)
+  TG | 2005-2011 | 2.4L Petrol (G4KC); 2.7L Petrol (G6EA); 3.3L Petrol (G6DB); 3.8L Petrol (G6DA); 2.2L Diesel (D4EB)
+  HG | 2011-2016 | 2.4L Petrol (G4KJ); 3.0L Petrol (G6DG); 3.3L Petrol (G6DH); 2.4L Hybrid (G4KK); 2.2L Diesel (D4HB)
+  IG | 2016-2022 | 2.4L Petrol (G4KJ); 2.5L Petrol (G4KN); 3.0L Petrol (G6DG); 3.3L Petrol (G6DH); 2.4L Hybrid (G4KK); 3.0L LPG (L6DB); 2.2L Diesel (D4HB)
+  GN7 | 2022-now | 2.5L Petrol (G4KN); 3.5L Petrol (G6DU); 1.6L Hybrid (G4FT); 3.5L LPG (L6DU)
+
+H-1 | Starex, Grand Starex, H200, i800, iLoad, iMax | Van, minibus
+  A1 | 2000-2007 | 2.4L Petrol (G4JS); 3.0L Petrol (G6AT); 2.5L Diesel (D4BH); 2.5L Diesel (D4CB)
+  TQ | 2007-2021 | 2.4L Petrol (G4KC); 2.4L LPG (L4KB); 2.5L Diesel (D4BH); 2.5L Diesel (D4CB)
+
+H350 | Solati | Van, minibus
+  EU | 2015-now | 2.5L Diesel (D4CB)
+
+HB20 | HB20S | Hatchback, sedan
+  HB | 2012-2019 | 1.0L Petrol (G3LA); 1.6L Petrol (G4FC)
+  BR2 | 2019-now | 1.0L Petrol (G3LA); 1.0L Turbo Petrol (G3LC); 1.6L Petrol (G4FG)
+
+i10 | Grand i10, Grand i10 Nios, Xcent | Hatchback, sedan
+  PA | 2007-2013 | 1.1L Petrol (G4HG); 1.2L Petrol (G4LA); 1.1L Diesel (D3FA)
+  BA | 2013-2019 | 1.0L Petrol (G3LA); 1.2L Petrol (G4LA); 1.1L Diesel (D3FA); 1.2L Diesel (D3FA)
+  AC3 | 2019-now | 1.0L Petrol (G3LA); 1.0L Turbo Petrol (G3LD); 1.2L Petrol (G4LA); 1.2L Diesel (D3FA)
+
+i20 | Elite i20 | Hatchback
+  PB | 2008-2014 | 1.2L Petrol (G4LA); 1.4L Petrol (G4FA); 1.6L Petrol (G4FC); 1.1L Diesel (D3FA); 1.4L Diesel (D4FC)
+  GB | 2014-2020 | 1.2L Petrol (G4LA); 1.4L Petrol (G4LC); 1.0L Turbo Petrol (G3LC); 1.1L Diesel (D3FA); 1.4L Diesel (D4FC)
+  BC3 | 2020-2026 | 1.0L Turbo Petrol (G3LE); 1.2L Petrol (G4LF); 1.6L Turbo Petrol (G4FP); 1.5L Diesel (D4FE)
+
+i30 | Elantra Touring, Elantra GT | Hatchback, wagon
+  FD | 2007-2011 | 1.4L Petrol (G4FA); 1.6L Petrol (G4FC); 2.0L Petrol (G4GC); 1.6L Diesel (D4FB); 2.0L Diesel (D4EA)
+  GD | 2011-2016 | 1.4L Petrol (G4FA); 1.6L Petrol (G4FG); 1.6L Petrol (G4FD); 1.8L Petrol (G4NB); 2.0L Petrol (G4NC); 1.4L Diesel (D4FC); 1.6L Diesel (D4FB)
+  PD | 2016-2025 | 1.0L Turbo Petrol (G3LC); 1.4L Turbo Petrol (G4LD); 1.5L Turbo Petrol (G4LH); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NC); 2.0L Turbo Petrol (G4KH); 1.6L Diesel (D4FE)
+
+i40 | | Sedan, wagon
+  VF | 2011-2019 | 1.6L Petrol (G4FD); 2.0L Petrol (G4NC); 1.7L Diesel (D4FD)
+
+Ioniq | | Hatchback
+  AE | 2016-2022 | 1.6L Hybrid (G4LE); 1.6L Plug-in Hybrid (G4LE); Electric
+
+Ioniq 5 | | Crossover
+  NE | 2021-now | Electric
+
+Ioniq 6 | | Sedan
+  CE | 2022-now | Electric
+
+Ioniq 9 | | SUV
+  ME | 2025-now | Electric
+
+ix20 | | MPV
+  JC | 2010-2019 | 1.4L Petrol (G4FA); 1.6L Petrol (G4FC); 1.4L Diesel (D4FC); 1.6L Diesel (D4FB)
+
+Kona | Kauai | SUV
+  OS | 2017-2023 | 1.0L Turbo Petrol (G3LC); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NH); 1.6L Hybrid (G4LE); 1.6L Diesel (D4FE); Electric
+  SX2 | 2023-now | 1.0L Turbo Petrol (G3LE); 1.6L Turbo Petrol (G4FP); 2.0L Petrol (G4NS); 1.6L Hybrid (G4LL); Electric
+
+Matrix | Lavita | MPV
+  FC | 2001-2010 | 1.5L Petrol (G4EC); 1.6L Petrol (G4ED); 1.8L Petrol (G4GB); 1.5L Diesel (D3EA); 1.5L Diesel (D4FA)
+
+Mighty | | Light truck
+  Mighty II | 2000-2015 | 3.3L Diesel (D4AL); 3.9L Diesel (D4DB); 3.9L Diesel (D4DD)
+  QT | 2015-now | 3.9L Diesel (D4GA); 3.5L Diesel (D4CC)
+
+Nexo | | SUV
+  FE | 2018-now | Hydrogen fuel cell
+
+Palisade | | SUV
+  LX2 | 2018-2025 | 3.5L Petrol (G6DP); 3.8L Petrol (G6DN); 2.2L Diesel (D4HE)
+  LX3 | 2025-now | 2.5L Turbo Petrol (G4KR); 3.5L Petrol (G6DU); 2.5L Hybrid (G4KX)
+
+Porter | H100, H-100 | Light truck, van
+  HR | 2000-2004 | 2.5L Diesel (D4BH); 2.6L Diesel (D4BB)
+  Porter II | 2004-now | 2.5L Diesel (D4CB); 2.5L Turbo LPG (L4GA); Electric
+
+Santa Cruz | | Pickup
+  NX4a | 2021-now | 2.5L Petrol (G4KN); 2.5L Turbo Petrol (G4KP)
+
+Santa Fe | Maxcruz, Santa Fe XL | SUV
+  SM | 2000-2006 | 2.0L Petrol (G4JP); 2.4L Petrol (G4JS); 2.7L Petrol (G6BA); 3.5L Petrol (G6CU); 2.0L Diesel (D4EA)
+  CM | 2006-2012 | 2.4L Petrol (G4KE); 2.7L Petrol (G6EA); 3.3L Petrol (G6DB); 3.5L Petrol (G6DC); 2.2L Diesel (D4EB); 2.2L Diesel (D4HB); 2.0L Diesel (D4HA)
+  DM | 2012-2018 | 2.4L Petrol (G4KJ); 2.0L Turbo Petrol (G4KH); 3.3L Petrol (G6DH); 2.0L Diesel (D4HA); 2.2L Diesel (D4HB)
+  TM | 2018-2023 | 2.4L Petrol (G4KJ); 2.5L Petrol (G4KM); 2.0L Turbo Petrol (G4KH); 2.5L Turbo Petrol (G4KP); 3.5L Petrol (G6DP); 1.6L Hybrid (G4FT); 2.0L Diesel (D4HA); 2.2L Diesel (D4HB); 2.2L Diesel (D4HE)
+  MX5 | 2023-now | 2.5L Turbo Petrol (G4KP); 1.6L Hybrid (G4FT); 1.6L Plug-in Hybrid (G4FT)
+
+Santamo | | MPV
+  Santamo | 2000-2003 | 2.0L Petrol (G4CP)
+
+Sonata | i45, Sonica | Sedan
+  EF | 2000-2005 | 2.0L Petrol (G4JP); 2.4L Petrol (G4JS); 2.5L Petrol (G6BV); 2.7L Petrol (G6BA)
+  NF | 2005-2010 | 2.0L Petrol (G4KA); 2.4L Petrol (G4KC); 3.3L Petrol (G6DB); 2.0L Diesel (D4EA)
+  YF | 2010-2014 | 2.0L Petrol (G4KD); 2.4L Petrol (G4KJ); 2.0L Turbo Petrol (G4KH); 2.4L Hybrid (G4KK); 2.0L LPG (L4KA)
+  LF | 2014-2019 | 2.0L Petrol (G4NA); 2.4L Petrol (G4KJ); 1.6L Turbo Petrol (G4FJ); 2.0L Turbo Petrol (G4KH); 2.0L Hybrid (G4NG); 2.0L LPG (L4NA); 1.7L Diesel (D4FD)
+  DN8 | 2019-now | 2.0L Petrol (G4NS); 2.5L Petrol (G4KN); 1.6L Turbo Petrol (G4FP); 2.5L Turbo Petrol (G4KR); 2.0L Hybrid (G4NG); 2.0L LPG (L4NF)
+
+Staria | | Van, minibus
+  US4 | 2021-now | 3.5L Petrol (G6DU); 3.5L LPG (L6DU); 2.2L Diesel (D4HE); 1.6L Hybrid (G4FT)
+
+Stargazer | | MPV
+  KS | 2022-now | 1.5L Petrol (G4FL)
+
+Terracan | | SUV
+  HP | 2001-2007 | 3.5L Petrol (G6CU); 2.5L Diesel (D4BH); 2.9L Diesel (J3)
+
+Tiburon | Coupe, Tuscani | Coupe
+  RD | 2000-2001 | 1.6L Petrol (G4GR); 2.0L Petrol (G4GF)
+  GK | 2001-2008 | 1.6L Petrol (G4ED); 2.0L Petrol (G4GC); 2.7L Petrol (G6BA)
+
+Trajet | | MPV
+  FO | 2000-2008 | 2.0L Petrol (G4GC); 2.7L Petrol (G6BA); 2.0L Diesel (D4EA)
+
+Tucson | ix35 | SUV
+  JM | 2004-2009 | 2.0L Petrol (G4GC); 2.7L Petrol (G6BA); 2.0L Diesel (D4EA)
+  LM | 2009-2015 | 1.6L Petrol (G4FD); 2.0L Petrol (G4KD); 2.0L Petrol (G4NA); 2.4L Petrol (G4KE); 1.7L Diesel (D4FD); 2.0L Diesel (D4HA)
+  TL | 2015-2020 | 1.6L Petrol (G4FD); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NA); 2.4L Petrol (G4KJ); 1.6L Diesel (D4FE); 1.7L Diesel (D4FD); 2.0L Diesel (D4HA)
+  NX4 | 2020-now | 1.6L Turbo Petrol (G4FP); 2.0L Petrol (G4NS); 2.5L Petrol (G4KN); 1.6L Hybrid (G4FT); 1.6L Plug-in Hybrid (G4FT); 1.6L Diesel (D4FE); 2.0L Diesel (D4HD)
+
+Veloster | | Hatchback
+  FS | 2011-2017 | 1.6L Petrol (G4FD); 1.6L Turbo Petrol (G4FJ)
+  JS | 2018-2022 | 1.4L Turbo Petrol (G4LD); 1.6L Turbo Petrol (G4FJ); 2.0L Petrol (G4NH); 2.0L Turbo Petrol (G4KH)
+
+Venue | | SUV
+  QX | 2019-now | 1.2L Petrol (G4LA); 1.0L Turbo Petrol (G3LC); 1.6L Petrol (G4FM); 1.5L Diesel (D4FE)
+
+Veracruz | ix55 | SUV
+  EN | 2006-2015 | 3.8L Petrol (G6DA); 3.0L Diesel (D6EA)
