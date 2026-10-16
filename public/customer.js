@@ -1008,8 +1008,8 @@
       class: `fit-card${fit && !fit.shops ? ' out' : ''}`, type: 'button', 'aria-pressed': String(state.category === c.name),
       onclick: () => pickCategory(c),
     },
-    h('span', { class: 'fc-photo' }, PART_PHOTOS[c.name]
-      ? h('img', { src: `/img/parts/${PART_PHOTOS[c.name]}`, alt: '', width: 72, height: 72, loading: 'lazy' })
+    h('span', { class: 'fc-photo' }, PART_PHOTOS[c.name] || (fit && fit.photo)
+      ? h('img', { src: PART_PHOTOS[c.name] ? `/img/parts/${PART_PHOTOS[c.name]}` : fit.photo, alt: '', width: 72, height: 72, loading: 'lazy' })
       : h('span', { class: 'pt-initial', 'aria-hidden': 'true', text: c.name.charAt(0) })),
     h('span', { class: 'fc-body' },
       h('span', { class: 'fc-name', text: c.name }),
@@ -1050,7 +1050,7 @@
 
   async function loadListings() {
     const q = new URLSearchParams();
-    if (state.query.oe) { q.set('oe_numbers', state.query.oe.join(',')); q.set('vehicle_id', state.vehicle.id); }
+    if (state.query.oe) { q.set('oe_numbers', state.query.oe.join(',')); q.set('vehicle_id', state.vehicle.id); q.set('part_category', state.category); }
     else q.set('part_category', state.query.category);
     if (state.coords) { q.set('lat', state.coords.lat); q.set('lon', state.coords.lon); }
     q.set('radius_km', state.radius);

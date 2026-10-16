@@ -9,6 +9,7 @@ const alg = require('../lib/algorithms');
 
 let server;
 let base;
+let testDb;
 
 // Each test database is in memory, or, with TEST_LIBSQL=1, a temporary file opened through the
 // libsql client that Vinzuu uses online with Turso, so both database paths get the same tests.
@@ -83,7 +84,7 @@ async function fakeVinLookup(vin) {
 const ADMIN = { 'x-admin-token': 'test-admin' };
 
 before(async () => {
-  const db = await openDb(testDbTarget());
+  const db = testDb = await openDb(testDbTarget());
   await seedDemo(db);
   const app = createApp(db, { adminToken: 'test-admin', writeLimit: { windowMs: 60_000, max: 10_000 }, vinLookup: fakeVinLookup, wikiJson: fakeWiki });
   await new Promise((resolve) => { server = app.listen(0, resolve); });
@@ -1520,4 +1521,41 @@ test('a garage the admin adds needs a photo, which customers then see', async ()
   assert.equal(changed.json.garage.photo_url, 'data:image/png;base64,iVBO');
   assert.equal((await call('PUT', `/api/admin/garages/${added.json.garage.id}`, { photo_url: '' }, ADMIN)).status, 400, 'the photo cannot be removed');
   assert.equal((await get('/api/garages/1/photo')).status, 404);
+});
+
+test('one part number is one part: a part shows only under the part it was posted as, with its own photo', async () => {
+  const row = { oe_number: 'TEST-760044Z000', part_category: 'Oil Filter', make: 'Hyundai', model: 'Casper', generation: 'AX1',
+    year_start: 2021, year_end: 2026, engine: null, origin_market: null, confidence_level: 'LOW', source: 'Test' };
+  assert.equal((await post('/api/admin/fitment-reference', row, ADMIN)).status, 201);
+  const twice = await post('/api/admin/fitment-reference', { ...row, part_category: 'Side Mirror' }, ADMIN);
+  assert.equal(twice.status, 409);
+  assert.match(twice.json.error, /already saved as Oil Filter/);
+
+  // A database saved before this check can still hold the number under both parts.
+  await testDb.prepare(`INSERT INTO fitment_reference (oe_number, part_category, make, model, generation, year_start, year_end,
+    engine, origin_market, confidence_level, source) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(row.oe_number, 'Side Mirror', 'Hyundai', 'Casper', 'AX1', 2021, 2026, null, null, 'LOW', 'Test');
+  const shop = (await get('/api/admin/shops', ADMIN)).json.shops[0];
+  const posted = await post('/api/admin/listings', { shop_id: shop.id, part_category: 'Side Mirror', oe_number: row.oe_number,
+    condition: 'aftermarket', price_rwf: 78000, stock_quantity: 19, photo_url: 'data:image/png;base64,iVBORw0K' }, ADMIN);
+  assert.equal(posted.status, 201);
+
+  const car = await post('/api/vehicles/register', { vin: 'KMHB351ARPU000777', make: 'Hyundai', model: 'Casper', year: 2024,
+    generation: 'AX1', engine: '1.0L Petrol' });
+  const cats = (await get(`/api/parts/for-vehicle?vehicle_id=${car.json.vehicle.id}`)).json.categories;
+  const mirror = cats.find((c) => c.name === 'Side Mirror');
+  assert.equal(mirror.shops, 1);
+  assert.equal(mirror.from_price_rwf, 78000);
+  assert.match(mirror.photo, new RegExp(`^/api/listings/${posted.json.listing.id}/photo\\?v=`));
+  const filter = cats.find((c) => c.name === 'Oil Filter');
+  assert.equal(filter.shops, 0, 'the mirror is not counted as an oil filter');
+  assert.equal(filter.photo, null);
+
+  const img = await fetch(base + mirror.photo);
+  assert.equal(img.status, 200);
+  assert.equal(img.headers.get('content-type'), 'image/png');
+  const q = `oe_numbers=${row.oe_number}&vehicle_id=${car.json.vehicle.id}&radius_km=any`;
+  assert.equal((await get(`/api/parts/listings?${q}&part_category=Side%20Mirror`)).json.count, 1);
+  assert.equal((await get(`/api/parts/listings?${q}&part_category=Oil%20Filter`)).json.count, 0);
+  assert.equal((await get('/api/listings/999999/photo')).status, 404);
 });
