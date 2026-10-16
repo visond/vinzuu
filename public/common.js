@@ -432,43 +432,44 @@ const AFTERMARKET_BRANDS = {
   'Wheels and tyres': ['Hankook', 'Kumho', 'Nexen', 'Bridgestone', 'Michelin', 'Dunlop', 'Goodyear', 'Yokohama'],
 };
 
-/** A Brand <select> for a part form: genuine brands, then the aftermarket brands of the chosen
- *  part's group, then "Other brand" which shows a text box. Picking a brand also sets the
- *  "Genuine / Aftermarket" select, so the two can't disagree. Put `select` in a field, then call
- *  `mount()` to add the text box under it. `value()` is the brand to save, or null. */
+/** A Brand <select> for a part form. The "Genuine / Aftermarket" select decides the list: genuine
+ *  shows the car makers' brands, aftermarket shows the makers of the chosen part's group, and both
+ *  end with "Other brand", which shows a text box. So a brand and its type can't disagree. Put
+ *  `select` in a field, then call `mount()` to add the text box under it. `value()` is the brand
+ *  to save, or null. */
 function brandPicker(id, typeSelect, { value = '', placeholder = 'Type the brand on the box' } = {}) {
   const OTHER = '__other';
   const select = h('select', { id });
   const other = h('input', { id: `${id}-other`, type: 'text', maxLength: 60, placeholder, 'aria-label': 'Brand name', style: 'margin-top: 8px', hidden: true });
   let group = null;
   function draw(keep, typed) {
-    const aftermarket = (group && AFTERMARKET_BRANDS[group]) || [];
-    const known = [...GENUINE_BRANDS, ...aftermarket];
-    const match = keep && known.find((b) => b.toLowerCase() === keep.toLowerCase());
+    const genuine = typeSelect.value === 'genuine';
+    const brands = genuine ? GENUINE_BRANDS : (group && AFTERMARKET_BRANDS[group]) || [];
+    const match = keep && brands.find((b) => b.toLowerCase() === keep.toLowerCase());
     select.replaceChildren(
-      h('option', { value: '', text: 'Choose the brand' }),
-      h('optgroup', { label: 'Genuine (the car maker\'s own part)' }, ...GENUINE_BRANDS.map((b) => h('option', { value: b, text: b }))),
-      aftermarket.length ? h('optgroup', { label: 'Aftermarket' }, ...aftermarket.map((b) => h('option', { value: b, text: b }))) : null,
+      h('option', { value: '', text: genuine || group ? 'Choose the brand' : 'Choose the part first to see brands' }),
+      ...brands.map((b) => h('option', { value: b, text: b })),
       h('option', { value: OTHER, text: 'Other brand: type it' }));
     if (match) select.value = match;
     else if (keep && typed) { select.value = OTHER; other.value = keep; }
     else select.value = '';
     other.hidden = select.value !== OTHER;
   }
+  const redraw = () => { const typed = select.value === OTHER; draw(picker.value() || '', typed); };
   select.addEventListener('change', () => {
     other.hidden = select.value !== OTHER;
     if (select.value === OTHER) other.focus();
-    if (!typeSelect || !select.value || select.value === OTHER) return;
-    typeSelect.value = GENUINE_BRANDS.includes(select.value) ? 'genuine' : 'aftermarket';
   });
-  draw(value, true);
-  return {
+  typeSelect.addEventListener('change', redraw);
+  const picker = {
     select,
     mount() { select.after(other); },
     /** Shows the brands for this part type's group. A picked brand stays if it is still listed; a typed one always stays. */
-    setCategory(cat) { const typed = select.value === OTHER, keep = this.value(); group = cat ? cat.group : null; draw(keep || '', typed); },
+    setCategory(cat) { group = cat ? cat.group : null; redraw(); },
     value() { return select.value === OTHER ? (other.value.trim() || null) : (select.value || null); },
   };
+  draw(value, true);
+  return picker;
 }
 
 /** <option>s for a part-type <select>, grouped like a parts catalogue (Service parts, Brakes…).
