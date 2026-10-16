@@ -445,7 +445,6 @@
       shop: select('pp-shop', [['', 'Choose the shop'], ...shops.map((s) => [String(s.id), `${s.name}${s.vetted ? '' : ' (not vetted)'}`])]),
       cat: h('select', { id: 'pp-cat' }, ...categoryOptions(categories, 'Choose a part')),
       oe: h('select', { id: 'pp-oe' }), spec: input('pp-spec', { placeholder: 'For example 12V 60Ah' }),
-      brand: input('pp-brand', { placeholder: 'For example Bosch' }),
       cond: select('pp-cond', [['genuine', 'Genuine part'], ['aftermarket', 'Aftermarket part']]),
       war: input('pp-war', { type: 'number', min: 0, placeholder: 'No warranty' }),
       price: input('pp-price', { type: 'number', min: 1 }), stock: input('pp-stock', { type: 'number', min: 0, value: 1 }),
@@ -453,6 +452,7 @@
       photo: h('input', { id: 'pp-photo', type: 'file', accept: 'image/*' }),
       preview: h('img', { class: 'photo-preview', alt: 'Photo preview', hidden: true }),
     };
+    const brand = brandPicker('pp-brand', f.cond);
     // Like a parts catalogue: the car narrows the part numbers, so the list stays short.
     const car = carSelects(makes, 'pp', { onChange: () => loadNumbers() });
     // A number that isn't in the table yet can be typed here: posting saves it for the chosen car
@@ -504,6 +504,7 @@
       const cat = categories.find((c) => c.name === f.cat.value);
       oeWrap.hidden = !cat || cat.type !== 'model_specific';
       specWrap.hidden = !cat || cat.type !== 'universal';
+      brand.setCategory(cat);
       loadNumbers();
     });
     f.photo.addEventListener('change', async (e) => {
@@ -511,7 +512,7 @@
       if (!e.target.files[0]) return;
       try { photo = await resizeImage(e.target.files[0]); f.preview.src = photo; f.preview.hidden = false; } catch (err) { setStatus(status, err.message, 'error'); }
     });
-    return h('form', { class: 'panel', novalidate: true, onsubmit: async (event) => {
+    const form = h('form', { class: 'panel', novalidate: true, onsubmit: async (event) => {
       event.preventDefault();
       const cat = categories.find((c) => c.name === f.cat.value);
       if (!f.shop.value) return setStatus(status, 'Choose the shop.', 'error');
@@ -525,7 +526,7 @@
         await call('/api/admin/listings', { method: 'POST', body: {
           shop_id: Number(f.shop.value), part_category: cat.name,
           oe_number: oe, universal_spec: cat.type === 'universal' ? f.spec.value : null,
-          brand: f.brand.value || null, condition: f.cond.value, warranty_months: f.war.value === '' ? null : Number(f.war.value),
+          brand: brand.value(), condition: f.cond.value, warranty_months: f.war.value === '' ? null : Number(f.war.value),
           price_rwf: Number(f.price.value), stock_quantity: Number(f.stock.value || 0), description: f.desc.value || null, photo_url: photo,
         } });
         setStatus(status, 'Posted. Customers can see it now.', 'ok');
@@ -536,12 +537,14 @@
       h('p', { class: 'muted', text: 'For a part you checked yourself, for example at the shop.' }),
       h('div', { class: 'row stack-sm' }, fieldEl('Shop', f.shop), fieldEl('Part', f.cat)),
       oeWrap, specWrap,
-      h('div', { class: 'row stack-sm' }, fieldEl('Brand', f.brand), fieldEl('Type', f.cond)),
+      h('div', { class: 'row stack-sm' }, fieldEl('Brand', brand.select), fieldEl('Type', f.cond)),
       h('div', { class: 'row stack-sm' }, fieldEl('Price (RWF)', f.price), fieldEl('Stock', f.stock)),
       fieldEl('Warranty in months (optional)', f.war),
       fieldEl('Description', f.desc, 'What customers read about the part.'),
       h('div', { class: 'field' }, h('label', { for: 'pp-photo', text: 'Photo' }), f.photo, f.preview),
       h('button', { class: 'btn btn-primary', type: 'submit', text: 'Post part' }), status);
+    brand.mount();
+    return form;
   }
 
   function allPartsList(listings, shops) {
@@ -572,27 +575,30 @@
   function editListing(l) {
     const f = {
       price: input('el-price', { type: 'number', min: 1, value: l.price_rwf }), stock: input('el-stock', { type: 'number', min: 0, value: l.stock_quantity }),
-      brand: input('el-brand', { value: l.brand || '' }), war: input('el-war', { type: 'number', min: 0, value: l.warranty_months ?? '' }),
+      war: input('el-war', { type: 'number', min: 0, value: l.warranty_months ?? '' }),
       cond: select('el-cond', [['genuine', 'Genuine part'], ['aftermarket', 'Aftermarket part']]),
       desc: h('textarea', { id: 'el-desc', rows: 4, maxLength: 600, value: l.description || '' }),
     };
     f.cond.value = l.condition;
+    const brand = brandPicker('el-brand', f.cond, { value: l.brand || '' });
+    brand.setCategory(categories.find((c) => c.name === l.part_category));
     const status = h('p', { class: 'status', role: 'status', 'aria-live': 'polite' });
     dialog(`Edit ${l.part_category} at ${l.shop_name}`, (close) => [
       h('div', { class: 'row stack-sm' }, fieldEl('Price (RWF)', f.price), fieldEl('Stock', f.stock)),
-      h('div', { class: 'row stack-sm' }, fieldEl('Brand', f.brand), fieldEl('Type', f.cond)),
+      h('div', { class: 'row stack-sm' }, fieldEl('Brand', brand.select), fieldEl('Type', f.cond)),
       fieldEl('Warranty in months', f.war), fieldEl('Description', f.desc), status,
       h('div', { class: 'dialog-actions' },
         h('button', { class: 'btn btn-primary', type: 'button', text: 'Save', onclick: async () => {
           try {
             await call(`/api/admin/listings/${l.id}`, { method: 'PUT', body: {
-              price_rwf: Number(f.price.value), stock_quantity: Number(f.stock.value), brand: f.brand.value || null, condition: f.cond.value,
+              price_rwf: Number(f.price.value), stock_quantity: Number(f.stock.value), brand: brand.value(), condition: f.cond.value,
               warranty_months: f.war.value === '' ? null : Number(f.war.value), description: f.desc.value || null,
             } });
             close(); showTab('parts');
           } catch (err) { setStatus(status, err.message, 'error'); }
         } }),
         h('button', { class: 'btn btn-quiet', type: 'button', text: 'Cancel', onclick: close }))]);
+    brand.mount();
   }
 
   // ---------------------------------------------------------------- reviews

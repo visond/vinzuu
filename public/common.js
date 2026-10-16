@@ -410,6 +410,67 @@ function portalSwitch(user, current) {
   });
 })();
 
+/** Brands a part can come from, so the admin and shops pick one instead of typing it. The
+ *  genuine ones are the car makers' own parts; the rest are well-known aftermarket makers, listed
+ *  per group of the parts catalogue (lib/partcatalog.js) so the list stays short. Korean brands
+ *  first in each group, since most cars on Vinzuu are Hyundai and Kia. */
+const GENUINE_BRANDS = ['Hyundai Genuine (Mobis)', 'Kia Genuine (Mobis)', 'Toyota Genuine'];
+const AFTERMARKET_BRANDS = {
+  'Service parts': ['Parts-Mall (PMC)', 'Sakura', 'Mann-Filter', 'Mahle', 'Bosch', 'Denso', 'NGK', 'Champion', 'Gates', 'Dayco', 'Aisin', 'Valeo', 'ZIC', 'Kixx', 'Total', 'Shell', 'Castrol', 'Mobil'],
+  Brakes: ['Sangsin (Hi-Q)', 'Mando', 'Parts-Mall (PMC)', 'Brembo', 'TRW', 'Bosch', 'Akebono', 'ATE', 'Textar'],
+  Engine: ['Parts-Mall (PMC)', 'Mahle', 'Aisin', 'Gates', 'Dayco', 'GMB', 'Victor Reinz', 'Elring', 'Febi'],
+  Cooling: ['Parts-Mall (PMC)', 'Aisin', 'GMB', 'Gates', 'Denso', 'Koyorad', 'Nissens', 'Valeo'],
+  'Fuel and ignition': ['Parts-Mall (PMC)', 'Bosch', 'Denso', 'NGK', 'Delphi', 'Champion'],
+  Exhaust: ['Parts-Mall (PMC)', 'Bosal', 'Walker'],
+  'Suspension and steering': ['Mando', 'CTR', 'Parts-Mall (PMC)', 'KYB', 'Monroe', 'Sachs', '555', 'Lemförder', 'Febi'],
+  'Transmission and drive': ['Valeo', 'Exedy', 'Aisin', 'Sachs', 'GKN', 'Parts-Mall (PMC)'],
+  Electrical: ['Rocket', 'Solite', 'Mando', 'Parts-Mall (PMC)', 'Bosch', 'Denso', 'Valeo', 'Hella', 'Varta', 'Exide', 'Amaron'],
+  Lighting: ['Depo', 'TYC', 'Philips', 'Osram', 'Hella'],
+  Body: ['Depo', 'TYC', 'Gordon', 'Parts-Mall (PMC)', 'Fuyao', 'AGC', 'Saint-Gobain'],
+  'Air conditioning and heating': ['Hanon (Halla)', 'Doowon', 'Denso', 'Valeo', 'Sanden', 'Parts-Mall (PMC)'],
+  Interior: ['Parts-Mall (PMC)'],
+  'Wheels and tyres': ['Hankook', 'Kumho', 'Nexen', 'Bridgestone', 'Michelin', 'Dunlop', 'Goodyear', 'Yokohama'],
+};
+
+/** A Brand <select> for a part form: genuine brands, then the aftermarket brands of the chosen
+ *  part's group, then "Other brand" which shows a text box. Picking a brand also sets the
+ *  "Genuine / Aftermarket" select, so the two can't disagree. Put `select` in a field, then call
+ *  `mount()` to add the text box under it. `value()` is the brand to save, or null. */
+function brandPicker(id, typeSelect, { value = '', placeholder = 'Type the brand on the box' } = {}) {
+  const OTHER = '__other';
+  const select = h('select', { id });
+  const other = h('input', { id: `${id}-other`, type: 'text', maxLength: 60, placeholder, 'aria-label': 'Brand name', style: 'margin-top: 8px', hidden: true });
+  let group = null;
+  function draw(keep, typed) {
+    const aftermarket = (group && AFTERMARKET_BRANDS[group]) || [];
+    const known = [...GENUINE_BRANDS, ...aftermarket];
+    const match = keep && known.find((b) => b.toLowerCase() === keep.toLowerCase());
+    select.replaceChildren(
+      h('option', { value: '', text: 'Choose the brand' }),
+      h('optgroup', { label: 'Genuine (the car maker\'s own part)' }, ...GENUINE_BRANDS.map((b) => h('option', { value: b, text: b }))),
+      aftermarket.length ? h('optgroup', { label: 'Aftermarket' }, ...aftermarket.map((b) => h('option', { value: b, text: b }))) : null,
+      h('option', { value: OTHER, text: 'Other brand: type it' }));
+    if (match) select.value = match;
+    else if (keep && typed) { select.value = OTHER; other.value = keep; }
+    else select.value = '';
+    other.hidden = select.value !== OTHER;
+  }
+  select.addEventListener('change', () => {
+    other.hidden = select.value !== OTHER;
+    if (select.value === OTHER) other.focus();
+    if (!typeSelect || !select.value || select.value === OTHER) return;
+    typeSelect.value = GENUINE_BRANDS.includes(select.value) ? 'genuine' : 'aftermarket';
+  });
+  draw(value, true);
+  return {
+    select,
+    mount() { select.after(other); },
+    /** Shows the brands for this part type's group. A picked brand stays if it is still listed; a typed one always stays. */
+    setCategory(cat) { const typed = select.value === OTHER, keep = this.value(); group = cat ? cat.group : null; draw(keep || '', typed); },
+    value() { return select.value === OTHER ? (other.value.trim() || null) : (select.value || null); },
+  };
+}
+
 /** <option>s for a part-type <select>, grouped like a parts catalogue (Service parts, Brakes…).
  *  `only` narrows it, for example to the parts that have part numbers. */
 function categoryOptions(categories, firstText, { only, selected, label = (c) => c.name } = {}) {
