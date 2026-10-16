@@ -109,6 +109,13 @@ function garagePhotoLink(g) {
   return `/api/garages/${g.id}/photo?v=${crypto.createHash('sha1').update(g.photo_url).digest('hex').slice(0, 10)}`;
 }
 
+/** Where the browser loads a part's photo from, without sending the uploaded picture inline. */
+function listingPhotoLink(l) {
+  if (!l.photo_url) return null;
+  if (!l.photo_url.startsWith('data:')) return l.photo_url;
+  return `/api/listings/${l.listing_id}/photo?v=${crypto.createHash('sha1').update(l.photo_url).digest('hex').slice(0, 10)}`;
+}
+
 function normalizeEmail(raw) {
   const email = text(raw, { field: 'email', max: 120, required: true }).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Enter a valid email address.');
@@ -731,12 +738,16 @@ function createApp(db, config = {}) {
       } else if (found(c).match_type !== 'none') {
         fit = found(c).match_type;
         const set = new Set(found(c).results.map((r) => r.oe_number));
-        mine = listings.filter((l) => l.oe_number && set.has(l.oe_number));
+        // A listing counts only for the part it was posted as, even if its number was also
+        // (wrongly) saved under another part.
+        mine = listings.filter((l) => l.oe_number && set.has(l.oe_number) && l.part_category === c.name);
       }
+      const cheapest = mine.reduce((a, l) => (!a || l.price_rwf < a.price_rwf ? l : a), null);
       return {
         name: c.name, type: c.type, fit,
         shops: new Set(mine.map((l) => l.shop_id)).size,
-        from_price_rwf: mine.length ? Math.min(...mine.map((l) => l.price_rwf)) : null,
+        from_price_rwf: cheapest ? cheapest.price_rwf : null,
+        photo: cheapest ? listingPhotoLink(cheapest) : null,
       };
     });
     res.json({ vehicle_id: vehicle.id, categories });
@@ -753,7 +764,8 @@ function createApp(db, config = {}) {
     const radiusKm = parseRadius(req.query.radius_km);
     const sortBy = req.query.sort === 'distance' ? 'distance' : 'price';
 
-    const listings = await resolveListings(db, { oeNumbers, category, vehicle, origin, radiusKm, sortBy });
+    // With part numbers, part_category only narrows them to listings posted as that part.
+    const listings = await resolveListings(db, { oeNumbers, category, partCategory: oeNumbers.length ? category : null, vehicle, origin, radiusKm, sortBy });
     res.json({ count: listings.length, listings, radius_km: radiusKm, sort: sortBy, location_used: used });
   });
 
@@ -763,6 +775,14 @@ function createApp(db, config = {}) {
     const row = await db.prepare('SELECT photo_url FROM garages WHERE id = ?').get(Number(req.params.id));
     const m = row && /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(row.photo_url || '');
     if (!m) throw new HttpError(404, 'This garage has no photo.');
+    res.type(m[1]).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(m[2], 'base64'));
+  }));
+
+  // A part's own photo, for the cards that list parts without carrying every picture inline.
+  app.get('/api/listings/:id/photo', asyncRoute(async (req, res) => {
+    const row = await db.prepare('SELECT photo_url FROM shop_listings WHERE id = ? AND hidden = 0').get(Number(req.params.id));
+    const m = row && /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(row.photo_url || '');
+    if (!m) throw new HttpError(404, 'This part has no photo.');
     res.type(m[1]).set('Cache-Control', 'public, max-age=86400').send(Buffer.from(m[2], 'base64'));
   }));
 
@@ -1280,7 +1300,7 @@ function createApp(db, config = {}) {
     });
   });
 
-  const fitmentInput = async (b) => {
+  const fitmentInput = async (b, exceptId = null) => {
     const category = await getCategory(String(b.part_category || ''));
     if (!category) throw new HttpError(400, `"${b.part_category || ''}" is not a part in the list. Use the exact name, for example "Front Brake Pad".`);
     if (category.type !== 'model_specific') {
@@ -1296,8 +1316,16 @@ function createApp(db, config = {}) {
     }
     const origin = text(b.origin_market, { field: 'origin_market', max: 40 });
     if (origin && !ORIGINS.includes(origin)) throw new HttpError(400, `origin_market must be blank (any) or one of: ${ORIGINS.join(', ')}.`);
+    const oe = text(b.oe_number, { field: 'oe_number', max: 60, required: true });
+    // One part number is one part. The same number saved as two different parts makes it show up
+    // under both on every customer's garage page.
+    const other = await db.prepare(`SELECT part_category FROM fitment_reference
+      WHERE oe_number = ? AND part_category <> ? AND id IS NOT ? LIMIT 1`).get(oe, category.name, exceptId);
+    if (other) {
+      throw new HttpError(409, `Part number ${oe} is already saved as ${other.part_category}. One part number is one part: fix or delete that row under Part numbers first.`, 'oe_other_part');
+    }
     return [
-      text(b.oe_number, { field: 'oe_number', max: 60, required: true }), category.name,
+      oe, category.name,
       text(b.make, { field: 'make', max: 40, required: true }), text(b.model, { field: 'model', max: 60, required: true }),
       text(b.generation, { field: 'generation', max: 30 }), yearStart, yearEnd,
       text(b.engine, { field: 'engine', max: 40 }), origin, confidence,
@@ -1366,7 +1394,7 @@ function createApp(db, config = {}) {
     if (!(await db.prepare('SELECT 1 FROM fitment_reference WHERE id = ?').get(id))) throw new HttpError(404, 'Row not found.');
     await db.prepare(`UPDATE fitment_reference SET oe_number=?, part_category=?, make=?, model=?, generation=?,
       year_start=?, year_end=?, engine=?, origin_market=?, confidence_level=?, source=?, verified_by=? WHERE id = ?`)
-      .run(...(await fitmentInput(req.body || {})), id);
+      .run(...(await fitmentInput(req.body || {}, id)), id);
     await logAdmin(req, 'Changed a part number', 'part_number', id, (await db.prepare('SELECT oe_number FROM fitment_reference WHERE id = ?').get(id)).oe_number);
     res.json({ row: await db.prepare('SELECT * FROM fitment_reference WHERE id = ?').get(id) });
   });
