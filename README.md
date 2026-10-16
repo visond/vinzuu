@@ -37,7 +37,8 @@ garage to `/business.html`, a customer to their garage. Shop, garage and admin a
 its owner sees) or the customer site; a shop or garage to the customer site. Customers have no such menu.
 
 **Admin account.** Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`: the server makes that account an
-admin when it starts. With demo data, `admin@vinzuu.rw` / `Admin-vinzuu1` also works. The old
+admin when it starts. **More admins:** the person creates a normal account, then an admin clicks
+**Make admin** next to it under Customers (and **Remove admin** to undo; the `ADMIN_EMAIL` account always stays). With demo data, `admin@vinzuu.rw` / `Admin-vinzuu1` also works. The old
 `ADMIN_TOKEN` header still works for scripts (default `dev-admin-token`, laptop only).
 
 **Session secret.** Also set `SESSION_SECRET` in `.env` to a long random string before you share the
