@@ -427,6 +427,32 @@ test('a VIN nobody knows yet gives the maker and year but no exact car', async (
   assert.equal(r.json.car, null);
 });
 
+test('a Korean-market Hyundai or Kia VIN gives its model from the model line, and the generation from the year', async () => {
+  const r = await get('/api/vin/decode?vin=KMHJU81BDHU999991');
+  assert.equal(r.json.car.source, 'line');
+  assert.equal(r.json.car.make, 'Hyundai');
+  assert.equal(r.json.car.model, 'Tucson');
+  assert.equal(r.json.car.year, 2017);
+  assert.equal(r.json.car.generation, 'TL');
+  const k = await get('/api/vin/decode?vin=KNAPC81BDA7999992');
+  assert.equal(k.json.car.model, 'Sportage');
+  // A year two generations share is left for the customer to pick.
+  assert.equal((await get('/api/vin/decode?vin=KMHJU81BDFU999993')).json.car.generation, null);
+});
+
+test('every Hyundai and Kia model line points at a model in the lineup', () => {
+  const { withLineup } = require('../lib/lineup');
+  const { LINES, lineOf } = require('../lib/vinlines');
+  const makes = withLineup([{ make: 'Hyundai', models: [] }, { make: 'Kia', models: [] }]);
+  for (const [wmi, lines] of Object.entries(LINES)) {
+    for (const ch of Object.keys(lines)) {
+      const line = lineOf(`${wmi}${ch}0000000000000`);
+      const make = makes.find((m) => m.make === line.make);
+      assert.ok(vindecode.findModel(make, line.model), `${wmi}${ch} (${line.model}) is not in the lineup`);
+    }
+  }
+});
+
 test('a VIN sharing its build characters with a saved car is suggested as the same build', async () => {
   await post('/api/vehicles/register', {
     vin: 'KNAFK4A61J7400001', make: 'Kia', model: 'Sportage', generation: 'QL', year: 2018, engine: '2.0L Diesel', origin_market: 'Korea',

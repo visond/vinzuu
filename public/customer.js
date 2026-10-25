@@ -591,8 +591,9 @@
     ].filter(Boolean);
     const vinView = h('p', { class: 'vv-vin', 'aria-label': `VIN ${vin.split('').join(' ')}` },
       h('mark', { class: 'vv-wmi', text: vin.slice(0, 3) }), vin.slice(3, 9), h('mark', { class: 'vv-year', text: vin[9] }), vin.slice(10));
+    const model = maker && d.car && sameText(d.car.make, maker) ? ` ${d.car.model}` : '';
     const title = maker
-      ? `Is your car ${year ? `a ${year}` : article(maker)} ${maker}?`
+      ? `Is your car ${year ? `a ${year}` : article(maker)} ${maker}${model}?`
       : 'We could not tell the maker from this VIN';
     const yes = h('button', { class: 'btn btn-primary', type: 'button', text: maker ? 'Yes, that\'s my car' : 'My VIN is right, continue', onclick: () => showRegister(vin, d) });
     const recheck = h('button', { class: maker ? 'btn btn-secondary' : 'btn btn-primary', type: 'button', text: maker ? 'No, let me check my VIN' : 'Check my VIN again', onclick: reenter });
@@ -785,6 +786,8 @@
           ? 'We filled in the model and engine from the makers\' database for this VIN. Please check them.'
           : guess.source === 'frame'
             ? 'We filled in the model and engine from your chassis number. Please check them, and add the model year.'
+            : guess.source === 'line'
+              ? 'We filled in the model from your VIN. Please check it, and choose the generation and engine if they are empty.'
             : 'We filled in the model and engine from cars already saved with a VIN like yours. Please check them.' });
       }
     }
