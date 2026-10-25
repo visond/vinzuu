@@ -38,16 +38,16 @@
     <!-- 1. Vehicle inquiry: the VIN is all we ask for. -->
     <section id="start" class="inquiry wrap" aria-labelledby="page-title">
       <h1 id="page-title">Find your car</h1>
-      <p class="inquiry-sub">Enter your VIN and we'll find your exact car, then only the parts that fit it.</p>
+      <p class="inquiry-sub">Enter your VIN or chassis number and we'll find your exact car, then only the parts that fit it.</p>
       <form id="vin-form" class="vinbox-form" novalidate>
         <div>
-          <label for="vin" class="field-label">Vehicle Identification Number (VIN)</label>
+          <label for="vin" class="field-label">Type your VIN or chassis number</label>
           <div class="vinbox">
             <span class="vinbox-tag" aria-hidden="true">VIN</span>
             <input id="vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters"
-                   autocomplete="off" maxlength="17" placeholder="e.g. JTMBK31V996054321" aria-describedby="vin-hint">
+                   autocomplete="off" maxlength="17" placeholder="e.g. KMHJ3813DHU888881 or NZE121-3123456" aria-describedby="vin-hint">
           </div>
-          <p class="hint" id="vin-hint">17 letters and numbers. A car built for Japan may have a chassis number instead, like NZE121-3123456.<span id="demo-try" hidden> No VIN to hand? <button class="btn-link" type="button" id="demo-try-btn">Try a demo car</button>.</span></p>
+          <p class="hint" id="vin-hint">Hyundai, Kia and most cars: the 17-character VIN. A car built for Japan: the chassis number, like NZE121-3123456.<span id="demo-try" hidden> No VIN to hand? <button class="btn-link" type="button" id="demo-try-btn">Try a demo car</button>.</span></p>
         </div>
         <button id="vin-go" class="btn btn-primary btn-block" type="submit">View my car</button>
       </form>

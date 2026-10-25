@@ -20,8 +20,8 @@
   const vinCount = $('hs-count');
   function updateVinCount() {
     const n = heroVinInput.value.length;
-    vinCount.textContent = `${n} / 17`;
-    vinCount.classList.toggle('done', n === 17 && validVin(heroVinInput.value));
+    vinCount.textContent = validFrame(heroVinInput.value) ? 'Chassis number' : `${n} / 17`;
+    vinCount.classList.toggle('done', validVin(heroVinInput.value) || validFrame(heroVinInput.value));
   }
   heroVinInput.addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -35,7 +35,7 @@
     if (!validVin(vin) && !validFrame(vin)) {
       status.textContent = vin
         ? 'A VIN has exactly 17 letters and numbers (never I, O or Q). A car built for Japan may have a chassis number instead, like NZE121-3123456.'
-        : 'Type your 17-character VIN first.';
+        : 'Type your VIN or chassis number first.';
       status.hidden = false;
       heroVinInput.focus();
       return;
