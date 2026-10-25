@@ -4,6 +4,8 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const validVin = (v) => /^[A-HJ-NPR-Z0-9]{17}$/.test(v); // I, O, Q are never used in a real VIN
+  // Cars built for Japan have a chassis (frame) number instead, like NZE121-3123456.
+  const validFrame = (v) => /^[A-Z]{2,5}\d{2,3}[A-Z]?\d{5,8}$/.test(v) && v.length <= 14;
   const normalizeVin = (raw) => String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
   // (The nav hamburger toggle lives in common.js, since About and Contact use the same nav
@@ -30,9 +32,9 @@
     event.preventDefault();
     const vin = normalizeVin(heroVinInput.value);
     const status = $('hs-status');
-    if (!validVin(vin)) {
+    if (!validVin(vin) && !validFrame(vin)) {
       status.textContent = vin
-        ? 'A VIN has exactly 17 letters and numbers (never I, O or Q). Check it and try again.'
+        ? 'A VIN has exactly 17 letters and numbers (never I, O or Q). A car built for Japan may have a chassis number instead, like NZE121-3123456.'
         : 'Type your 17-character VIN first.';
       status.hidden = false;
       heroVinInput.focus();
@@ -67,7 +69,7 @@
   function shopNowHref(part) {
     const q = new URLSearchParams({ part });
     const vin = normalizeVin(heroVinInput.value);
-    if (validVin(vin)) q.set('vin', vin); // already typed above? carry it over
+    if (validVin(vin) || validFrame(vin)) q.set('vin', vin); // already typed above? carry it over
     return `/index.html?${q}`;
   }
 

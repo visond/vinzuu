@@ -239,6 +239,50 @@ test('VIN decode returns the maker, build country and model year together', asyn
   assert.equal((await get('/api/vin/decode?vin=nope')).json.valid, false);
 });
 
+test('a Japanese chassis number decodes to the model, generation and engine', async () => {
+  const r = await get('/api/vin/decode?vin=nze121-3123456');
+  assert.equal(r.json.valid, true);
+  assert.equal(r.json.kind, 'frame');
+  assert.equal(r.json.vin, 'NZE121-3123456');
+  assert.equal(r.json.maker, 'Toyota');
+  assert.equal(r.json.origin, 'Japan');
+  assert.equal(r.json.model_year, null);
+  assert.equal(r.json.car.model, 'Corolla');
+  assert.equal(r.json.car.generation, 'E120');
+  assert.equal(r.json.car.engine, '1.5L Petrol');
+  // Typed without the dash, a body letter picks the Fielder wagon.
+  const g = await get('/api/vin/decode?vin=NZE141G1234567');
+  assert.equal(g.json.vin, 'NZE141G-1234567');
+  assert.equal(g.json.car.model, 'Corolla Fielder');
+  // A code we don't know yet still reads as a frame number, with nothing guessed.
+  const u = await get('/api/vin/decode?vin=XYZ123-4567890');
+  assert.equal(u.json.valid, true);
+  assert.equal(u.json.maker, null);
+  assert.equal(u.json.car, null);
+});
+
+test('a car registers and is found again by its chassis number', async () => {
+  const reg = await post('/api/vehicles/register', {
+    vin: 'ZRE152 1234567', make: 'Toyota', model: 'Corolla', generation: 'E140', engine: '1.8L Petrol', year: 2010,
+  });
+  assert.equal(reg.status, 201);
+  assert.equal(reg.json.vehicle.origin_market, 'Japan');
+  const found = await get('/api/vehicles/by-vin/ZRE152-1234567');
+  assert.equal(found.status, 200);
+  assert.equal(found.json.vehicle.id, reg.json.vehicle.id);
+  assert.equal((await post('/api/vehicles/register', { vin: '12345', make: 'Toyota', model: 'Corolla', year: 2010 })).status, 400);
+});
+
+test('every chassis code points at a model, generation and engine in the Toyota lineup', () => {
+  const { withLineup } = require('../lib/lineup');
+  const framecodes = require('../lib/framecodes');
+  const makes = withLineup([{ make: 'Toyota', models: [] }]);
+  for (const code of Object.keys(framecodes.CODES)) {
+    const { car } = framecodes.decodeFrame(`${code}1234567`, makes);
+    assert.ok(car.generation && car.engine, `${code} does not match the lineup`);
+  }
+});
+
 test('a lineup model with no part numbers yet registers, and a part search for it is logged as a gap', async () => {
   const reg = await post('/api/vehicles/register', {
     plate_number: 'RXA321Z', vin: 'KMHSU81XDCU123321', make: 'Hyundai', model: 'Santa Fe', year: 2012,

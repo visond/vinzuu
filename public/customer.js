@@ -149,6 +149,9 @@
 
   const normalizeVin = (raw) => String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const validVin = (v) => /^[A-HJ-NPR-Z0-9]{17}$/.test(v); // I, O, Q are never used in a real VIN
+  // Cars built for Japan have a chassis (frame) number instead, like NZE121-3123456.
+  const validFrame = (v) => /^[A-Z]{2,5}\d{2,3}[A-Z]?\d{5,8}$/.test(v) && v.length <= 14;
+  const isFrame = (d) => !!d && d.kind === 'frame';
 
   function hideSections() {
     for (const id of ['confirm', 'register', 'basic', 'vehicle', 'results']) $(id).hidden = true;
@@ -167,8 +170,8 @@
   function onVinSubmit(event) {
     event.preventDefault();
     const vin = normalizeVin($('vin').value);
-    if (!validVin(vin)) {
-      setStatus($('vin-status'), 'Enter the full 17-character VIN. The letters I, O and Q are never used.', 'error');
+    if (!validVin(vin) && !validFrame(vin)) {
+      setStatus($('vin-status'), 'Enter the full 17-character VIN (the letters I, O and Q are never used), or a Japanese chassis number like NZE121-3123456.', 'error');
       $('vin').focus();
       return;
     }
@@ -188,7 +191,7 @@
         setStatus($('vin-status'), 'Reading your VIN…');
         const d = await decodeVin(vin);
         setStatus($('vin-status'), '');
-        showVerify(vin, d);
+        showVerify((d && d.vin) || vin, d);
       } else {
         setStatus($('vin-status'), err.message, 'error');
       }
@@ -578,6 +581,7 @@
    * the model year. So we say what we read and ask. A "no" almost always means a mistyped VIN.
    */
   function showVerify(vin, d) {
+    if (isFrame(d)) return showVerifyFrame(vin, d);
     const maker = d && d.maker;
     const year = d && d.model_year;
     const facts = [
@@ -611,6 +615,47 @@
       showStep('start');
       $('vin').value = vin;
       setStatus($('vin-status'), 'Compare each character with the VIN on your registration card, then search again. 0 and D, 1 and 7, and 8 and B are easy to mix up.');
+      $('vin').focus();
+      $('vin').select();
+    }
+  }
+
+  /**
+   * Step 2 for a Japanese chassis number. Its model code (NZE121) names the model, generation and
+   * engine, so we say what we read and ask. It has no model year; that is asked next.
+   */
+  function showVerifyFrame(frame, d) {
+    const car = d.car;
+    const code = d.frame_code || frame.split('-')[0];
+    const facts = car ? [
+      ['Maker', h('span', { class: 'vv-maker' }, makeLogo(car.make, 'vv-logo'), car.make), `from "${code}"`],
+      ['Model', `${car.model}${car.generation ? ` (${car.generation}, ${car.year_start} to ${car.year_end})` : ''}`, `from "${code}"`],
+      car.engine ? ['Engine', `${car.engine}${car.engine_code ? ` (${car.engine_code})` : ''}`, `from "${code}"`] : null,
+      ['Built for', 'Japan', 'a chassis number instead of a VIN'],
+    ].filter(Boolean) : [];
+    const title = car ? `Is your car a ${car.make} ${car.model}?` : 'We could not tell the model from this chassis number';
+    const yes = h('button', { class: 'btn btn-primary', type: 'button', text: car ? 'Yes, that\'s my car' : 'My number is right, continue', onclick: () => showRegister(frame, d) });
+    const recheck = h('button', { class: car ? 'btn btn-secondary' : 'btn btn-primary', type: 'button', text: car ? 'No, let me check the number' : 'Check the number again', onclick: reenter });
+    $('confirm').replaceChildren(stepper(1), h('div', { class: 'verify-card' },
+      h('p', { class: 'vv-kicker', text: 'Vehicle check' }),
+      h('h1', { id: 'confirm-title', class: 'vv-title', text: title }),
+      h('p', { class: 'vv-vin', 'aria-label': `Chassis number ${frame.split('').join(' ')}` },
+        h('mark', { class: 'vv-wmi', text: code }), frame.slice(code.length)),
+      facts.length
+        ? h('dl', { class: 'vv-facts' }, ...facts.map(([k, value, from]) => h('div', {},
+          h('dt', { text: k }), h('dd', {}, value), h('p', { class: 'vv-from', text: from }))))
+        : null,
+      h('p', { class: 'vv-help', text: car
+        ? 'If this is not your car, the number was probably typed wrong. Check it against your registration card.'
+        : 'We know the most common Toyota chassis codes, and this one is not on our list yet. If it matches your papers, carry on and choose the details yourself.' }),
+      h('div', { class: 'vv-actions' }, car ? yes : recheck, car ? recheck : yes)));
+    showStep('confirm');
+    (car ? yes : recheck).focus({ preventScroll: true });
+
+    function reenter() {
+      showStep('start');
+      $('vin').value = frame;
+      setStatus($('vin-status'), 'Compare each character with the chassis number on your registration card, then search again.');
       $('vin').focus();
       $('vin').select();
     }
@@ -738,7 +783,9 @@
       if (f.model.value === guess.model) {
         guessNote = h('p', { class: 'note-box', role: 'note', text: guess.source === 'vpic'
           ? 'We filled in the model and engine from the makers\' database for this VIN. Please check them.'
-          : 'We filled in the model and engine from cars already saved with a VIN like yours. Please check them.' });
+          : guess.source === 'frame'
+            ? 'We filled in the model and engine from your chassis number. Please check them, and add the model year.'
+            : 'We filled in the model and engine from cars already saved with a VIN like yours. Please check them.' });
       }
     }
 
@@ -752,7 +799,7 @@
       h('h1', { id: 'register-title', class: 'step-title', text: 'Your car\'s details' }),
       h('p', { class: 'muted', text: 'We need these to find parts that fit. You only fill them in once.' }),
       h('div', { class: 'from-vin' },
-        h('div', { class: 'fv-head' }, h('span', { class: 'fv-tag', text: 'From your VIN' }), h('span', { class: 'fv-vin', text: vin })),
+        h('div', { class: 'fv-head' }, h('span', { class: 'fv-tag', text: isFrame(d) ? 'From your chassis number' : 'From your VIN' }), h('span', { class: 'fv-vin', text: vin })),
         fromVin.length ? h('dl', { class: 'fv-list' }, ...fromVin.map(([k, value]) => h('div', {}, h('dt', { text: k }), h('dd', {}, value)))) : null),
       guessNote,
       h('fieldset', { class: 'group' },
@@ -827,7 +874,7 @@
       ['Generation', generationLabel(car)], ['Engine', engineText(car)], ['Fuel', fuelOf(car.engine)],
       ['Built in', car.origin_market], ['Transmission', car.transmission || 'Not given'],
       ['Imported from', car.import_source || 'Not given'],
-      ['Mileage', car.mileage_km != null ? kmFmt(car.mileage_km) : 'Not given'], ['VIN', vin],
+      ['Mileage', car.mileage_km != null ? kmFmt(car.mileage_km) : 'Not given'], [validVin(vin) ? 'VIN' : 'Chassis number', vin],
     ].filter(([, value]) => value != null && value !== '');
     const save = h('button', { class: 'btn btn-primary', type: 'button', text: 'Save my car', onclick: onSave });
     $('basic').replaceChildren(stepper(3),
