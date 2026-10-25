@@ -22,6 +22,7 @@ const carphotos = require('./lib/carphotos');
 
 const APP_NAME = 'Vinzuu';
 
+const VIN_RULE = 'A VIN has exactly 17 letters and numbers (the letters I, O and Q are never used). A car built for Japan may have a chassis number instead, like NZE121-3123456.';
 const ORIGINS = ['Korea', 'Japan', 'USA', 'Canada', 'Mexico', 'Germany', 'UK', 'France', 'Spain',
   'Italy', 'Turkey', 'Slovakia', 'China', 'India', 'Thailand', 'Indonesia', 'South Africa'];
 // What a customer can report about a shop, a garage or a part.
@@ -514,20 +515,11 @@ function createApp(db, config = {}) {
 
   // The maker, build country and model year come from the VIN itself. `car` is the exact build
   // (model, generation, engine) when a saved car or the online decoder knows it, for the customer
-  // to confirm; null when they need to pick it themselves.
+  // to confirm; null when they need to pick it themselves. A Japanese frame number works too.
   app.get('/api/vin/decode', asyncRoute(async (req, res) => {
-    const vin = String(req.query.vin || '').toUpperCase().trim();
-    if (!alg.isValidVin(vin)) return res.json({ valid: false });
-    const year = alg.decodeModelYear(vin);
-    const wmi = alg.decodeWmi(vin);
-    const car = await vindecode.findCar(db, vin, {
-      lineupMakes: withLineup(await buildCatalog(db)), year: year.year, lookup: cfg.vinLookup,
-    });
-    if (car) {
-      car.year = car.year || year.year;
-      car.origin_market = car.origin_market || wmi.origin || null;
-    }
-    res.json({ valid: true, ...wmi, model_year: year.year, model_year_code: year.code, car });
+    res.json(await vindecode.decodeVin(db, req.query.vin, {
+      lineupMakes: withLineup(await buildCatalog(db)), lookup: cfg.vinLookup,
+    }));
   }));
 
   // Algorithm A. VIN-first: a VIN never changes, so it is the trusted key that decides whether
@@ -555,11 +547,10 @@ function createApp(db, config = {}) {
     let vin = null;
     let decoded = { wmi: null, origin: null, maker: null, source: 'unknown' };
     if (b.vin != null && String(b.vin).trim() !== '') {
-      vin = String(b.vin).toUpperCase().replace(/\s/g, '');
-      if (!alg.isValidVin(vin)) {
-        throw new HttpError(400, 'A VIN has exactly 17 letters and numbers (the letters I, O and Q are never used). Check it or leave it empty.');
-      }
-      decoded = alg.decodeWmi(vin);
+      const id = vindecode.vehicleId(b.vin);
+      if (!id) throw new HttpError(400, `${VIN_RULE} Check it or leave it empty.`);
+      vin = id.id;
+      decoded = vindecode.makerOf(vin);
     }
 
     // This VIN is already on file: it is the same car, however the plate strip reads today.
@@ -634,9 +625,9 @@ function createApp(db, config = {}) {
   // Lets a garage (or anyone) look a car up the trusted way, by VIN, instead of by whatever
   // plate happens to be on it today. Mirrors GET /api/vehicles/:plate above.
   app.get('/api/vehicles/by-vin/:vin', async (req, res) => {
-    const vin = String(req.params.vin || '').toUpperCase().replace(/\s/g, '');
-    if (!alg.isValidVin(vin)) throw new HttpError(400, 'A VIN has exactly 17 letters and numbers (the letters I, O and Q are never used).');
-    const v = await getVehicleByVin(vin);
+    const id = vindecode.vehicleId(req.params.vin);
+    if (!id) throw new HttpError(400, VIN_RULE);
+    const v = await getVehicleByVin(id.id);
     if (!v) throw new HttpError(404, 'This VIN is not registered yet.', 'not_registered');
     res.json({ vehicle: publicVehicle(v, req) });
   });
@@ -1544,10 +1535,11 @@ function createApp(db, config = {}) {
     const year = integer(b.year, { field: 'year', min: 1980, max: new Date().getFullYear() + 1 });
     let vin = null;
     if (b.vin != null && String(b.vin).trim() !== '') {
-      vin = String(b.vin).toUpperCase().replace(/\s/g, '');
-      if (!alg.isValidVin(vin)) throw new HttpError(400, 'A VIN has exactly 17 letters and numbers (the letters I, O and Q are never used).');
+      const id = vindecode.vehicleId(b.vin);
+      if (!id) throw new HttpError(400, VIN_RULE);
+      vin = id.id;
     }
-    const wmi = vin ? alg.decodeWmi(vin).wmi : null;
+    const wmi = vin ? vindecode.makerOf(vin).wmi : null;
     const generation = text(b.generation, { field: 'generation', max: 30 });
     const engine = text(b.engine, { field: 'engine', max: 40 });
     const transmission = text(b.transmission, { field: 'transmission', max: 20 });
