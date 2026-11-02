@@ -189,9 +189,10 @@ function createApp(db, config = {}) {
     // turns it off on a server with no internet.
     vinLookup: config.vinLookup !== undefined ? config.vinLookup
       : process.env.VIN_LOOKUP === 'off' ? null : vindecode.vpicLookup,
-    // Reads Wikipedia/Commons for car photos (null = offline: the drawn outline is shown).
+    // Reads Wikipedia/Commons for car photos (null = off: the drawn outline is shown). Off unless
+    // CAR_PHOTOS=on, so the site only shows pictures made for it.
     wikiJson: config.wikiJson !== undefined ? config.wikiJson
-      : process.env.CAR_PHOTOS === 'off' ? null : carphotos.wikiJson,
+      : process.env.CAR_PHOTOS === 'on' ? carphotos.wikiJson : null,
   };
   const googleClientId = () => cfg.googleClientId || process.env.GOOGLE_CLIENT_ID || null;
   const app = catchAsyncErrors(express());
