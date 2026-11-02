@@ -376,7 +376,6 @@
       cat: h('select', { id: 'rq-cat' }, ...categoryOptions(catalog.categories, 'Choose a part')),
       oe: h('select', { id: 'rq-oe' }),
       spec: h('input', { id: 'rq-spec', type: 'text', maxLength: 80, placeholder: 'For example 12V 60Ah, or 24 inch' }),
-      brand: h('input', { id: 'rq-brand', type: 'text', maxLength: 60, placeholder: 'For example Toyota, Bosch, Denso' }),
       condition: h('select', { id: 'rq-cond' }, h('option', { value: 'genuine', text: 'Genuine part' }), h('option', { value: 'aftermarket', text: 'Aftermarket part' })),
       warranty: h('input', { id: 'rq-war', type: 'number', inputMode: 'numeric', min: 0, max: 120, placeholder: 'No warranty' }),
       price: h('input', { id: 'rq-price', type: 'number', inputMode: 'numeric', min: 1 }),
@@ -386,6 +385,7 @@
       preview: h('img', { class: 'photo-preview', alt: 'Photo preview', hidden: true }),
       note: h('textarea', { id: 'rq-note', maxLength: 300, rows: 2, placeholder: 'Anything the vinzuu team should know (optional)' }),
     };
+    const brand = brandPicker('rq-brand', f.condition);
     // The car narrows the part numbers, so the list stays short.
     const car = carSelects(catalog.makes, 'rq', { onChange: () => loadNumbers() });
     const oeWrap = h('div', {},
@@ -410,6 +410,7 @@
       const cat = catalog.categories.find((c) => c.name === f.cat.value);
       oeWrap.hidden = !cat || cat.type !== 'model_specific';
       specWrap.hidden = !cat || cat.type !== 'universal';
+      brand.setCategory(cat);
       loadNumbers();
     });
     f.photo.addEventListener('change', async (e) => {
@@ -433,7 +434,7 @@
       try {
         await api(`/api/shops/${shopId()}/listing-requests`, { method: 'POST', body: {
           part_category: cat.name, oe_number: cat.type === 'model_specific' ? f.oe.value : null,
-          universal_spec: cat.type === 'universal' ? f.spec.value : null, brand: f.brand.value || null,
+          universal_spec: cat.type === 'universal' ? f.spec.value : null, brand: brand.value(),
           condition: f.condition.value, warranty_months: f.warranty.value === '' ? null : Number(f.warranty.value),
           price_rwf: Number(f.price.value), stock_quantity: Number(f.stock.value || 0),
           description: f.desc.value, photo_url: photo, note: f.note.value || null,
@@ -445,7 +446,7 @@
       h('h2', { text: 'Ask vinzuu to post a part' }),
       h('p', { class: 'muted', text: 'We check every part before customers see it, so nobody can sell a fake one. Most requests are answered within a day.' }),
       field('Part', f.cat), oeWrap, specWrap,
-      h('div', { class: 'row stack-sm' }, field('Brand', f.brand), field('Type of part', f.condition, 'Genuine means the car maker\'s own part.')),
+      h('div', { class: 'row stack-sm' }, field('Brand', brand.select), field('Type of part', f.condition, 'Genuine means the car maker\'s own part.')),
       h('div', { class: 'row stack-sm' }, field('Price in RWF', f.price), field('How many in stock', f.stock)),
       field('Warranty in months (optional)', f.warranty),
       field('Description', f.desc, 'What customers read on the part. Say what is in the box and anything special about it.'),
@@ -453,6 +454,7 @@
         h('p', { class: 'hint', text: 'Take it on your shelf, in good light. Customers only see parts with a photo.' }), f.preview),
       field('Note to the vinzuu team', f.note),
       h('button', { class: 'btn btn-primary', type: 'submit', text: 'Send for checking' }), status);
+    brand.mount();
 
     const REQ = { pending: ['Waiting', 'pill-new'], approved: ['Approved, on sale', 'pill-ok'], rejected: ['Not approved', 'pill-off'] };
     return h('div', {}, form,
