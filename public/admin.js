@@ -6,6 +6,7 @@
 
   const $ = (id) => document.getElementById(id);
   let meta = null;
+  let signedInEmail = null; // the admin using this page (no Remove admin on their own row)
   let categories = [];
   let makes = [];          // the model lineup, for the car pickers
   let prefill = null;      // set when jumping from the "missing parts" report to the add form
@@ -56,6 +57,7 @@
   }
 
   async function openConsole(user) {
+    signedInEmail = user && user.email;
     ({ categories, makes } = await api('/api/catalog'));
     $('admin-account').replaceChildren(accountMenu(user, 'admin'));
     $('admin-switch').replaceChildren(portalSwitch(user, 'admin') || '');
@@ -957,6 +959,14 @@
     const mount = h('div', {});
     const ROLE = { customer: 'Customer', business: 'Shop or garage', admin: 'Admin' };
     let timer = null;
+    // Make admin / Remove admin: more than one person can run Vinzuu.
+    const adminButton = (u, make) => h('button', { class: 'btn btn-secondary btn-small', type: 'button',
+      text: make ? 'Make admin' : 'Remove admin', onclick: async () => {
+        if (!confirm(make
+          ? `Make ${u.email} an admin? They can then do everything you can: approve shops, post parts, block accounts.`
+          : `Remove admin access from ${u.email}? Their account becomes a normal customer account.`)) return;
+        try { await call(`/api/admin/users/${u.id}/${make ? 'make-admin' : 'remove-admin'}`, { method: 'POST' }); reload(); } catch (err) { alert(err.message); }
+      } });
     async function reload() {
       const { users } = await call(`/api/admin/users?role=${role === 'all' ? '' : role}&q=${enc(search.value)}`);
       mount.replaceChildren(dataTable([
@@ -968,7 +978,7 @@
         { label: 'Joined', render: (u) => h('span', { class: 'nowrap', text: String(u.created_at || '').slice(0, 10) }) },
         { label: 'Last signed in', render: (u) => (u.last_login_at ? h('span', { class: 'nowrap', text: shortWhen(u.last_login_at) }) : h('span', { class: 'muted', text: 'Not yet' })) },
         { label: 'Status', render: (u) => (u.blocked ? h('span', { title: u.blocked_reason || '' }, pill('Blocked', 'pill-off')) : pill('Active', 'pill-ok')) },
-        { label: '', render: (u) => (u.role === 'admin' ? null : u.blocked
+        { label: '', render: (u) => h('div', { class: 'row-buttons' }, u.role === 'admin' ? (u.email === signedInEmail ? null : adminButton(u, false)) : u.blocked
           ? h('button', { class: 'btn btn-secondary btn-small', type: 'button', text: 'Unblock', onclick: async () => {
             if (!confirm(`Unblock ${u.email}? They can sign in again.`)) return;
             try { await call(`/api/admin/users/${u.id}/unblock`, { method: 'POST' }); reload(); } catch (err) { alert(err.message); }
@@ -976,14 +986,15 @@
           : h('button', { class: 'btn btn-danger btn-small', type: 'button', text: 'Block', onclick: () => askReason(`Block ${u.name}`,
             'For example: made fake bookings with other people\'s numbers.',
             async (reason) => { await call(`/api/admin/users/${u.id}/block`, { method: 'POST', body: { reason } }); reload(); },
-            { action: 'Block account', intro: `${u.email} is signed out at once and cannot sign in again until you unblock it. They see your reason when they try.` }) })) },
+            { action: 'Block account', intro: `${u.email} is signed out at once and cannot sign in again until you unblock it. They see your reason when they try.` }) }),
+          u.role === 'customer' && !u.blocked ? adminButton(u, true) : null) },
       ], users));
     }
     search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(reload, 250); });
     await reload();
     return h('div', {},
       h('h2', { text: 'Accounts' }),
-      h('p', { class: 'muted', text: 'Everyone with a Vinzuu account. Block an account that is abusing the site; a shop or garage owner who is blocked also loses their dashboard.' }),
+      h('p', { class: 'muted', text: 'Everyone with a Vinzuu account. Block an account that is abusing the site; a shop or garage owner who is blocked also loses their dashboard. To add another admin, ask them to create an account, then click Make admin next to it.' }),
       h('div', { class: 'parts-tools' }, search,
         segFilter([['customer', 'Customers'], ['business', 'Shops and garages'], ['admin', 'Admins'], ['all', 'All']], role, (k) => { role = k; reload(); }),
         csvLink('customers')),

@@ -1653,6 +1653,33 @@ function createApp(db, config = {}) {
   }
   admin.post('/users/:id/block', async (req, res) => res.json(await setBlocked(req, true)));
   admin.post('/users/:id/unblock', async (req, res) => res.json(await setBlocked(req, false)));
+  // More than one admin: an admin turns a customer account into an admin, or back. The account
+  // signs up the normal way first. The ADMIN_EMAIL account stays an admin (it is restored on every
+  // start), you cannot remove yourself, and there is always at least one admin left.
+  admin.post('/users/:id/make-admin', async (req, res) => {
+    const user = await getUserById(Number(req.params.id));
+    if (!user) throw new HttpError(404, 'Account not found.');
+    if (roleOf(user) === 'admin') throw new HttpError(409, 'That account is already an admin.');
+    if (user.blocked) throw new HttpError(409, 'Unblock this account before making it an admin.');
+    if (user.shop_id || user.garage_id) throw new HttpError(409, 'This account runs a shop or garage. Ask them to sign up a separate account to be an admin.');
+    await db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
+    await logAdmin(req, 'Made an account an admin', 'user', user.id, user.email);
+    res.json({ ok: true });
+  });
+  admin.post('/users/:id/remove-admin', async (req, res) => {
+    const user = await getUserById(Number(req.params.id));
+    if (!user) throw new HttpError(404, 'Account not found.');
+    if (roleOf(user) !== 'admin') throw new HttpError(409, 'That account is not an admin.');
+    if (req.userId === user.id) throw new HttpError(409, 'You cannot remove your own admin access. Ask another admin.');
+    if (user.email === (process.env.ADMIN_EMAIL || '').trim().toLowerCase()) {
+      throw new HttpError(409, 'This is the main admin account set in the server settings (ADMIN_EMAIL). Change it there instead.');
+    }
+    const admins = (await db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin'").get()).n;
+    if (admins <= 1) throw new HttpError(409, 'Vinzuu needs at least one admin.');
+    await db.prepare("UPDATE users SET role = 'customer' WHERE id = ?").run(user.id);
+    await logAdmin(req, 'Removed admin access', 'user', user.id, user.email);
+    res.json({ ok: true });
+  });
 
   // ----- reports from customers -----
 
