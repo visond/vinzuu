@@ -1055,7 +1055,15 @@
     if (state.coords) { q.set('lat', state.coords.lat); q.set('lon', state.coords.lon); }
     q.set('radius_km', state.radius);
     q.set('sort', state.sort);
-    const data = await api(`/api/parts/listings?${q}`);
+    let data = await api(`/api/parts/listings?${q}`);
+    // The part card counts shops at any distance, so never answer it with an empty list:
+    // when nothing is close, show the shops further away and say so.
+    state.widened = false;
+    if (!data.listings.length && state.radius !== 'any') {
+      q.set('radius_km', 'any');
+      data = await api(`/api/parts/listings?${q}`);
+      state.widened = data.listings.length > 0;
+    }
     state.listings = data.listings;
     renderResults();
   }
@@ -1147,7 +1155,7 @@
     });
     const radius = h('select', { id: 'radius', 'aria-label': 'Distance', onchange: (e) => { state.radius = e.target.value; loadListings(); } },
       ...[['5', 'Within 5 km'], ['15', 'Within 15 km'], ['30', 'Within 30 km'], ['any', 'Any distance']]
-        .map(([value, text]) => h('option', { value, text, selected: state.radius === value })));
+        .map(([value, text]) => h('option', { value, text, selected: (state.widened ? 'any' : state.radius) === value })));
     parts.push(h('div', { class: 'controls' },
       h('div', { class: 'seg', role: 'group', 'aria-label': 'Sort by' }, sortBtn('price', 'Lowest price'), sortBtn('distance', 'Nearest')),
       radius));
@@ -1157,6 +1165,7 @@
       ? h('button', { class: 'btn btn-quiet flush', type: 'button', text: 'Use my location', onclick: useMyLocation }) : null;
     parts.push(h('p', { class: 'small muted' }, where, ' ', locBtn));
     if (state.locationNote) parts.push(h('p', { class: 'small', text: state.locationNote }));
+    if (state.widened) parts.push(h('div', { class: 'note-box', role: 'note', text: `No shop within ${state.radius} km has this, so these are further away.` }));
 
     if (state.searchInfo && state.searchInfo.type !== 'universal') parts.push(whatBadgesMean());
 
@@ -1219,12 +1228,29 @@
         state.user ? h('button', { class: 'link-btn small result-report', type: 'button', text: 'Report this part', onclick: () => openReportForm({ listing_id: l.listing_id }, `${l.part_category} at ${l.shop_name}`) }) : null));
   }
 
+  const OUTSIDE_RWANDA_KM = 200;
+
+  /** Straight-line distance in km between two { lat, lon } points. */
+  function distanceKm(a, b) {
+    const rad = (d) => (d * Math.PI) / 180;
+    const x = Math.sin(rad(b.lat - a.lat) / 2) ** 2
+      + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lon - a.lon) / 2) ** 2;
+    return 6371 * 2 * Math.asin(Math.sqrt(x));
+  }
+
   function useMyLocation() {
     state.locationNote = 'Finding your location…';
     renderResults();
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        state.coords = { lat: Number(pos.coords.latitude.toFixed(4)), lon: Number(pos.coords.longitude.toFixed(4)) };
+        const here = { lat: Number(pos.coords.latitude.toFixed(4)), lon: Number(pos.coords.longitude.toFixed(4)) };
+        // Shops are all in Rwanda, so a location far away (abroad) would only give distances
+        // like 10,000 km. Keep measuring from central Kigali then.
+        if (distanceKm(here, state.meta.kigali_center) > OUTSIDE_RWANDA_KM) {
+          state.locationNote = 'You seem to be outside Rwanda, so distances stay measured from central Kigali.';
+          return renderResults();
+        }
+        state.coords = here;
         state.locationNote = '';
         loadListings();
       },
