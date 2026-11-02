@@ -56,7 +56,7 @@
     <div class="finder-card">
       <div class="finder-main">
         <h2 id="find-head">Can we look for your car's parts?</h2>
-        <p class="finder-sub">Type your 17-character VIN and we'll show only the parts that fit. No account needed.</p>
+        <p class="finder-sub">Type your VIN or chassis number and we'll show only the parts that fit. No account needed.</p>
         <div class="vin-howto">
           <h3 id="vin-example-head">How to write your VIN</h3>
           <div class="vin-anatomy" aria-label="Example VIN JTMBK31V996054321, split into its three parts">
@@ -72,11 +72,11 @@
           <button class="btn-link vin-try" type="button" id="vin-use-example">Fill in this example</button>
         </div>
         <form class="hero-search" id="hero-search" novalidate>
-          <label for="hs-vin" class="sr-only">VIN (17 characters)</label>
+          <label for="hs-vin" class="sr-only">VIN or chassis number</label>
           <div class="hero-search-row">
             <div class="vinbox">
               <span class="vinbox-tag" aria-hidden="true">VIN</span>
-              <input id="hs-vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="17" placeholder="e.g. JTMBK31V996054321" aria-describedby="vin-example-head">
+              <input id="hs-vin" class="vinbox-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="17" placeholder="VIN or chassis number" aria-describedby="vin-example-head">
             </div>
             <button class="btn btn-primary hero-search-go" type="submit">Find parts</button>
           </div>
